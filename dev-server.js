@@ -68,5 +68,5 @@ const server = createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`Account Health Copilot (local) — http://localhost:${PORT}`);
-  console.log(`MOCK_AI=${process.env.MOCK_AI === "true" ? "on (keine echten API-Calls)" : "off"}`);
+  console.log(`MOCK_AI=${process.env.MOCK_AI === "true" ? "on (no real API calls)" : "off"}`);
 });

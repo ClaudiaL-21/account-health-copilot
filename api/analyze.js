@@ -49,18 +49,18 @@ function mockInsight(account) {
   return {
     sentiment: {
       label: health.riskCategory === "high" ? "negative" : health.riskCategory === "medium" ? "neutral" : "positive",
-      rationale: `[MOCK] Basierend auf ${account.freeTextArtifacts.length} Text-Snippet(s), z.B. "${account.freeTextArtifacts[0]?.text.slice(0, 60)}..."`,
+      rationale: `[MOCK] Based on ${account.freeTextArtifacts.length} text snippet(s), e.g. "${account.freeTextArtifacts[0]?.text.slice(0, 60)}..."`,
     },
-    narrative: `[MOCK-Antwort, keine echte KI] ${account.accountName} hat einen Health Score von ${health.score} (${health.riskCategory}). Top-Treiber: ${health.criteria[0].label}.`,
+    narrative: `[MOCK response, not real AI] ${account.accountName} has a Health Score of ${health.score} (${health.riskCategory} risk). Top driver: ${health.criteria[0].label}.`,
     recommendations: [
-      "[MOCK] Rufe den Kunden an und kläre das Hauptthema.",
-      "[MOCK] Prüfe den Champion-Status vor dem nächsten QBR.",
+      "[MOCK] Call the customer and clarify the main issue.",
+      "[MOCK] Check champion status ahead of the next QBR.",
     ],
   };
 }
 
 function mockAsk(account, question) {
-  return { answer: `[MOCK-Antwort, keine echte KI] Zu "${question}" bei ${account.accountName}: Der Score liegt bei ${computeHealthScore(account).score}, das ist eine simulierte Antwort für lokale Tests.` };
+  return { answer: `[MOCK response, not real AI] Regarding "${question}" for ${account.accountName}: the score is ${computeHealthScore(account).score}, this is a simulated answer for local testing.` };
 }
 
 function mockTeamPriority(csmId) {
@@ -69,7 +69,7 @@ function mockTeamPriority(csmId) {
     priorities: accounts.map(a => ({
       accountId: a.accountId,
       accountName: a.accountName,
-      reason: "[MOCK] Simulierte Priorisierung für lokalen Test, keine echte KI-Antwort.",
+      reason: "[MOCK] Simulated prioritization for local testing, not a real AI answer.",
     })),
   };
 }

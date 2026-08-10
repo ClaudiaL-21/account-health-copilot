@@ -28,8 +28,8 @@ function scoreUsageDecline(account) {
   const adoptionRisk = clamp(100 - adoptionRatePct, 0, 100);
   const risk = trendRisk * 0.5 + adoptionRisk * 0.5;
   return {
-    key: "usageDecline", label: "Nutzungs-/Adoptionsrückgang",
-    rawValue: `Adoption ${adoptionRatePct}% · Sessions-Trend ${sessionsTrendPct > 0 ? "+" : ""}${sessionsTrendPct}%`,
+    key: "usageDecline", label: "Usage/Adoption Decline",
+    rawValue: `Adoption ${adoptionRatePct}% · Sessions trend ${sessionsTrendPct > 0 ? "+" : ""}${sessionsTrendPct}%`,
     riskPct: Math.round(risk),
   };
 }
@@ -38,8 +38,8 @@ function scoreRecurringTicket(account) {
   const { recurringTicketTopic, openTickets } = account.support;
   const risk = recurringTicketTopic ? 100 : clamp(openTickets * 15, 0, 60);
   return {
-    key: "recurringTicket", label: "Wiederkehrendes Ticket-Thema",
-    rawValue: recurringTicketTopic ? recurringTicketTopic : `${openTickets} offene Tickets, kein wiederkehrendes Thema`,
+    key: "recurringTicket", label: "Recurring Ticket Topic",
+    rawValue: recurringTicketTopic ? recurringTicketTopic : `${openTickets} open ticket(s), no recurring topic`,
     riskPct: Math.round(risk),
   };
 }
@@ -54,8 +54,8 @@ function scoreCSATTrend(account) {
   const trendRisk = avgLast < avgFirst ? 20 : 0;
   const risk = clamp(levelRisk + trendRisk, 0, 100);
   return {
-    key: "csatTrend", label: "CSAT-Trend (8 Wochen)",
-    rawValue: `Ø aktuell ${avgLast.toFixed(1)} (vorher ${avgFirst.toFixed(1)})`,
+    key: "csatTrend", label: "CSAT Trend (8 weeks)",
+    rawValue: `avg. now ${avgLast.toFixed(1)} (was ${avgFirst.toFixed(1)})`,
     riskPct: Math.round(risk),
   };
 }
@@ -68,8 +68,8 @@ function scoreNPS(account) {
   const trendRisk = latest < first ? 15 : 0;
   const risk = clamp(levelRisk + trendRisk, 0, 100);
   return {
-    key: "nps", label: "NPS (3 Quartale)",
-    rawValue: `aktuell ${latest} (vorher ${first})`,
+    key: "nps", label: "NPS (3 quarters)",
+    rawValue: `now ${latest} (was ${first})`,
     riskPct: Math.round(risk),
   };
 }
@@ -77,9 +77,9 @@ function scoreNPS(account) {
 function scoreChampionRisk(account) {
   const status = account.relationship.championStatus;
   const risk = status === "recently_departed" ? 100 : status === "unknown" ? 50 : 0;
-  const labelMap = { active: "aktiv", unknown: "unklar", recently_departed: "kürzlich abgesprungen" };
+  const labelMap = { active: "active", unknown: "unclear", recently_departed: "recently departed" };
   return {
-    key: "championRisk", label: "Champion-Risiko",
+    key: "championRisk", label: "Champion Risk",
     rawValue: `${account.relationship.championName} (${labelMap[status]})`,
     riskPct: risk,
   };
@@ -89,8 +89,8 @@ function scoreInteractionRecency(account) {
   const days = account.relationship.lastInteractionDaysAgo;
   const risk = clamp(days / 30 * 100, 0, 100);
   return {
-    key: "interactionRecency", label: "Interaktions-Aktualität",
-    rawValue: `${days} Tage seit letzter Interaktion`,
+    key: "interactionRecency", label: "Interaction Recency",
+    rawValue: `${days} days since last interaction`,
     riskPct: Math.round(risk),
   };
 }
@@ -98,8 +98,8 @@ function scoreInteractionRecency(account) {
 function scoreExecSponsor(account) {
   const engaged = account.relationship.execSponsorEngaged;
   return {
-    key: "execSponsor", label: "Exec-Sponsor-Engagement",
-    rawValue: engaged ? "engagiert" : "nicht engagiert",
+    key: "execSponsor", label: "Exec Sponsor Engagement",
+    rawValue: engaged ? "engaged" : "not engaged",
     riskPct: engaged ? 0 : 100,
   };
 }
@@ -111,8 +111,8 @@ function scoreQBROverdue(account) {
   if (daysSinceLastQBR > 100 && daysToNextQBR > 20) risk = 100;
   else if (daysSinceLastQBR > 70) risk = 50;
   return {
-    key: "qbrOverdue", label: "QBR-Kadenz",
-    rawValue: `letztes QBR vor ${daysSinceLastQBR} Tagen · nächstes in ${daysToNextQBR} Tagen`,
+    key: "qbrOverdue", label: "QBR Cadence",
+    rawValue: `last QBR ${daysSinceLastQBR} days ago · next in ${daysToNextQBR} days`,
     riskPct: risk,
   };
 }

@@ -1,9 +1,9 @@
 import { computeHealthScore, computeExpansionScore, daysSince, daysFromToday } from "./scoring.js";
 import { fetchAccountInsight, askAboutAccount, fetchTeamPriority } from "./ai.js";
 
-const RISK_LABEL = { high: "Hoch", medium: "Mittel", low: "Niedrig" };
+const RISK_LABEL = { high: "High", medium: "Medium", low: "Low" };
 const fmtUSD = n => "$" + n.toLocaleString("en-US");
-const fmtDate = iso => new Date(iso).toLocaleDateString("de-DE", { year: "numeric", month: "short", day: "2-digit" });
+const fmtDate = iso => new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "2-digit" });
 
 let state = {
   accounts: [], csms: [], view: "portfolio",
@@ -106,10 +106,10 @@ function renderPortfolio() {
   const counts = { high: 0, medium: 0, low: 0 };
   list.forEach(a => counts[a.health.riskCategory]++);
   summary.innerHTML = `
-    <div class="summary-chip risk-high">${counts.high} Hoch</div>
-    <div class="summary-chip risk-medium">${counts.medium} Mittel</div>
-    <div class="summary-chip risk-low">${counts.low} Niedrig</div>
-    <div class="summary-chip neutral">${list.length} Accounts gesamt</div>
+    <div class="summary-chip risk-high">${counts.high} High</div>
+    <div class="summary-chip risk-medium">${counts.medium} Medium</div>
+    <div class="summary-chip risk-low">${counts.low} Low</div>
+    <div class="summary-chip neutral">${list.length} accounts total</div>
   `;
   wrap.appendChild(summary);
 
@@ -123,9 +123,9 @@ function renderPortfolio() {
   headRow.appendChild(renderSortHeader("ARR", "arr"));
   headRow.appendChild(renderSortHeader("Renewal", "renewal"));
   headRow.appendChild(renderSortHeader("Health Score", "score"));
-  const th2 = document.createElement("th"); th2.textContent = "Risiko"; headRow.appendChild(th2);
+  const th2 = document.createElement("th"); th2.textContent = "Risk"; headRow.appendChild(th2);
   headRow.appendChild(renderSortHeader("Expansion", "expansion"));
-  ["Letzte Interaktion", "Nächstes QBR"].forEach(h => { const th = document.createElement("th"); th.textContent = h; headRow.appendChild(th); });
+  ["Last Interaction", "Next QBR"].forEach(h => { const th = document.createElement("th"); th.textContent = h; headRow.appendChild(th); });
   thead.appendChild(headRow);
   table.appendChild(thead);
 
@@ -182,10 +182,10 @@ function renderAccountDetail(acc) {
     </tr>
   `).join("");
 
-  const modules = acc.licensedModules.map(m => `<li>${escapeHtml(m.name)} — ${m.tier} (${m.licensedUsers} User)</li>`).join("");
+  const modules = acc.licensedModules.map(m => `<li>${escapeHtml(m.name)} — ${m.tier} (${m.licensedUsers} users)</li>`).join("");
   const whitespace = acc.expansion.whitespaceModules.length
-    ? `<p class="sub">Ungenutzte Module (Expansion-Whitespace): ${acc.expansion.whitespaceModules.join(", ")}</p>`
-    : `<p class="sub">Alle Module lizenziert.</p>`;
+    ? `<p class="sub">Unused modules (expansion whitespace): ${acc.expansion.whitespaceModules.join(", ")}</p>`
+    : `<p class="sub">All modules licensed.</p>`;
 
   const artifacts = acc.freeTextArtifacts.map(a => `
     <div class="artifact">
@@ -197,20 +197,20 @@ function renderAccountDetail(acc) {
   div.innerHTML = `
     <div class="detail-grid">
       <div>
-        <h4>Score-Aufschlüsselung</h4>
-        <p class="sub">Risikopunkte pro Kriterium — Summe wird vom Health Score (100) abgezogen. Health Score ${acc.health.score} = 100 − ${Math.round(acc.health.criteria.reduce((s, c) => s + c.points, 0))} Risikopunkte.</p>
+        <h4>Score Breakdown</h4>
+        <p class="sub">Risk points per criterion — the total is subtracted from the Health Score (100). Health Score ${acc.health.score} = 100 − ${Math.round(acc.health.criteria.reduce((s, c) => s + c.points, 0))} risk points.</p>
         <table class="breakdown-table"><tbody>${criteriaRows}</tbody></table>
       </div>
       <div>
-        <h4>Vertrag & Lizenzierung</h4>
-        <p>${acc.contract.type === "multi-year" ? `Mehrjahresvertrag (${acc.contract.termYears} Jahre)` : "Einzeljahresvertrag"}, seit ${fmtDate(acc.contract.startDate)}</p>
+        <h4>Contract & Licensing</h4>
+        <p>${acc.contract.type === "multi-year" ? `Multi-year contract (${acc.contract.termYears} years)` : "Single-year contract"}, since ${fmtDate(acc.contract.startDate)}</p>
         <ul>${modules}</ul>
         ${whitespace}
-        <h4>Beziehung</h4>
+        <h4>Relationship</h4>
         <p>Champion: ${escapeHtml(acc.relationship.championName)} (${acc.relationship.championStatus})<br/>
-        Exec-Sponsor: ${acc.relationship.execSponsorEngaged ? "engagiert" : "nicht engagiert"}<br/>
-        Letztes QBR: ${fmtDate(acc.relationship.lastQBRDate)}</p>
-        <h4>Notizen (Support/Kommunikation)</h4>
+        Exec sponsor: ${acc.relationship.execSponsorEngaged ? "engaged" : "not engaged"}<br/>
+        Last QBR: ${fmtDate(acc.relationship.lastQBRDate)}</p>
+        <h4>Notes (Support/Communication)</h4>
         ${artifacts}
       </div>
     </div>
@@ -226,11 +226,11 @@ function renderAiSection(container, acc) {
   const ask = state.aiAsk[acc.accountId] || { status: "idle", question: "" };
 
   container.innerHTML = `
-    <h4>KI-Insights <span class="ai-disclaimer">— KI-generiert, kann ungenau sein, vor Handeln prüfen</span></h4>
+    <h4>AI Insights <span class="ai-disclaimer">— AI-generated, may be inaccurate, verify before acting</span></h4>
     <div class="ai-insight-body"></div>
     <div class="ai-ask">
-      <input type="text" class="ai-ask-input" placeholder="Frage zu diesem Account stellen…" value="${escapeHtml(ask.question || "")}" />
-      <button class="ai-ask-btn">Fragen</button>
+      <input type="text" class="ai-ask-input" placeholder="Ask a question about this account…" value="${escapeHtml(ask.question || "")}" />
+      <button class="ai-ask-btn">Ask</button>
     </div>
     <div class="ai-ask-answer"></div>
   `;
@@ -239,13 +239,13 @@ function renderAiSection(container, acc) {
   if (insight.status === "idle") {
     const btn = document.createElement("button");
     btn.className = "ai-load-btn";
-    btn.textContent = "KI-Insights laden";
+    btn.textContent = "Load AI Insights";
     btn.addEventListener("click", () => loadInsight(acc.accountId));
     body.appendChild(btn);
   } else if (insight.status === "loading") {
-    body.innerHTML = `<p class="sub">Lädt…</p>`;
+    body.innerHTML = `<p class="sub">Loading…</p>`;
   } else if (insight.status === "error") {
-    body.innerHTML = `<p class="ai-unavailable">KI-Insights nicht verfügbar (${escapeHtml(insight.error)}). Berechneter Score bleibt unverändert gültig.</p>`;
+    body.innerHTML = `<p class="ai-unavailable">AI insights unavailable (${escapeHtml(insight.error)}). Calculated score remains valid.</p>`;
   } else if (insight.status === "done") {
     const d = insight.data;
     const recs = (d.recommendations || []).map(r => `<li>${escapeHtml(r)}</li>`).join("");
@@ -262,8 +262,8 @@ function renderAiSection(container, acc) {
   askInput.addEventListener("keydown", e => { if (e.key === "Enter") submitAsk(acc.accountId, askInput.value); });
 
   const answerBox = container.querySelector(".ai-ask-answer");
-  if (ask.status === "loading") answerBox.innerHTML = `<p class="sub">Lädt…</p>`;
-  else if (ask.status === "error") answerBox.innerHTML = `<p class="ai-unavailable">Antwort nicht verfügbar (${escapeHtml(ask.error)}).</p>`;
+  if (ask.status === "loading") answerBox.innerHTML = `<p class="sub">Loading…</p>`;
+  else if (ask.status === "error") answerBox.innerHTML = `<p class="ai-unavailable">Answer unavailable (${escapeHtml(ask.error)}).</p>`;
   else if (ask.status === "done") answerBox.innerHTML = `<p class="ai-answer">${escapeHtml(ask.answer)}</p>`;
 }
 
@@ -297,19 +297,19 @@ function renderTeam() {
 
   const priorityBox = document.createElement("div");
   priorityBox.className = "team-priority-box";
-  priorityBox.innerHTML = `<h4>KI-Wochenpriorisierung <span class="ai-disclaimer">— KI-generiert, kann ungenau sein, vor Handeln prüfen</span></h4><div class="team-priority-body"></div>`;
+  priorityBox.innerHTML = `<h4>AI Weekly Priorities <span class="ai-disclaimer">— AI-generated, may be inaccurate, verify before acting</span></h4><div class="team-priority-body"></div>`;
   const body = priorityBox.querySelector(".team-priority-body");
 
   if (state.teamPriority.status === "idle") {
     const btn = document.createElement("button");
     btn.className = "ai-load-btn";
-    btn.textContent = "KI-Priorisierung für das gesamte Team laden";
+    btn.textContent = "Load AI Prioritization for the Whole Team";
     btn.addEventListener("click", loadTeamPriority);
     body.appendChild(btn);
   } else if (state.teamPriority.status === "loading") {
-    body.innerHTML = `<p class="sub">Lädt…</p>`;
+    body.innerHTML = `<p class="sub">Loading…</p>`;
   } else if (state.teamPriority.status === "error") {
-    body.innerHTML = `<p class="ai-unavailable">Nicht verfügbar (${escapeHtml(state.teamPriority.error)}).</p>`;
+    body.innerHTML = `<p class="ai-unavailable">Unavailable (${escapeHtml(state.teamPriority.error)}).</p>`;
   } else if (state.teamPriority.status === "done") {
     const items = (state.teamPriority.data.priorities || []).map(p => `
       <li><strong>${escapeHtml(p.accountName)}</strong> — <span class="sub">${escapeHtml(p.reason)}</span></li>
@@ -336,14 +336,14 @@ function renderTeam() {
       <h3>${escapeHtml(csm.name)}</h3>
       <p class="sub">${escapeHtml(csm.regionCoverage)} · ${accs.length} Accounts</p>
       <div class="summary-bar">
-        <div class="summary-chip risk-high">${counts.high} Hoch</div>
-        <div class="summary-chip risk-medium">${counts.medium} Mittel</div>
-        <div class="summary-chip risk-low">${counts.low} Niedrig</div>
+        <div class="summary-chip risk-high">${counts.high} High</div>
+        <div class="summary-chip risk-medium">${counts.medium} Medium</div>
+        <div class="summary-chip risk-low">${counts.low} Low</div>
       </div>
       <div class="csm-stats">
-        <div><span class="stat-num">${fmtUSD(arrAtRisk)}</span><span class="stat-label">ARR bei Hochrisiko-Accounts</span></div>
-        <div><span class="stat-num">${upcomingRenewals}</span><span class="stat-label">Renewals in 90 Tagen</span></div>
-        <div><span class="stat-num">${overdueQBRs}</span><span class="stat-label">QBR überfällig</span></div>
+        <div><span class="stat-num">${fmtUSD(arrAtRisk)}</span><span class="stat-label">ARR in high-risk accounts</span></div>
+        <div><span class="stat-num">${upcomingRenewals}</span><span class="stat-label">Renewals within 90 days</span></div>
+        <div><span class="stat-num">${overdueQBRs}</span><span class="stat-label">QBR overdue</span></div>
       </div>
     `;
     grid.appendChild(card);
