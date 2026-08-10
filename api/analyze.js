@@ -42,6 +42,38 @@ function getAllowedOrigins() {
     .split(",").map(s => s.trim()).filter(Boolean);
 }
 
+const MOCK_MODE = process.env.MOCK_AI === "true";
+
+function mockInsight(account) {
+  const health = computeHealthScore(account);
+  return {
+    sentiment: {
+      label: health.riskCategory === "high" ? "negative" : health.riskCategory === "medium" ? "neutral" : "positive",
+      rationale: `[MOCK] Basierend auf ${account.freeTextArtifacts.length} Text-Snippet(s), z.B. "${account.freeTextArtifacts[0]?.text.slice(0, 60)}..."`,
+    },
+    narrative: `[MOCK-Antwort, keine echte KI] ${account.accountName} hat einen Health Score von ${health.score} (${health.riskCategory}). Top-Treiber: ${health.criteria[0].label}.`,
+    recommendations: [
+      "[MOCK] Rufe den Kunden an und kläre das Hauptthema.",
+      "[MOCK] Prüfe den Champion-Status vor dem nächsten QBR.",
+    ],
+  };
+}
+
+function mockAsk(account, question) {
+  return { answer: `[MOCK-Antwort, keine echte KI] Zu "${question}" bei ${account.accountName}: Der Score liegt bei ${computeHealthScore(account).score}, das ist eine simulierte Antwort für lokale Tests.` };
+}
+
+function mockTeamPriority(csmId) {
+  const accounts = ACCOUNTS.filter(a => !csmId || a.csmId === csmId).slice(0, 5);
+  return {
+    priorities: accounts.map(a => ({
+      accountId: a.accountId,
+      accountName: a.accountName,
+      reason: "[MOCK] Simulierte Priorisierung für lokalen Test, keine echte KI-Antwort.",
+    })),
+  };
+}
+
 async function callClaude(apiKey, system, user, maxTokens) {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -99,6 +131,10 @@ ${quotes}`;
 }
 
 async function handleAccountInsight(apiKey, account) {
+  if (MOCK_MODE) {
+    await new Promise(r => setTimeout(r, 500));
+    return mockInsight(account);
+  }
   const user = `${accountContext(account)}
 
 Respond with ONLY this JSON schema:
@@ -113,6 +149,10 @@ Respond with ONLY this JSON schema:
 
 async function handleAsk(apiKey, account, question) {
   const safeQuestion = String(question || "").slice(0, 500);
+  if (MOCK_MODE) {
+    await new Promise(r => setTimeout(r, 500));
+    return mockAsk(account, safeQuestion);
+  }
   const user = `${accountContext(account)}
 
 The CSM asks: "${safeQuestion}"
@@ -124,6 +164,10 @@ Respond with ONLY this JSON schema:
 }
 
 async function handleTeamPriority(apiKey, csmId) {
+  if (MOCK_MODE) {
+    await new Promise(r => setTimeout(r, 500));
+    return mockTeamPriority(csmId);
+  }
   const accounts = ACCOUNTS.filter(a => !csmId || a.csmId === csmId).map(a => {
     const health = computeHealthScore(a);
     return { a, health };
@@ -169,7 +213,7 @@ export default async function handler(req, res) {
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
+  if (!apiKey && !MOCK_MODE) {
     return res.status(503).json({ error: "AI layer not configured (no API key)." });
   }
 
