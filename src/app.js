@@ -8,7 +8,7 @@ const fmtDate = iso => new Date(iso).toLocaleDateString("de-DE", { year: "numeri
 let state = {
   accounts: [], csms: [], view: "portfolio",
   filters: { csm: "all", region: "all", risk: "all" },
-  sort: { key: "score", dir: "desc" }, expanded: null,
+  sort: { key: "score", dir: "asc" }, expanded: null, // asc = lowest Health Score (most concerning) first
   aiInsights: {}, // accountId -> { status: 'idle'|'loading'|'done'|'error', data, error }
   aiAsk: {},      // accountId -> { question, status, answer, error }
   teamPriority: { status: "idle", data: null, error: null },
@@ -198,6 +198,7 @@ function renderAccountDetail(acc) {
     <div class="detail-grid">
       <div>
         <h4>Score-Aufschlüsselung</h4>
+        <p class="sub">Risikopunkte pro Kriterium — Summe wird vom Health Score (100) abgezogen. Health Score ${acc.health.score} = 100 − ${Math.round(acc.health.criteria.reduce((s, c) => s + c.points, 0))} Risikopunkte.</p>
         <table class="breakdown-table"><tbody>${criteriaRows}</tbody></table>
       </div>
       <div>

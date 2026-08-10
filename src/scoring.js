@@ -129,8 +129,12 @@ export function computeHealthScore(account) {
     scoreQBROverdue(account),
   ].map(c => ({ ...c, weight: WEIGHTS[c.key], points: c.riskPct * WEIGHTS[c.key] }));
 
-  const score = Math.round(criteria.reduce((sum, c) => sum + c.points, 0));
-  const riskCategory = score >= 60 ? "high" : score >= 30 ? "medium" : "low";
+  // Each criterion's `points` is a risk contribution (higher = more concerning) —
+  // that's what the breakdown table explains. The Health Score itself is the
+  // inverse, matching standard CS convention (Gainsight etc.): higher = healthier.
+  const riskPoints = criteria.reduce((sum, c) => sum + c.points, 0);
+  const score = Math.round(100 - riskPoints);
+  const riskCategory = riskPoints >= 60 ? "high" : riskPoints >= 30 ? "medium" : "low";
 
   return { score, riskCategory, criteria: criteria.sort((a, b) => b.points - a.points) };
 }
