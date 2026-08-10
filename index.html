@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Account Health Copilot</title>
+<link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+
+<header>
+  <h1>Account Health Copilot</h1>
+  <p>Portfolio- und Team-Übersicht für Customer Success — Health Score, Churn Risk & Expansion Potenzial.</p>
+</header>
+
+<div class="disclaimer">
+  Demo-Daten — es werden keine echten Kundeninformationen verwendet oder gespeichert. Domänenlogik inspiriert von realer CSM-Erfahrung mit SAS CI360 & Gainsight, alle Accounts sind fiktiv.
+</div>
+
+<nav class="tabs">
+  <button id="tab-portfolio" class="active">Portfolio</button>
+  <button id="tab-team">Team</button>
+</nav>
+
+<div id="filters">
+  <label>CSM: <select id="filter-csm"><option value="all">Alle</option></select></label>
+  <label>Region: <select id="filter-region"><option value="all">Alle</option><option value="EMEA">EMEA</option><option value="APAC">APAC</option></select></label>
+  <label>Risiko: <select id="filter-risk"><option value="all">Alle</option><option value="high">Hoch</option><option value="medium">Mittel</option><option value="low">Niedrig</option></select></label>
+</div>
+
+<main id="app"></main>
+
+<footer>Sprint 1 — deterministische Scoring-Engine, kein KI-Layer aktiv.</footer>
+
+<script type="module" src="src/app.js"></script>
+</body>
+</html>
