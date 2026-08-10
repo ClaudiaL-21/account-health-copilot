@@ -9,6 +9,7 @@ let state = {
   accounts: [], csms: [], view: "portfolio",
   filters: { csm: "all", region: "all", risk: "all" },
   sort: { key: "score", dir: "asc" }, expanded: null, // asc = lowest Health Score (most concerning) first
+  matrixSelected: null, // accountId selected in the Matrix view (inline detail, no navigation)
   aiInsights: {}, // accountId -> { status: 'idle'|'loading'|'done'|'error', data, error }
   aiAsk: {},      // accountId -> { question, status, answer, error }
   teamPriority: { status: "idle", data: null, error: null },
@@ -343,6 +344,19 @@ function renderMatrix() {
     </circle>`;
   }).join("");
 
+  // Quadrant label blocks: title + one-line description, with a background
+  // chip so they stay legible over dots. Positioned inset from the corners.
+  const quadrantLabels = [
+    { x: marginLeft + 12, y: marginTop + 12, anchor: "start", cls: "ql-save", title: "Save — Priority", desc: "High value, at risk. Act now." },
+    { x: marginLeft + plotW - 12, y: marginTop + 12, anchor: "end", cls: "ql-protect", title: "Protect & Expand", desc: "High value, healthy. Nurture & upsell." },
+    { x: marginLeft + 12, y: marginTop + plotH - 34, anchor: "start", cls: "ql-monitor", title: "Monitor", desc: "Lower value, at risk. Watch, don't panic." },
+    { x: marginLeft + plotW - 12, y: marginTop + plotH - 34, anchor: "end", cls: "ql-nurture", title: "Nurture / Grow", desc: "Lower value, healthy. Growth candidate." },
+  ];
+  const labelBlocks = quadrantLabels.map(l => `
+    <text x="${l.x}" y="${l.y}" class="quadrant-label ${l.cls}" text-anchor="${l.anchor}">${escapeHtml(l.title)}</text>
+    <text x="${l.x}" y="${l.y + 16}" class="quadrant-desc ${l.cls}" text-anchor="${l.anchor}">${escapeHtml(l.desc)}</text>
+  `).join("");
+
   const svg = `
     <svg viewBox="0 0 ${W} ${H}" class="matrix-svg">
       <!-- quadrant backgrounds -->
@@ -359,11 +373,8 @@ function renderMatrix() {
       <line x1="${marginLeft}" y1="${marginTop + plotH}" x2="${marginLeft + plotW}" y2="${marginTop + plotH}" class="axis-line" />
       <line x1="${marginLeft}" y1="${marginTop}" x2="${marginLeft}" y2="${marginTop + plotH}" class="axis-line" />
 
-      <!-- quadrant labels -->
-      <text x="${marginLeft + 10}" y="${marginTop + 18}" class="quadrant-label">Save — Priority</text>
-      <text x="${marginLeft + plotW - 10}" y="${marginTop + 18}" class="quadrant-label" text-anchor="end">Protect &amp; Expand</text>
-      <text x="${marginLeft + 10}" y="${marginTop + plotH - 8}" class="quadrant-label">Monitor</text>
-      <text x="${marginLeft + plotW - 10}" y="${marginTop + plotH - 8}" class="quadrant-label" text-anchor="end">Nurture / Grow</text>
+      <!-- quadrant labels (title + description) -->
+      ${labelBlocks}
 
       <!-- axis titles -->
       <text x="${marginLeft + plotW / 2}" y="${H - 12}" class="axis-title" text-anchor="middle">Health Score →</text>
@@ -373,9 +384,26 @@ function renderMatrix() {
     </svg>
   `;
 
+  const selected = state.matrixSelected ? list.find(a => a.accountId === state.matrixSelected) : null;
+  const detailPanel = selected ? `
+    <div class="matrix-detail">
+      <button class="matrix-detail-close" aria-label="Close">&times;</button>
+      <h4>${escapeHtml(selected.accountName)} <span class="status-pill risk-${selected.health.riskCategory}">${RISK_LABEL[selected.health.riskCategory]}</span></h4>
+      <p class="sub">${escapeHtml(selected.industry)} · ${escapeHtml(selected.subregion)} · ${escapeHtml(csmName(selected.csmId))}</p>
+      <div class="matrix-detail-stats">
+        <div><span class="stat-num risk-text-${selected.health.riskCategory}">${selected.health.score}</span><span class="stat-label">Health Score</span></div>
+        <div><span class="stat-num">${fmtUSD(selected.contract.arrUSD)}</span><span class="stat-label">ARR</span></div>
+        <div><span class="stat-num exp-text-${selected.expansion.category}">${selected.expansion.score}</span><span class="stat-label">Expansion</span></div>
+      </div>
+      <p class="sub">Top driver: ${escapeHtml(selected.health.criteria[0].label)} (${escapeHtml(String(selected.health.criteria[0].rawValue))})</p>
+      <button class="ai-load-btn matrix-detail-link">View full details in Portfolio →</button>
+    </div>
+  ` : "";
+
   wrap.innerHTML = `
-    <p class="sub">Each dot is an account — X: Health Score, Y: ARR. Quadrant lines split at Health ${healthMid} and median ARR (${fmtUSD(Math.round(arrMedian))}) of the currently filtered accounts.</p>
+    <p class="sub">Each dot is an account — X: Health Score, Y: ARR. Quadrant lines split at Health ${healthMid} and median ARR (${fmtUSD(Math.round(arrMedian))}) of the currently filtered accounts. Click a dot for details.</p>
     <div class="matrix-wrap">${svg}</div>
+    ${detailPanel}
     <div class="summary-bar" style="margin-top:14px;">
       <div class="summary-chip risk-high">● High risk</div>
       <div class="summary-chip risk-medium">● Medium risk</div>
@@ -385,11 +413,23 @@ function renderMatrix() {
 
   wrap.querySelectorAll(".matrix-dot").forEach(dot => {
     dot.addEventListener("click", () => {
-      state.view = "portfolio";
-      state.expanded = dot.dataset.accountId;
+      state.matrixSelected = dot.dataset.accountId;
       render();
-      document.getElementById(`detail-${dot.dataset.accountId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
+  });
+
+  wrap.querySelector(".matrix-detail-close")?.addEventListener("click", () => {
+    state.matrixSelected = null;
+    render();
+  });
+
+  wrap.querySelector(".matrix-detail-link")?.addEventListener("click", () => {
+    const id = state.matrixSelected;
+    state.view = "portfolio";
+    state.expanded = id;
+    state.matrixSelected = null;
+    render();
+    document.getElementById(`detail-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
   });
 
   return wrap;

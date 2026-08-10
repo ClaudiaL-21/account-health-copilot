@@ -139,13 +139,37 @@ table.portfolio-table tbody tr:not(.detail-row):hover { background: #fafafa; }
 .quadrant-nurture { fill: var(--blue-bg); }
 .quadrant-divider { stroke: var(--border); stroke-width: 1.5; stroke-dasharray: 4 4; }
 .axis-line { stroke: var(--muted); stroke-width: 1.5; }
-.quadrant-label { font-size: 12px; fill: var(--muted); font-weight: 600; }
+.quadrant-label { font-size: 14px; font-weight: 700; }
+.quadrant-desc { font-size: 11px; font-weight: 400; opacity: 0.85; }
+.ql-save { fill: #b91c1c; }
+.ql-protect { fill: #15803d; }
+.ql-monitor { fill: #475569; }
+.ql-nurture { fill: #1d4ed8; }
 .axis-title { font-size: 12px; fill: var(--muted); }
 .matrix-dot { cursor: pointer; stroke: white; stroke-width: 1.5; }
 .matrix-dot:hover { r: 9; }
 .risk-dot-high { fill: var(--red); }
 .risk-dot-medium { fill: var(--orange); }
 .risk-dot-low { fill: var(--green); }
+
+.matrix-detail {
+  position: relative;
+  margin-top: 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 18px;
+}
+.matrix-detail h4 { margin: 0 0 4px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+.matrix-detail-close {
+  position: absolute; top: 12px; right: 14px;
+  border: none; background: none; font-size: 20px; line-height: 1;
+  color: var(--muted); cursor: pointer;
+}
+.matrix-detail-stats { display: flex; gap: 24px; margin: 12px 0; }
+.matrix-detail-stats .stat-num { display: block; font-size: 20px; font-weight: 700; }
+.matrix-detail-stats .stat-label { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
+.matrix-detail-link { margin-top: 6px; }
 
 tr.risk-row-high { border-left: 3px solid var(--red); }
 tr.risk-row-medium { border-left: 3px solid var(--orange); }
