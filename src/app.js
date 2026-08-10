@@ -1,4 +1,4 @@
-import { computeHealthScore, computeExpansionScore, daysSince, daysFromToday } from "./scoring.js";
+import { computeHealthScore, computeExpansionScore, daysSince, daysFromToday, computeTrend } from "./scoring.js";
 import { fetchAccountInsight, askAboutAccount, fetchTeamPriority } from "./ai.js";
 
 const RISK_LABEL = { high: "High", medium: "Medium", low: "Low" };
@@ -7,9 +7,10 @@ const fmtDate = iso => new Date(iso).toLocaleDateString("en-US", { year: "numeri
 
 let state = {
   accounts: [], csms: [], view: "portfolio",
-  filters: { csm: "all", region: "all", risk: "all" },
+  filters: { csm: "all", region: "all", risk: "all", expansion: "all", trend: "all" },
   sort: { key: "score", dir: "asc" }, expanded: null, // asc = lowest Health Score (most concerning) first
   matrixSelected: null, // accountId selected in the Matrix view (inline detail, no navigation)
+  matrixMode: "value",  // "value" = Health x ARR, "renewal" = Health x days-to-renewal (bubble = ARR)
   aiInsights: {}, // accountId -> { status: 'idle'|'loading'|'done'|'error', data, error }
   aiAsk: {},      // accountId -> { question, status, answer, error }
   teamPriority: { status: "idle", data: null, error: null },
@@ -22,7 +23,8 @@ async function init() {
   state.accounts = data.accounts.map(acc => {
     const health = computeHealthScore(acc);
     const expansion = computeExpansionScore(acc);
-    return { ...acc, health, expansion };
+    const trend = computeTrend(acc);
+    return { ...acc, health, expansion, trend };
   });
   bindControls();
   render();
@@ -46,13 +48,21 @@ function bindControls() {
 
   const riskSelect = document.getElementById("filter-risk");
   riskSelect.addEventListener("change", e => { state.filters.risk = e.target.value; render(); });
+
+  const expansionSelect = document.getElementById("filter-expansion");
+  expansionSelect.addEventListener("change", e => { state.filters.expansion = e.target.value; render(); });
+
+  const trendSelect = document.getElementById("filter-trend");
+  trendSelect.addEventListener("change", e => { state.filters.trend = e.target.value; render(); });
 }
 
 function getFilteredAccounts() {
   return state.accounts.filter(a =>
     (state.filters.csm === "all" || a.csmId === state.filters.csm) &&
     (state.filters.region === "all" || a.region === state.filters.region) &&
-    (state.filters.risk === "all" || a.health.riskCategory === state.filters.risk)
+    (state.filters.risk === "all" || a.health.riskCategory === state.filters.risk) &&
+    (state.filters.expansion === "all" || a.expansion.category === state.filters.expansion) &&
+    (state.filters.trend === "all" || a.trend === state.filters.trend)
   );
 }
 
@@ -307,6 +317,8 @@ function median(nums) {
   return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
 }
 
+const TREND_GLYPH = { up: "▲", down: "▼", flat: "" };
+
 function renderMatrix() {
   const wrap = document.createElement("div");
   const list = getFilteredAccounts();
@@ -316,37 +328,60 @@ function renderMatrix() {
     return wrap;
   }
 
+  const mode = state.matrixMode;
   const W = 820, H = 520;
   const marginLeft = 70, marginRight = 24, marginTop = 20, marginBottom = 50;
   const plotW = W - marginLeft - marginRight;
   const plotH = H - marginTop - marginBottom;
+  const healthMid = 50;
 
   const arrValues = list.map(a => a.contract.arrUSD);
   const minArr = Math.min(...arrValues);
   const maxArr = Math.max(...arrValues);
-  const arrMedian = median(arrValues);
-  const healthMid = 50;
+
+  // yPlot is the value actually placed on the Y axis (higher = nearer the top).
+  // Value mode: yPlot = ARR (bigger deal = higher up).
+  // Renewal mode: yPlot = -daysToRenewal (sooner renewal = higher up = more urgent).
+  const yPlotOf = a => mode === "renewal" ? -daysFromToday(a.contract.nextRenewalDate) : a.contract.arrUSD;
+  const yPlotValues = list.map(yPlotOf);
+  const minY = Math.min(...yPlotValues);
+  const maxY = Math.max(...yPlotValues);
+  const yPlotMedian = median(yPlotValues);
 
   const xScale = health => marginLeft + (health / 100) * plotW;
-  const yScale = arr => {
-    if (maxArr === minArr) return marginTop + plotH / 2;
-    return marginTop + (1 - (arr - minArr) / (maxArr - minArr)) * plotH;
+  const yScale = yPlot => {
+    if (maxY === minY) return marginTop + plotH / 2;
+    return marginTop + (1 - (yPlot - minY) / (maxY - minY)) * plotH;
+  };
+  const radiusOf = a => {
+    if (mode !== "renewal") return 7;
+    if (maxArr === minArr) return 9;
+    return 5 + ((a.contract.arrUSD - minArr) / (maxArr - minArr)) * 11;
   };
 
   const quadrantX = xScale(healthMid);
-  const quadrantY = yScale(arrMedian);
+  const quadrantY = yScale(yPlotMedian);
 
   const dots = list.map(a => {
     const cx = xScale(a.health.score);
-    const cy = yScale(a.contract.arrUSD);
-    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="7" class="matrix-dot risk-dot-${a.health.riskCategory}" data-account-id="${a.accountId}">
-      <title>${escapeHtml(a.accountName)} — Health ${a.health.score}, ARR ${fmtUSD(a.contract.arrUSD)}</title>
-    </circle>`;
+    const cy = yScale(yPlotOf(a));
+    const r = radiusOf(a);
+    const glyph = TREND_GLYPH[a.trend];
+    const glyphSpan = glyph ? `<text x="${(cx + r + 2).toFixed(1)}" y="${(cy + 4).toFixed(1)}" class="trend-glyph trend-${a.trend}">${glyph}</text>` : "";
+    const yDesc = mode === "renewal" ? `renewal in ${daysFromToday(a.contract.nextRenewalDate)}d, ARR ${fmtUSD(a.contract.arrUSD)}` : `ARR ${fmtUSD(a.contract.arrUSD)}`;
+    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" class="matrix-dot risk-dot-${a.health.riskCategory}" data-account-id="${a.accountId}">
+      <title>${escapeHtml(a.accountName)} — Health ${a.health.score}, ${yDesc}, trend ${a.trend}</title>
+    </circle>${glyphSpan}`;
   }).join("");
 
   // Quadrant label blocks: title + one-line description, with a background
   // chip so they stay legible over dots. Positioned inset from the corners.
-  const quadrantLabels = [
+  const quadrantLabels = mode === "renewal" ? [
+    { x: marginLeft + 12, y: marginTop + 12, anchor: "start", cls: "ql-save", title: "Save — Urgent!", desc: "At risk, renewing soon. Call today." },
+    { x: marginLeft + plotW - 12, y: marginTop + 12, anchor: "end", cls: "ql-protect", title: "Confirm & Expand", desc: "Healthy, renewal coming up. Upsell moment." },
+    { x: marginLeft + 12, y: marginTop + plotH - 34, anchor: "start", cls: "ql-monitor", title: "Fix Quietly", desc: "At risk, renewal is distant. Fix before urgent." },
+    { x: marginLeft + plotW - 12, y: marginTop + plotH - 34, anchor: "end", cls: "ql-nurture", title: "Steady — Low Touch", desc: "Healthy, renewal is distant. No rush." },
+  ] : [
     { x: marginLeft + 12, y: marginTop + 12, anchor: "start", cls: "ql-save", title: "Save — Priority", desc: "High value, at risk. Act now." },
     { x: marginLeft + plotW - 12, y: marginTop + 12, anchor: "end", cls: "ql-protect", title: "Protect & Expand", desc: "High value, healthy. Nurture & upsell." },
     { x: marginLeft + 12, y: marginTop + plotH - 34, anchor: "start", cls: "ql-monitor", title: "Monitor", desc: "Lower value, at risk. Watch, don't panic." },
@@ -378,38 +413,58 @@ function renderMatrix() {
 
       <!-- axis titles -->
       <text x="${marginLeft + plotW / 2}" y="${H - 12}" class="axis-title" text-anchor="middle">Health Score →</text>
-      <text x="16" y="${marginTop + plotH / 2}" class="axis-title" text-anchor="middle" transform="rotate(-90, 16, ${marginTop + plotH / 2})">ARR →</text>
+      <text x="16" y="${marginTop + plotH / 2}" class="axis-title" text-anchor="middle" transform="rotate(-90, 16, ${marginTop + plotH / 2})">${mode === "renewal" ? "Renewal urgency →" : "ARR →"}</text>
+      ${mode === "renewal" ? `<text x="${marginLeft + plotW / 2}" y="${marginTop - 4}" class="axis-title" text-anchor="middle">(bubble size = ARR)</text>` : ""}
 
       ${dots}
     </svg>
   `;
 
   const selected = state.matrixSelected ? list.find(a => a.accountId === state.matrixSelected) : null;
+  const TREND_TEXT = { up: "Improving ▲", down: "Declining ▼", flat: "Stable" };
   const detailPanel = selected ? `
     <div class="matrix-detail">
       <button class="matrix-detail-close" aria-label="Close">&times;</button>
       <h4>${escapeHtml(selected.accountName)} <span class="status-pill risk-${selected.health.riskCategory}">${RISK_LABEL[selected.health.riskCategory]}</span></h4>
-      <p class="sub">${escapeHtml(selected.industry)} · ${escapeHtml(selected.subregion)} · ${escapeHtml(csmName(selected.csmId))}</p>
+      <p class="sub">${escapeHtml(selected.industry)} · ${escapeHtml(selected.subregion)} · ${escapeHtml(csmName(selected.csmId))} · CSAT trend: <span class="trend-${selected.trend}">${TREND_TEXT[selected.trend]}</span></p>
       <div class="matrix-detail-stats">
         <div><span class="stat-num risk-text-${selected.health.riskCategory}">${selected.health.score}</span><span class="stat-label">Health Score</span></div>
         <div><span class="stat-num">${fmtUSD(selected.contract.arrUSD)}</span><span class="stat-label">ARR</span></div>
         <div><span class="stat-num exp-text-${selected.expansion.category}">${selected.expansion.score}</span><span class="stat-label">Expansion</span></div>
+        <div><span class="stat-num">${daysFromToday(selected.contract.nextRenewalDate)}d</span><span class="stat-label">To Renewal</span></div>
       </div>
       <p class="sub">Top driver: ${escapeHtml(selected.health.criteria[0].label)} (${escapeHtml(String(selected.health.criteria[0].rawValue))})</p>
       <button class="ai-load-btn matrix-detail-link">View full details in Portfolio →</button>
     </div>
   ` : "";
 
+  const modeDesc = mode === "renewal"
+    ? `X: Health Score, Y: renewal urgency (sooner = higher), bubble size: ARR. Quadrant lines split at Health ${healthMid} and the median renewal date of the filtered accounts.`
+    : `X: Health Score, Y: ARR. Quadrant lines split at Health ${healthMid} and median ARR (${fmtUSD(Math.round(mode === "renewal" ? 0 : yPlotMedian))}) of the filtered accounts.`;
+
   wrap.innerHTML = `
-    <p class="sub">Each dot is an account — X: Health Score, Y: ARR. Quadrant lines split at Health ${healthMid} and median ARR (${fmtUSD(Math.round(arrMedian))}) of the currently filtered accounts. Click a dot for details.</p>
+    <div class="matrix-toggle">
+      <button class="matrix-toggle-btn ${mode === "value" ? "active" : ""}" data-mode="value">Value (Health × ARR)</button>
+      <button class="matrix-toggle-btn ${mode === "renewal" ? "active" : ""}" data-mode="renewal">Renewal Radar (Health × Time-to-Renewal)</button>
+    </div>
+    <p class="sub">Each dot is an account. ${modeDesc} ▲/▼ next to a dot = CSAT trend over the last 8 weeks. Click a dot for details.</p>
     <div class="matrix-wrap">${svg}</div>
     ${detailPanel}
     <div class="summary-bar" style="margin-top:14px;">
       <div class="summary-chip risk-high">● High risk</div>
       <div class="summary-chip risk-medium">● Medium risk</div>
       <div class="summary-chip risk-low">● Low risk</div>
+      <div class="summary-chip neutral">▲ improving / ▼ declining CSAT</div>
     </div>
   `;
+
+  wrap.querySelectorAll(".matrix-toggle-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      state.matrixMode = btn.dataset.mode;
+      state.matrixSelected = null;
+      render();
+    });
+  });
 
   wrap.querySelectorAll(".matrix-dot").forEach(dot => {
     dot.addEventListener("click", () => {

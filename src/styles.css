@@ -54,7 +54,8 @@ nav.tabs button.active { color: var(--blue); border-bottom-color: var(--blue); f
 
 #filters {
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 10px 16px;
   margin: 14px 28px 0;
   align-items: center;
   font-size: 13px;
@@ -151,6 +152,24 @@ table.portfolio-table tbody tr:not(.detail-row):hover { background: #fafafa; }
 .risk-dot-high { fill: var(--red); }
 .risk-dot-medium { fill: var(--orange); }
 .risk-dot-low { fill: var(--green); }
+.trend-glyph { font-size: 11px; font-weight: 700; pointer-events: none; }
+.trend-glyph.trend-up { fill: var(--green); }
+.trend-glyph.trend-down { fill: var(--red); }
+
+.matrix-toggle { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.matrix-toggle-btn {
+  padding: 7px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.matrix-toggle-btn.active { border-color: var(--blue); background: var(--blue-bg); color: var(--blue); font-weight: 600; }
+
+.trend-up { color: var(--green); font-weight: 600; }
+.trend-down { color: var(--red); font-weight: 600; }
 
 .matrix-detail {
   position: relative;
@@ -166,7 +185,7 @@ table.portfolio-table tbody tr:not(.detail-row):hover { background: #fafafa; }
   border: none; background: none; font-size: 20px; line-height: 1;
   color: var(--muted); cursor: pointer;
 }
-.matrix-detail-stats { display: flex; gap: 24px; margin: 12px 0; }
+.matrix-detail-stats { display: flex; gap: 24px; margin: 12px 0; flex-wrap: wrap; }
 .matrix-detail-stats .stat-num { display: block; font-size: 20px; font-weight: 700; }
 .matrix-detail-stats .stat-label { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
 .matrix-detail-link { margin-top: 6px; }

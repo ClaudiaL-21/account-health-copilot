@@ -166,3 +166,15 @@ export function daysSince(dateISO) {
 export function daysFromToday(dateISO) {
   return daysBetween(TODAY.toISOString(), new Date(dateISO));
 }
+
+// Directional signal from the most recent weekly CSAT data: are the last
+// 4 weeks trending up, down, or flat vs. the first 4 weeks of the window.
+export function computeTrend(account) {
+  const scores = account.relationship.weeklyCSAT.map(w => w.score);
+  const avgFirst = scores.slice(0, 4).reduce((a, b) => a + b, 0) / 4;
+  const avgLast = scores.slice(-4).reduce((a, b) => a + b, 0) / 4;
+  const diff = avgLast - avgFirst;
+  if (diff > 0.15) return "up";
+  if (diff < -0.15) return "down";
+  return "flat";
+}
