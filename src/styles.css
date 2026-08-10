@@ -124,6 +124,10 @@ table.portfolio-table tbody tr:not(.detail-row):hover { background: #fafafa; }
 .exp-text-medium { color: var(--orange); }
 .exp-text-low { color: var(--muted); }
 
+.adopt-text-good { color: var(--green); }
+.adopt-text-warn { color: var(--orange); }
+.adopt-text-poor { color: var(--red); }
+
 .color-legend { font-size: 11px; color: var(--muted); margin: -6px 0 14px; }
 
 .matrix-wrap {

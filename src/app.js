@@ -4,6 +4,7 @@ import { fetchAccountInsight, askAboutAccount, fetchTeamPriority } from "./ai.js
 const RISK_LABEL = { high: "High", medium: "Medium", low: "Low" };
 const fmtUSD = n => "$" + n.toLocaleString("en-US");
 const fmtDate = iso => new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "2-digit" });
+const adoptionCategory = pct => pct >= 70 ? "good" : pct >= 40 ? "warn" : "poor";
 
 let state = {
   accounts: [], csms: [], view: "portfolio",
@@ -72,6 +73,7 @@ function getSorted(list) {
     let va, vb;
     if (key === "score") { va = a.health.score; vb = b.health.score; }
     else if (key === "expansion") { va = a.expansion.score; vb = b.expansion.score; }
+    else if (key === "adoption") { va = a.usage.adoptionRatePct; vb = b.usage.adoptionRatePct; }
     else if (key === "renewal") { va = new Date(a.contract.nextRenewalDate); vb = new Date(b.contract.nextRenewalDate); }
     else if (key === "arr") { va = a.contract.arrUSD; vb = b.contract.arrUSD; }
     else { va = a.accountName; vb = b.accountName; }
@@ -129,7 +131,7 @@ function renderPortfolio() {
 
   const legend = document.createElement("p");
   legend.className = "color-legend";
-  legend.textContent = "Color legend: green/orange/red on Health Score = risk level (same signal, just colored). Green/orange/gray on Expansion = upsell opportunity (low is neutral, not a warning).";
+  legend.textContent = "Color legend: green/orange/red on Health Score and Adoption = risk level (Adoption is a real warning signal — low usage of what's licensed). Green/orange/gray on Expansion = upsell opportunity (low is neutral, not a warning).";
   wrap.appendChild(legend);
 
   const table = document.createElement("table");
@@ -143,6 +145,7 @@ function renderPortfolio() {
   headRow.appendChild(renderSortHeader("Renewal", "renewal"));
   headRow.appendChild(renderSortHeader("Health Score", "score"));
   const th2 = document.createElement("th"); th2.textContent = "Risk"; headRow.appendChild(th2);
+  headRow.appendChild(renderSortHeader("Adoption", "adoption"));
   headRow.appendChild(renderSortHeader("Expansion", "expansion"));
   ["Last Interaction", "Next QBR"].forEach(h => { const th = document.createElement("th"); th.textContent = h; headRow.appendChild(th); });
   thead.appendChild(headRow);
@@ -160,6 +163,7 @@ function renderPortfolio() {
       <td>${fmtDate(acc.contract.nextRenewalDate)}</td>
       <td><span class="score-num risk-text-${acc.health.riskCategory}">${acc.health.score}</span></td>
       <td><span class="status-pill risk-${acc.health.riskCategory}">${RISK_LABEL[acc.health.riskCategory]}</span></td>
+      <td><span class="score-num adopt-text-${adoptionCategory(acc.usage.adoptionRatePct)}">${acc.usage.adoptionRatePct}%</span></td>
       <td><span class="score-num exp-text-${acc.expansion.category}">${acc.expansion.score}</span></td>
       <td>${acc.relationship.lastInteractionDaysAgo}d</td>
       <td>${fmtDate(acc.relationship.nextQBRDate)}</td>
