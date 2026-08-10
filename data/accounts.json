@@ -136,7 +136,13 @@
           "date": "2026-08-03",
           "text": "Quick check-in, everything running smoothly on our end, no blockers to report."
         }
-      ]
+      ],
+      "location": {
+        "city": "Vienna",
+        "country": "Austria",
+        "lat": 48.2082,
+        "lng": 16.3738
+      }
     },
     {
       "accountId": "ACC-02",
@@ -246,7 +252,13 @@
           "date": "2026-08-06",
           "text": "The scheduled report export has failed silently for the past two weeks, nobody noticed until Monday."
         }
-      ]
+      ],
+      "location": {
+        "city": "Milan",
+        "country": "Italy",
+        "lat": 45.4642,
+        "lng": 9.19
+      }
     },
     {
       "accountId": "ACC-03",
@@ -356,7 +368,13 @@
           "date": "2026-07-31",
           "text": "Just wanted to say the onboarding of our new regional team went smoothly, thanks for the fast turnaround."
         }
-      ]
+      ],
+      "location": {
+        "city": "Cologne",
+        "country": "Germany",
+        "lat": 50.9375,
+        "lng": 6.9603
+      }
     },
     {
       "accountId": "ACC-04",
@@ -466,7 +484,13 @@
           "date": "2026-07-19",
           "text": "The new predictive audience feature saved our team a full day of manual segmentation last week, really impressed."
         }
-      ]
+      ],
+      "location": {
+        "city": "Madrid",
+        "country": "Spain",
+        "lat": 40.4168,
+        "lng": -3.7038
+      }
     },
     {
       "accountId": "ACC-05",
@@ -581,7 +605,13 @@
           "date": "2026-07-19",
           "text": "We're seeing strong results from the journey orchestration module and are discussing budget for a second use case next year."
         }
-      ]
+      ],
+      "location": {
+        "city": "Zurich",
+        "country": "Switzerland",
+        "lat": 47.3769,
+        "lng": 8.5417
+      }
     },
     {
       "accountId": "ACC-06",
@@ -706,7 +736,13 @@
           "date": "2026-07-30",
           "text": "Just a heads up, our main admin and platform owner left the company last month, we're still figuring out who owns this relationship internally."
         }
-      ]
+      ],
+      "location": {
+        "city": "Budapest",
+        "country": "Hungary",
+        "lat": 47.4979,
+        "lng": 19.0402
+      }
     },
     {
       "accountId": "ACC-07",
@@ -821,7 +857,13 @@
           "date": "2026-07-16",
           "text": "The new predictive audience feature saved our team a full day of manual segmentation last week, really impressed."
         }
-      ]
+      ],
+      "location": {
+        "city": "London",
+        "country": "United Kingdom",
+        "lat": 51.5074,
+        "lng": -0.1278
+      }
     },
     {
       "accountId": "ACC-08",
@@ -936,7 +978,13 @@
           "date": "2026-08-02",
           "text": "Great QBR last month, the roadmap alignment on identity resolution gave our exec team real confidence."
         }
-      ]
+      ],
+      "location": {
+        "city": "Manchester",
+        "country": "United Kingdom",
+        "lat": 53.4808,
+        "lng": -2.2426
+      }
     },
     {
       "accountId": "ACC-09",
@@ -1061,7 +1109,13 @@
           "date": "2026-07-28",
           "text": "We've been asked to justify the current tier ahead of renewal, usage numbers would help our internal case."
         }
-      ]
+      ],
+      "location": {
+        "city": "Oslo",
+        "country": "Norway",
+        "lat": 59.9139,
+        "lng": 10.7522
+      }
     },
     {
       "accountId": "ACC-10",
@@ -1181,7 +1235,13 @@
           "date": "2026-08-03",
           "text": "We've been asked to justify the current tier ahead of renewal, usage numbers would help our internal case."
         }
-      ]
+      ],
+      "location": {
+        "city": "Amsterdam",
+        "country": "Netherlands",
+        "lat": 52.3676,
+        "lng": 4.9041
+      }
     },
     {
       "accountId": "ACC-11",
@@ -1296,7 +1356,13 @@
           "date": "2026-08-08",
           "text": "Users in our EU offices keep getting logged out mid-session, IT has flagged it three times now."
         }
-      ]
+      ],
+      "location": {
+        "city": "Bergen",
+        "country": "Norway",
+        "lat": 60.3913,
+        "lng": 5.3221
+      }
     },
     {
       "accountId": "ACC-12",
@@ -1411,7 +1477,13 @@
           "date": "2026-08-01",
           "text": "The new predictive audience feature saved our team a full day of manual segmentation last week, really impressed."
         }
-      ]
+      ],
+      "location": {
+        "city": "Dublin",
+        "country": "Ireland",
+        "lat": 53.3498,
+        "lng": -6.2603
+      }
     },
     {
       "accountId": "ACC-13",
@@ -1531,7 +1603,13 @@
           "date": "2026-07-31",
           "text": "The new predictive audience feature saved our team a full day of manual segmentation last week, really impressed."
         }
-      ]
+      ],
+      "location": {
+        "city": "Rotterdam",
+        "country": "Netherlands",
+        "lat": 51.9244,
+        "lng": 4.4777
+      }
     },
     {
       "accountId": "ACC-14",
@@ -1641,7 +1719,13 @@
           "date": "2026-08-05",
           "text": "The new predictive audience feature saved our team a full day of manual segmentation last week, really impressed."
         }
-      ]
+      ],
+      "location": {
+        "city": "Kuala Lumpur",
+        "country": "Malaysia",
+        "lat": 3.139,
+        "lng": 101.6869
+      }
     },
     {
       "accountId": "ACC-15",
@@ -1756,7 +1840,13 @@
           "date": "2026-07-30",
           "text": "We're seeing strong results from the journey orchestration module and are discussing budget for a second use case next year."
         }
-      ]
+      ],
+      "location": {
+        "city": "Ho Chi Minh City",
+        "country": "Vietnam",
+        "lat": 10.8231,
+        "lng": 106.6297
+      }
     },
     {
       "accountId": "ACC-16",
@@ -1871,7 +1961,13 @@
           "date": "2026-08-04",
           "text": "Finance is reviewing all software spend this quarter, renewal conversations may take longer than usual."
         }
-      ]
+      ],
+      "location": {
+        "city": "Mumbai",
+        "country": "India",
+        "lat": 19.076,
+        "lng": 72.8777
+      }
     },
     {
       "accountId": "ACC-17",
@@ -1991,7 +2087,13 @@
           "date": "2026-07-31",
           "text": "Our integration hits the API rate limit daily during campaign launches, this is blocking our team."
         }
-      ]
+      ],
+      "location": {
+        "city": "Bangalore",
+        "country": "India",
+        "lat": 12.9716,
+        "lng": 77.5946
+      }
     },
     {
       "accountId": "ACC-18",
@@ -2101,7 +2203,13 @@
           "date": "2026-07-27",
           "text": "The new predictive audience feature saved our team a full day of manual segmentation last week, really impressed."
         }
-      ]
+      ],
+      "location": {
+        "city": "Jakarta",
+        "country": "Indonesia",
+        "lat": -6.2088,
+        "lng": 106.8456
+      }
     },
     {
       "accountId": "ACC-19",
@@ -2226,7 +2334,13 @@
           "date": "2026-08-04",
           "text": "Finance is reviewing all software spend this quarter, renewal conversations may take longer than usual."
         }
-      ]
+      ],
+      "location": {
+        "city": "Bangkok",
+        "country": "Thailand",
+        "lat": 13.7563,
+        "lng": 100.5018
+      }
     },
     {
       "accountId": "ACC-20",
@@ -2336,7 +2450,13 @@
           "date": "2026-08-03",
           "text": "We're seeing strong results from the journey orchestration module and are discussing budget for a second use case next year."
         }
-      ]
+      ],
+      "location": {
+        "city": "Tokyo",
+        "country": "Japan",
+        "lat": 35.6762,
+        "lng": 139.6503
+      }
     },
     {
       "accountId": "ACC-21",
@@ -2446,7 +2566,13 @@
           "date": "2026-07-24",
           "text": "Great QBR last month, the roadmap alignment on identity resolution gave our exec team real confidence."
         }
-      ]
+      ],
+      "location": {
+        "city": "Seoul",
+        "country": "South Korea",
+        "lat": 37.5665,
+        "lng": 126.978
+      }
     },
     {
       "accountId": "ACC-22",
@@ -2556,7 +2682,13 @@
           "date": "2026-07-19",
           "text": "Great QBR last month, the roadmap alignment on identity resolution gave our exec team real confidence."
         }
-      ]
+      ],
+      "location": {
+        "city": "Sydney",
+        "country": "Australia",
+        "lat": -33.8688,
+        "lng": 151.2093
+      }
     },
     {
       "accountId": "ACC-23",
@@ -2671,7 +2803,13 @@
           "date": "2026-07-28",
           "text": "Data activation to our ad platforms is delayed by 48h+, our campaigns are running on stale segments."
         }
-      ]
+      ],
+      "location": {
+        "city": "Melbourne",
+        "country": "Australia",
+        "lat": -37.8136,
+        "lng": 144.9631
+      }
     },
     {
       "accountId": "ACC-24",
@@ -2781,7 +2919,13 @@
           "date": "2026-07-24",
           "text": "Quick check-in, everything running smoothly on our end, no blockers to report."
         }
-      ]
+      ],
+      "location": {
+        "city": "Auckland",
+        "country": "New Zealand",
+        "lat": -36.8485,
+        "lng": 174.7633
+      }
     },
     {
       "accountId": "ACC-25",
@@ -2901,7 +3045,13 @@
           "date": "2026-07-25",
           "text": "Quick check-in, everything running smoothly on our end, no blockers to report."
         }
-      ]
+      ],
+      "location": {
+        "city": "Nagoya",
+        "country": "Japan",
+        "lat": 35.1815,
+        "lng": 136.9066
+      }
     }
   ]
 }

@@ -58,6 +58,10 @@ relationship:
 
 freeTextArtifacts: [{ type ("ticket"|"email"|"chat"), date, text }]
   — für den späteren KI-Layer (Sentiment, Narrativ, Empfehlungen)
+
+location: { city, country, lat, lng }
+  — fiktiver Firmensitz pro Account, passend zur bestehenden subregion,
+  vorbereitet für eine spätere Kartenansicht (noch nicht in der App genutzt)
 ```
 
 ## Bewusste Annahmen (bitte gegenlesen)
