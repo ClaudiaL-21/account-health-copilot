@@ -29,6 +29,7 @@ async function init() {
 
 function bindControls() {
   document.getElementById("tab-portfolio").addEventListener("click", () => { state.view = "portfolio"; render(); });
+  document.getElementById("tab-matrix").addEventListener("click", () => { state.view = "matrix"; render(); });
   document.getElementById("tab-team").addEventListener("click", () => { state.view = "team"; render(); });
 
   const csmSelect = document.getElementById("filter-csm");
@@ -76,12 +77,14 @@ function csmName(csmId) {
 
 function render() {
   document.getElementById("tab-portfolio").classList.toggle("active", state.view === "portfolio");
+  document.getElementById("tab-matrix").classList.toggle("active", state.view === "matrix");
   document.getElementById("tab-team").classList.toggle("active", state.view === "team");
-  document.getElementById("filters").style.display = state.view === "portfolio" ? "flex" : "none";
+  document.getElementById("filters").style.display = state.view === "team" ? "none" : "flex";
 
   const root = document.getElementById("app");
   root.innerHTML = "";
   if (state.view === "portfolio") root.appendChild(renderPortfolio());
+  else if (state.view === "matrix") root.appendChild(renderMatrix());
   else root.appendChild(renderTeam());
 }
 
@@ -113,6 +116,11 @@ function renderPortfolio() {
   `;
   wrap.appendChild(summary);
 
+  const legend = document.createElement("p");
+  legend.className = "color-legend";
+  legend.textContent = "Color legend: green/orange/red on Health Score = risk level (same signal, just colored). Green/orange/gray on Expansion = upsell opportunity (low is neutral, not a warning).";
+  wrap.appendChild(legend);
+
   const table = document.createElement("table");
   table.className = "portfolio-table";
   const thead = document.createElement("thead");
@@ -139,9 +147,9 @@ function renderPortfolio() {
       <td>${escapeHtml(csmName(acc.csmId))}</td>
       <td>${fmtUSD(acc.contract.arrUSD)}</td>
       <td>${fmtDate(acc.contract.nextRenewalDate)}</td>
-      <td><span class="score-num">${acc.health.score}</span></td>
+      <td><span class="score-num risk-text-${acc.health.riskCategory}">${acc.health.score}</span></td>
       <td><span class="status-pill risk-${acc.health.riskCategory}">${RISK_LABEL[acc.health.riskCategory]}</span></td>
-      <td>${acc.expansion.score}</td>
+      <td><span class="score-num exp-text-${acc.expansion.category}">${acc.expansion.score}</span></td>
       <td>${acc.relationship.lastInteractionDaysAgo}d</td>
       <td>${fmtDate(acc.relationship.nextQBRDate)}</td>
     `;
@@ -290,6 +298,101 @@ async function submitAsk(accountId, questionText) {
     state.aiAsk[accountId] = { status: "error", question: questionText, error: e.message };
   }
   render();
+}
+
+function median(nums) {
+  const sorted = [...nums].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+}
+
+function renderMatrix() {
+  const wrap = document.createElement("div");
+  const list = getFilteredAccounts();
+
+  if (list.length === 0) {
+    wrap.innerHTML = `<p class="sub">No accounts match the current filters.</p>`;
+    return wrap;
+  }
+
+  const W = 820, H = 520;
+  const marginLeft = 70, marginRight = 24, marginTop = 20, marginBottom = 50;
+  const plotW = W - marginLeft - marginRight;
+  const plotH = H - marginTop - marginBottom;
+
+  const arrValues = list.map(a => a.contract.arrUSD);
+  const minArr = Math.min(...arrValues);
+  const maxArr = Math.max(...arrValues);
+  const arrMedian = median(arrValues);
+  const healthMid = 50;
+
+  const xScale = health => marginLeft + (health / 100) * plotW;
+  const yScale = arr => {
+    if (maxArr === minArr) return marginTop + plotH / 2;
+    return marginTop + (1 - (arr - minArr) / (maxArr - minArr)) * plotH;
+  };
+
+  const quadrantX = xScale(healthMid);
+  const quadrantY = yScale(arrMedian);
+
+  const dots = list.map(a => {
+    const cx = xScale(a.health.score);
+    const cy = yScale(a.contract.arrUSD);
+    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="7" class="matrix-dot risk-dot-${a.health.riskCategory}" data-account-id="${a.accountId}">
+      <title>${escapeHtml(a.accountName)} — Health ${a.health.score}, ARR ${fmtUSD(a.contract.arrUSD)}</title>
+    </circle>`;
+  }).join("");
+
+  const svg = `
+    <svg viewBox="0 0 ${W} ${H}" class="matrix-svg">
+      <!-- quadrant backgrounds -->
+      <rect x="${marginLeft}" y="${marginTop}" width="${quadrantX - marginLeft}" height="${quadrantY - marginTop}" class="quadrant-bg quadrant-save" />
+      <rect x="${quadrantX}" y="${marginTop}" width="${marginLeft + plotW - quadrantX}" height="${quadrantY - marginTop}" class="quadrant-bg quadrant-protect" />
+      <rect x="${marginLeft}" y="${quadrantY}" width="${quadrantX - marginLeft}" height="${marginTop + plotH - quadrantY}" class="quadrant-bg quadrant-monitor" />
+      <rect x="${quadrantX}" y="${quadrantY}" width="${marginLeft + plotW - quadrantX}" height="${marginTop + plotH - quadrantY}" class="quadrant-bg quadrant-nurture" />
+
+      <!-- quadrant divider lines -->
+      <line x1="${quadrantX}" y1="${marginTop}" x2="${quadrantX}" y2="${marginTop + plotH}" class="quadrant-divider" />
+      <line x1="${marginLeft}" y1="${quadrantY}" x2="${marginLeft + plotW}" y2="${quadrantY}" class="quadrant-divider" />
+
+      <!-- axes -->
+      <line x1="${marginLeft}" y1="${marginTop + plotH}" x2="${marginLeft + plotW}" y2="${marginTop + plotH}" class="axis-line" />
+      <line x1="${marginLeft}" y1="${marginTop}" x2="${marginLeft}" y2="${marginTop + plotH}" class="axis-line" />
+
+      <!-- quadrant labels -->
+      <text x="${marginLeft + 10}" y="${marginTop + 18}" class="quadrant-label">Save — Priority</text>
+      <text x="${marginLeft + plotW - 10}" y="${marginTop + 18}" class="quadrant-label" text-anchor="end">Protect &amp; Expand</text>
+      <text x="${marginLeft + 10}" y="${marginTop + plotH - 8}" class="quadrant-label">Monitor</text>
+      <text x="${marginLeft + plotW - 10}" y="${marginTop + plotH - 8}" class="quadrant-label" text-anchor="end">Nurture / Grow</text>
+
+      <!-- axis titles -->
+      <text x="${marginLeft + plotW / 2}" y="${H - 12}" class="axis-title" text-anchor="middle">Health Score →</text>
+      <text x="16" y="${marginTop + plotH / 2}" class="axis-title" text-anchor="middle" transform="rotate(-90, 16, ${marginTop + plotH / 2})">ARR →</text>
+
+      ${dots}
+    </svg>
+  `;
+
+  wrap.innerHTML = `
+    <p class="sub">Each dot is an account — X: Health Score, Y: ARR. Quadrant lines split at Health ${healthMid} and median ARR (${fmtUSD(Math.round(arrMedian))}) of the currently filtered accounts.</p>
+    <div class="matrix-wrap">${svg}</div>
+    <div class="summary-bar" style="margin-top:14px;">
+      <div class="summary-chip risk-high">● High risk</div>
+      <div class="summary-chip risk-medium">● Medium risk</div>
+      <div class="summary-chip risk-low">● Low risk</div>
+    </div>
+  `;
+
+  wrap.querySelectorAll(".matrix-dot").forEach(dot => {
+    dot.addEventListener("click", () => {
+      state.view = "portfolio";
+      state.expanded = dot.dataset.accountId;
+      render();
+      document.getElementById(`detail-${dot.dataset.accountId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  });
+
+  return wrap;
 }
 
 function renderTeam() {

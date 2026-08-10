@@ -115,6 +115,38 @@ table.portfolio-table tbody tr:not(.detail-row):hover { background: #fafafa; }
 .status-pill.risk-medium { background: var(--orange-bg); color: var(--orange); }
 .status-pill.risk-low { background: var(--green-bg); color: var(--green); }
 
+.risk-text-high { color: var(--red); }
+.risk-text-medium { color: var(--orange); }
+.risk-text-low { color: var(--green); }
+
+.exp-text-high { color: var(--green); }
+.exp-text-medium { color: var(--orange); }
+.exp-text-low { color: var(--muted); }
+
+.color-legend { font-size: 11px; color: var(--muted); margin: -6px 0 14px; }
+
+.matrix-wrap {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+.matrix-svg { width: 100%; height: auto; display: block; }
+.quadrant-bg { opacity: 0.5; }
+.quadrant-save { fill: var(--red-bg); }
+.quadrant-protect { fill: var(--green-bg); }
+.quadrant-monitor { fill: #f1f5f9; }
+.quadrant-nurture { fill: var(--blue-bg); }
+.quadrant-divider { stroke: var(--border); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.axis-line { stroke: var(--muted); stroke-width: 1.5; }
+.quadrant-label { font-size: 12px; fill: var(--muted); font-weight: 600; }
+.axis-title { font-size: 12px; fill: var(--muted); }
+.matrix-dot { cursor: pointer; stroke: white; stroke-width: 1.5; }
+.matrix-dot:hover { r: 9; }
+.risk-dot-high { fill: var(--red); }
+.risk-dot-medium { fill: var(--orange); }
+.risk-dot-low { fill: var(--green); }
+
 tr.risk-row-high { border-left: 3px solid var(--red); }
 tr.risk-row-medium { border-left: 3px solid var(--orange); }
 tr.risk-row-low { border-left: 3px solid var(--green); }

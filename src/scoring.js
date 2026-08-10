@@ -155,7 +155,8 @@ export function computeExpansionScore(account) {
   ), 0, 100);
 
   const whitespaceModules = ALL_MODULES.filter(m => !licensedNames.includes(m));
-  return { score, whitespaceModules };
+  const category = score >= 70 ? "high" : score >= 30 ? "medium" : "low";
+  return { score, whitespaceModules, category };
 }
 
 export function daysSince(dateISO) {
