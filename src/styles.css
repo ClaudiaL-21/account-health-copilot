@@ -160,6 +160,12 @@ table.portfolio-table tbody tr:not(.detail-row):hover { background: #fafafa; }
 .trend-glyph.trend-up { fill: var(--green); }
 .trend-glyph.trend-down { fill: var(--red); }
 
+.map-svg { width: 100%; height: auto; display: block; }
+.map-ocean { fill: #eaf3fb; }
+.continent { fill: #d9e6d3; stroke: #c3d4bc; stroke-width: 1; }
+.graticule-line { stroke: #ffffff; stroke-width: 1; }
+.graticule-equator { stroke: #ffffff; stroke-width: 1.5; stroke-dasharray: 3 3; }
+
 .matrix-toggle { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
 .matrix-toggle-btn {
   padding: 7px 14px;
