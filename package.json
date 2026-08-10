@@ -1,0 +1,11 @@
+{
+  "name": "account-health-copilot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Portfolio project: Account Health & Churn Risk dashboard with an Anthropic-powered AI insight layer. All data fictional.",
+  "scripts": {
+    "dev:static": "npx --yes serve . -l 5173",
+    "dev": "npx --yes vercel dev"
+  }
+}

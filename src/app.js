@@ -1,10 +1,18 @@
 import { computeHealthScore, computeExpansionScore, daysSince, daysFromToday } from "./scoring.js";
+import { fetchAccountInsight, askAboutAccount, fetchTeamPriority } from "./ai.js";
 
 const RISK_LABEL = { high: "Hoch", medium: "Mittel", low: "Niedrig" };
 const fmtUSD = n => "$" + n.toLocaleString("en-US");
 const fmtDate = iso => new Date(iso).toLocaleDateString("de-DE", { year: "numeric", month: "short", day: "2-digit" });
 
-let state = { accounts: [], csms: [], view: "portfolio", filters: { csm: "all", region: "all", risk: "all" }, sort: { key: "score", dir: "desc" }, expanded: null };
+let state = {
+  accounts: [], csms: [], view: "portfolio",
+  filters: { csm: "all", region: "all", risk: "all" },
+  sort: { key: "score", dir: "desc" }, expanded: null,
+  aiInsights: {}, // accountId -> { status: 'idle'|'loading'|'done'|'error', data, error }
+  aiAsk: {},      // accountId -> { question, status, answer, error }
+  teamPriority: { status: "idle", data: null, error: null },
+};
 
 async function init() {
   const res = await fetch("data/accounts.json");
@@ -205,13 +213,114 @@ function renderAccountDetail(acc) {
         ${artifacts}
       </div>
     </div>
+    <div class="ai-section" id="ai-section-${acc.accountId}"></div>
   `;
+
+  renderAiSection(div.querySelector(`#ai-section-${acc.accountId}`), acc);
   return div;
+}
+
+function renderAiSection(container, acc) {
+  const insight = state.aiInsights[acc.accountId] || { status: "idle" };
+  const ask = state.aiAsk[acc.accountId] || { status: "idle", question: "" };
+
+  container.innerHTML = `
+    <h4>KI-Insights <span class="ai-disclaimer">— KI-generiert, kann ungenau sein, vor Handeln prüfen</span></h4>
+    <div class="ai-insight-body"></div>
+    <div class="ai-ask">
+      <input type="text" class="ai-ask-input" placeholder="Frage zu diesem Account stellen…" value="${escapeHtml(ask.question || "")}" />
+      <button class="ai-ask-btn">Fragen</button>
+    </div>
+    <div class="ai-ask-answer"></div>
+  `;
+
+  const body = container.querySelector(".ai-insight-body");
+  if (insight.status === "idle") {
+    const btn = document.createElement("button");
+    btn.className = "ai-load-btn";
+    btn.textContent = "KI-Insights laden";
+    btn.addEventListener("click", () => loadInsight(acc.accountId));
+    body.appendChild(btn);
+  } else if (insight.status === "loading") {
+    body.innerHTML = `<p class="sub">Lädt…</p>`;
+  } else if (insight.status === "error") {
+    body.innerHTML = `<p class="ai-unavailable">KI-Insights nicht verfügbar (${escapeHtml(insight.error)}). Berechneter Score bleibt unverändert gültig.</p>`;
+  } else if (insight.status === "done") {
+    const d = insight.data;
+    const recs = (d.recommendations || []).map(r => `<li>${escapeHtml(r)}</li>`).join("");
+    body.innerHTML = `
+      <p><strong>Sentiment:</strong> ${escapeHtml(d.sentiment?.label ?? "-")} — <span class="sub">${escapeHtml(d.sentiment?.rationale ?? "")}</span></p>
+      <p>${escapeHtml(d.narrative ?? "")}</p>
+      <ul>${recs}</ul>
+    `;
+  }
+
+  const askInput = container.querySelector(".ai-ask-input");
+  const askBtn = container.querySelector(".ai-ask-btn");
+  askBtn.addEventListener("click", () => submitAsk(acc.accountId, askInput.value));
+  askInput.addEventListener("keydown", e => { if (e.key === "Enter") submitAsk(acc.accountId, askInput.value); });
+
+  const answerBox = container.querySelector(".ai-ask-answer");
+  if (ask.status === "loading") answerBox.innerHTML = `<p class="sub">Lädt…</p>`;
+  else if (ask.status === "error") answerBox.innerHTML = `<p class="ai-unavailable">Antwort nicht verfügbar (${escapeHtml(ask.error)}).</p>`;
+  else if (ask.status === "done") answerBox.innerHTML = `<p class="ai-answer">${escapeHtml(ask.answer)}</p>`;
+}
+
+async function loadInsight(accountId) {
+  state.aiInsights[accountId] = { status: "loading" };
+  render();
+  try {
+    const data = await fetchAccountInsight(accountId);
+    state.aiInsights[accountId] = { status: "done", data };
+  } catch (e) {
+    state.aiInsights[accountId] = { status: "error", error: e.message };
+  }
+  render();
+}
+
+async function submitAsk(accountId, questionText) {
+  if (!questionText || !questionText.trim()) return;
+  state.aiAsk[accountId] = { status: "loading", question: questionText };
+  render();
+  try {
+    const data = await askAboutAccount(accountId, questionText);
+    state.aiAsk[accountId] = { status: "done", question: questionText, answer: data.answer };
+  } catch (e) {
+    state.aiAsk[accountId] = { status: "error", question: questionText, error: e.message };
+  }
+  render();
 }
 
 function renderTeam() {
   const wrap = document.createElement("div");
-  wrap.className = "team-view";
+
+  const priorityBox = document.createElement("div");
+  priorityBox.className = "team-priority-box";
+  priorityBox.innerHTML = `<h4>KI-Wochenpriorisierung <span class="ai-disclaimer">— KI-generiert, kann ungenau sein, vor Handeln prüfen</span></h4><div class="team-priority-body"></div>`;
+  const body = priorityBox.querySelector(".team-priority-body");
+
+  if (state.teamPriority.status === "idle") {
+    const btn = document.createElement("button");
+    btn.className = "ai-load-btn";
+    btn.textContent = "KI-Priorisierung für das gesamte Team laden";
+    btn.addEventListener("click", loadTeamPriority);
+    body.appendChild(btn);
+  } else if (state.teamPriority.status === "loading") {
+    body.innerHTML = `<p class="sub">Lädt…</p>`;
+  } else if (state.teamPriority.status === "error") {
+    body.innerHTML = `<p class="ai-unavailable">Nicht verfügbar (${escapeHtml(state.teamPriority.error)}).</p>`;
+  } else if (state.teamPriority.status === "done") {
+    const items = (state.teamPriority.data.priorities || []).map(p => `
+      <li><strong>${escapeHtml(p.accountName)}</strong> — <span class="sub">${escapeHtml(p.reason)}</span></li>
+    `).join("");
+    body.innerHTML = `<ol class="priority-list">${items}</ol>`;
+  }
+  wrap.appendChild(priorityBox);
+
+  const grid = document.createElement("div");
+  grid.className = "team-view";
+  wrap.appendChild(grid);
+
   state.csms.forEach(csm => {
     const accs = state.accounts.filter(a => a.csmId === csm.csmId);
     const counts = { high: 0, medium: 0, low: 0 };
@@ -236,9 +345,21 @@ function renderTeam() {
         <div><span class="stat-num">${overdueQBRs}</span><span class="stat-label">QBR überfällig</span></div>
       </div>
     `;
-    wrap.appendChild(card);
+    grid.appendChild(card);
   });
   return wrap;
+}
+
+async function loadTeamPriority() {
+  state.teamPriority = { status: "loading" };
+  render();
+  try {
+    const data = await fetchTeamPriority();
+    state.teamPriority = { status: "done", data };
+  } catch (e) {
+    state.teamPriority = { status: "error", error: e.message };
+  }
+  render();
 }
 
 function escapeHtml(str) {
