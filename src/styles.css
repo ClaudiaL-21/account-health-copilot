@@ -10,8 +10,19 @@
   --orange-bg: #fffaeb;
   --red: #dc2626;
   --red-bg: #fef2f2;
-  --blue: #2563eb;
-  --blue-bg: #eff6ff;
+
+  /* Brand palette, from the CS AI Signal Hub logo */
+  --navy: #153450;
+  --navy-bg: #eaf1f6;
+  --teal: #14b8a6;
+  --teal-bg: #ecfdfa;
+  --mint: #5eead4;
+
+  /* Accent alias — was a generic blue, now the brand teal.
+     Kept as --blue/--blue-bg so existing component styles don't
+     need touching one-by-one; still teal under the hood. */
+  --blue: var(--teal);
+  --blue-bg: var(--teal-bg);
 }
 * { box-sizing: border-box; }
 body {
@@ -22,7 +33,7 @@ body {
   font-size: 14px;
 }
 header { padding: 20px 28px 8px; }
-header h1 { margin: 0 0 4px; font-size: 20px; }
+header h1 { margin: 0 0 4px; font-size: 20px; color: var(--navy); }
 header p { margin: 0; color: var(--muted); font-size: 13px; }
 
 .disclaimer {
