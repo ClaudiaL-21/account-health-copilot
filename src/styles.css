@@ -283,6 +283,15 @@ table.breakdown-table td { padding: 5px 6px; border-bottom: 1px solid var(--bord
 }
 .nba-box p { margin: 3px 0; }
 .nba-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 4px; }
+.milestone-box {
+  margin: 8px 0 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--teal-bg);
+  border: 1px solid var(--teal);
+}
+.milestone-box p { margin: 3px 0; font-size: 13px; }
+.milestone-label { font-size: 11px; font-weight: 700; color: var(--teal); text-transform: uppercase; letter-spacing: 0.03em; }
 .ai-load-btn, .team-priority-box .ai-load-btn {
   padding: 7px 14px;
   border-radius: 6px;

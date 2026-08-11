@@ -179,6 +179,10 @@
         "country": "Austria",
         "lat": 48.2082,
         "lng": 16.3738
+      },
+      "valueMilestone": {
+        "achievedDate": "2026-04-28",
+        "description": "Champion Tom Murphy presented the platform's ROI to their own leadership team, unprompted."
       }
     },
     {
@@ -297,7 +301,8 @@
         "country": "Italy",
         "lat": 45.4642,
         "lng": 9.19
-      }
+      },
+      "valueMilestone": null
     },
     {
       "accountId": "ACC-03",
@@ -415,6 +420,10 @@
         "country": "Germany",
         "lat": 50.9375,
         "lng": 6.9603
+      },
+      "valueMilestone": {
+        "achievedDate": "2026-06-03",
+        "description": "198 of 250 licensed users are now active — the account's highest adoption rate on record."
       }
     },
     {
@@ -533,6 +542,10 @@
         "country": "Spain",
         "lat": 40.4168,
         "lng": -3.7038
+      },
+      "valueMilestone": {
+        "achievedDate": "2026-04-29",
+        "description": "Went live with Journey Orchestration across the full team after a successful pilot phase."
       }
     },
     {
@@ -681,6 +694,10 @@
         "country": "Switzerland",
         "lat": 47.3769,
         "lng": 8.5417
+      },
+      "valueMilestone": {
+        "achievedDate": "2026-07-09",
+        "description": "Reached an NPS of 9 this quarter — the account's best score in the last year."
       }
     },
     {
@@ -834,7 +851,8 @@
         "country": "Hungary",
         "lat": 47.4979,
         "lng": 19.0402
-      }
+      },
+      "valueMilestone": null
     },
     {
       "accountId": "ACC-07",
@@ -957,6 +975,10 @@
         "country": "United Kingdom",
         "lat": 51.5074,
         "lng": -0.1278
+      },
+      "valueMilestone": {
+        "achievedDate": "2026-04-30",
+        "description": "Crossed 33,607 total sessions in Predictive Analytics over the last 3 months."
       }
     },
     {
@@ -1080,6 +1102,10 @@
         "country": "United Kingdom",
         "lat": 53.4808,
         "lng": -2.2426
+      },
+      "valueMilestone": {
+        "achievedDate": "2026-07-10",
+        "description": "150 of 217 licensed users are now active — the account's highest adoption rate on record."
       }
     },
     {
@@ -1226,7 +1252,8 @@
         "country": "Norway",
         "lat": 59.9139,
         "lng": 10.7522
-      }
+      },
+      "valueMilestone": null
     },
     {
       "accountId": "ACC-10",
@@ -1369,7 +1396,8 @@
         "country": "Netherlands",
         "lat": 52.3676,
         "lng": 4.9041
-      }
+      },
+      "valueMilestone": null
     },
     {
       "accountId": "ACC-11",
@@ -1517,7 +1545,8 @@
         "country": "Norway",
         "lat": 60.3913,
         "lng": 5.3221
-      }
+      },
+      "valueMilestone": null
     },
     {
       "accountId": "ACC-12",
@@ -1640,6 +1669,10 @@
         "country": "Ireland",
         "lat": 53.3498,
         "lng": -6.2603
+      },
+      "valueMilestone": {
+        "achievedDate": "2026-06-13",
+        "description": "24 of 28 licensed users are now active — the account's highest adoption rate on record."
       }
     },
     {
@@ -1793,6 +1826,10 @@
         "country": "Netherlands",
         "lat": 51.9244,
         "lng": 4.4777
+      },
+      "valueMilestone": {
+        "achievedDate": "2026-05-09",
+        "description": "Went live with Journey Orchestration across the full team after a successful pilot phase."
       }
     },
     {
@@ -1911,6 +1948,10 @@
         "country": "Malaysia",
         "lat": 3.139,
         "lng": 101.6869
+      },
+      "valueMilestone": {
+        "achievedDate": "2026-07-19",
+        "description": "Reached an NPS of 9 this quarter — the account's best score in the last year."
       }
     },
     {
@@ -2034,6 +2075,10 @@
         "country": "Vietnam",
         "lat": 10.8231,
         "lng": 106.6297
+      },
+      "valueMilestone": {
+        "achievedDate": "2026-06-14",
+        "description": "Champion Priya Fischer presented the platform's ROI to their own leadership team, unprompted."
       }
     },
     {
@@ -2177,7 +2222,8 @@
         "country": "India",
         "lat": 19.076,
         "lng": 72.8777
-      }
+      },
+      "valueMilestone": null
     },
     {
       "accountId": "ACC-17",
@@ -2305,7 +2351,8 @@
         "country": "India",
         "lat": 12.9716,
         "lng": 77.5946
-      }
+      },
+      "valueMilestone": null
     },
     {
       "accountId": "ACC-18",
@@ -2423,6 +2470,10 @@
         "country": "Indonesia",
         "lat": -6.2088,
         "lng": 106.8456
+      },
+      "valueMilestone": {
+        "achievedDate": "2026-06-15",
+        "description": "Went live with Data Activation Hub across the full team after a successful pilot phase."
       }
     },
     {
@@ -2576,7 +2627,8 @@
         "country": "Thailand",
         "lat": 13.7563,
         "lng": 100.5018
-      }
+      },
+      "valueMilestone": null
     },
     {
       "accountId": "ACC-20",
@@ -2694,6 +2746,10 @@
         "country": "Japan",
         "lat": 35.6762,
         "lng": 139.6503
+      },
+      "valueMilestone": {
+        "achievedDate": "2026-07-28",
+        "description": "Crossed 6,567 total sessions in Journey Orchestration over the last 3 months."
       }
     },
     {
@@ -2837,6 +2893,10 @@
         "country": "South Korea",
         "lat": 37.5665,
         "lng": 126.978
+      },
+      "valueMilestone": {
+        "achievedDate": "2026-06-23",
+        "description": "158 of 216 licensed users are now active — the account's highest adoption rate on record."
       }
     },
     {
@@ -2955,6 +3015,10 @@
         "country": "Australia",
         "lat": -33.8688,
         "lng": 151.2093
+      },
+      "valueMilestone": {
+        "achievedDate": "2026-05-19",
+        "description": "Went live with Offer Management across the full team after a successful pilot phase."
       }
     },
     {
@@ -3103,7 +3167,8 @@
         "country": "Australia",
         "lat": -37.8136,
         "lng": 144.9631
-      }
+      },
+      "valueMilestone": null
     },
     {
       "accountId": "ACC-24",
@@ -3221,7 +3286,8 @@
         "country": "New Zealand",
         "lat": -36.8485,
         "lng": 174.7633
-      }
+      },
+      "valueMilestone": null
     },
     {
       "accountId": "ACC-25",
@@ -3349,7 +3415,8 @@
         "country": "Japan",
         "lat": 35.1815,
         "lng": 136.9066
-      }
+      },
+      "valueMilestone": null
     },
     {
       "accountId": "ACC-26",
@@ -3466,6 +3533,10 @@
         "country": "United States",
         "lat": 47.6062,
         "lng": -122.3321
+      },
+      "valueMilestone": {
+        "achievedDate": "2026-07-30",
+        "description": "110 of 118 licensed users are now active — the account's highest adoption rate on record."
       }
     },
     {
@@ -3583,6 +3654,10 @@
         "country": "United States",
         "lat": 40.7128,
         "lng": -74.006
+      },
+      "valueMilestone": {
+        "achievedDate": "2026-06-25",
+        "description": "Went live with Identity Resolution across the full team after a successful pilot phase."
       }
     },
     {
@@ -3710,6 +3785,10 @@
         "country": "United States",
         "lat": 41.8781,
         "lng": -87.6298
+      },
+      "valueMilestone": {
+        "achievedDate": "2026-05-21",
+        "description": "Reached an NPS of 8 this quarter — the account's best score in the last year."
       }
     },
     {
@@ -3837,7 +3916,8 @@
         "country": "Canada",
         "lat": 43.6532,
         "lng": -79.3832
-      }
+      },
+      "valueMilestone": null
     },
     {
       "accountId": "ACC-30",
@@ -3959,6 +4039,10 @@
         "country": "United States",
         "lat": 30.2672,
         "lng": -97.7431
+      },
+      "valueMilestone": {
+        "achievedDate": "2026-07-03",
+        "description": "21 of 32 licensed users are now active — the account's highest adoption rate on record."
       }
     },
     {
@@ -4081,6 +4165,10 @@
         "country": "Chile",
         "lat": -33.4489,
         "lng": -70.6693
+      },
+      "valueMilestone": {
+        "achievedDate": "2026-05-29",
+        "description": "Went live with Identity Resolution across the full team after a successful pilot phase."
       }
     },
     {
@@ -4208,6 +4296,10 @@
         "country": "Brazil",
         "lat": -23.5505,
         "lng": -46.6333
+      },
+      "valueMilestone": {
+        "achievedDate": "2026-04-24",
+        "description": "Reached an NPS of 6 this quarter — the account's best score in the last year."
       }
     },
     {
@@ -4335,6 +4427,10 @@
         "country": "Argentina",
         "lat": -34.6037,
         "lng": -58.3816
+      },
+      "valueMilestone": {
+        "achievedDate": "2026-07-04",
+        "description": "Champion Ava Ramirez presented the platform's ROI to their own leadership team, unprompted."
       }
     },
     {
@@ -4472,7 +4568,8 @@
         "country": "Brazil",
         "lat": -22.9068,
         "lng": -43.1729
-      }
+      },
+      "valueMilestone": null
     },
     {
       "accountId": "ACC-35",
@@ -4589,6 +4686,10 @@
         "country": "Colombia",
         "lat": 4.711,
         "lng": -74.0721
+      },
+      "valueMilestone": {
+        "achievedDate": "2026-04-25",
+        "description": "101 of 171 licensed users are now active — the account's highest adoption rate on record."
       }
     }
   ]

@@ -230,6 +230,10 @@ function renderAccountDetail(acc) {
     </div>
   `).join("");
 
+  const milestone = acc.valueMilestone
+    ? `<div class="milestone-box"><p class="milestone-label">Value Milestone — ${fmtDate(acc.valueMilestone.achievedDate)}</p><p>${escapeHtml(acc.valueMilestone.description)}</p></div>`
+    : "";
+
   div.innerHTML = `
     <div class="detail-grid">
       <div>
@@ -242,6 +246,7 @@ function renderAccountDetail(acc) {
         <p>${acc.contract.type === "multi-year" ? `Multi-year contract (${acc.contract.termYears} years)` : "Single-year contract"}, since ${fmtDate(acc.contract.startDate)}</p>
         <ul>${modules}</ul>
         ${whitespace}
+        ${milestone}
         <h4>Relationship</h4>
         <p>Champion: ${escapeHtml(acc.relationship.championName)} (${CHAMPION_LABEL[acc.relationship.championStatus]})<br/>
         Exec sponsor: ${acc.relationship.execSponsorEngaged ? "engaged" : "not engaged"}<br/>
