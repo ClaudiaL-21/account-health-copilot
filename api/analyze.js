@@ -55,16 +55,20 @@ const MOCK_MODE = process.env.MOCK_AI === "true";
 
 function mockInsight(account) {
   const health = computeHealthScore(account);
+  const isGrowth = account.riskArchetype === "healthy_growth" || account.riskArchetype === "stable";
   return {
     sentiment: {
       label: health.riskCategory === "high" ? "negative" : health.riskCategory === "medium" ? "neutral" : "positive",
       rationale: `[MOCK] Based on ${account.freeTextArtifacts.length} text snippet(s), e.g. "${account.freeTextArtifacts[0]?.text.slice(0, 60)}..."`,
     },
     narrative: `[MOCK response, not real AI] ${account.accountName} has a Health Score of ${health.score} (${health.riskCategory} risk). Top driver: ${health.criteria[0].label}.`,
-    recommendations: [
-      "[MOCK] Call the customer and clarify the main issue.",
-      "[MOCK] Check champion status ahead of the next QBR.",
-    ],
+    confidence: {
+      level: account.freeTextArtifacts.length >= 3 ? "high" : "medium",
+      reason: account.freeTextArtifacts.length >= 3 ? "" : "[MOCK] Only a few interaction snippets available for this account.",
+    },
+    nextBestAction: isGrowth
+      ? { category: "growth", action: "[MOCK] Propose a pilot of an unused licensed module to the champion.", rationale: "[MOCK] Account is trending positively — good moment to explore expansion." }
+      : { category: "risk_mitigation", action: "[MOCK] Call the customer and clarify the main open issue.", rationale: "[MOCK] This is the top-weighted risk driver for this account right now." },
   };
 }
 
@@ -185,6 +189,17 @@ as the score — in particular, never sum, average, or otherwise recompute the
 "risk weight" values listed under Top risk drivers and present that sum as the score.
 Those risk-weight numbers explain WHY the score is what it is; they are not
 alternative scores themselves.
+When asked for a next best action, give exactly ONE — not a list. CSMs already have
+too many half-prioritized todo lists; force yourself to pick the single most
+important thing to do right now, and say why it beats the alternatives.
+Not every account needs a risk-mitigation action. If the account's signals are
+positive (stable or improving health, engaged champion, growing adoption), prefer a
+"growth" category action (e.g. propose an unused module, deepen a relationship,
+ask for an introduction to a new stakeholder) over inventing a problem to fix.
+Always include an honest confidence level for your own read of the account. Use
+"medium" or "low" when the available quotes are sparse, old, or ambiguous — do not
+default to "high" out of habit. A well-flagged "low confidence, here's why" is more
+useful to a CSM than false certainty.
 Always respond with ONLY valid JSON matching the schema you are given, no markdown
 fences, no commentary outside the JSON.`;
 
@@ -219,9 +234,14 @@ Respond with ONLY this JSON schema:
 {
   "sentiment": { "label": "positive|neutral|negative", "rationale": "one sentence, may quote a snippet" },
   "narrative": "2-3 sentence plain-English read on this account's health, referencing both the score drivers and the quotes",
-  "recommendations": ["1-3 concrete, specific next actions for the CSM"]
+  "confidence": { "level": "high|medium|low", "reason": "one short sentence if not high, otherwise an empty string" },
+  "nextBestAction": {
+    "category": "risk_mitigation|growth",
+    "action": "the single most important next action for the CSM, concrete and specific",
+    "rationale": "one sentence: why this beats other possible actions right now"
+  }
 }`;
-  const raw = await callAI(SYSTEM_PROMPT, user, 500);
+  const raw = await callAI(SYSTEM_PROMPT, user, 600);
   return parseJsonLoose(raw);
 }
 

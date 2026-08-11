@@ -284,11 +284,23 @@ function renderAiSection(container, acc) {
     body.innerHTML = `<p class="ai-unavailable">AI insights unavailable (${escapeHtml(insight.error)}). Calculated score remains valid.</p>`;
   } else if (insight.status === "done") {
     const d = insight.data;
-    const recs = (d.recommendations || []).map(r => `<li>${escapeHtml(r)}</li>`).join("");
+    const conf = d.confidence || { level: "high", reason: "" };
+    const confRisk = conf.level === "low" ? "high" : conf.level === "medium" ? "medium" : "low";
+    const confLabel = conf.level === "low" ? "Low confidence" : conf.level === "medium" ? "Medium confidence" : "High confidence";
+    const nba = d.nextBestAction;
+    const nbaLabel = nba?.category === "growth" ? "Next Best Action — Growth" : "Next Best Action — Risk Mitigation";
+    const nbaClass = nba?.category === "growth" ? "low" : "high";
     body.innerHTML = `
       <p><strong>Sentiment:</strong> ${escapeHtml(d.sentiment?.label ?? "-")} — <span class="sub">${escapeHtml(d.sentiment?.rationale ?? "")}</span></p>
       <p>${escapeHtml(d.narrative ?? "")}</p>
-      <ul>${recs}</ul>
+      <p><span class="status-pill risk-${confRisk}">${confLabel}</span>${conf.reason ? ` <span class="sub">${escapeHtml(conf.reason)}</span>` : ""}</p>
+      ${nba ? `
+        <div class="nba-box">
+          <p class="nba-label risk-text-${nbaClass}">${nbaLabel}</p>
+          <p><strong>${escapeHtml(nba.action)}</strong></p>
+          <p class="sub">${escapeHtml(nba.rationale)}</p>
+        </div>
+      ` : ""}
     `;
   }
 
