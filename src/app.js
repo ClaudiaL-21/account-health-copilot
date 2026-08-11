@@ -5,6 +5,7 @@ const RISK_LABEL = { high: "High", medium: "Medium", low: "Low" };
 const fmtUSD = n => "$" + n.toLocaleString("en-US");
 const fmtDate = iso => new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "2-digit" });
 const adoptionCategory = pct => pct >= 70 ? "good" : pct >= 40 ? "warn" : "poor";
+const CHAMPION_LABEL = { active: "active", unknown: "unclear", recently_departed: "recently departed" };
 
 let state = {
   accounts: [], csms: [], view: "portfolio",
@@ -237,7 +238,7 @@ function renderAccountDetail(acc) {
         <ul>${modules}</ul>
         ${whitespace}
         <h4>Relationship</h4>
-        <p>Champion: ${escapeHtml(acc.relationship.championName)} (${acc.relationship.championStatus})<br/>
+        <p>Champion: ${escapeHtml(acc.relationship.championName)} (${CHAMPION_LABEL[acc.relationship.championStatus]})<br/>
         Exec sponsor: ${acc.relationship.execSponsorEngaged ? "engaged" : "not engaged"}<br/>
         Last QBR: ${fmtDate(acc.relationship.lastQBRDate)}</p>
         <h4>Notes (Support/Communication)</h4>
@@ -329,6 +330,33 @@ function median(nums) {
 }
 
 const TREND_GLYPH = { up: "▲", down: "▼", flat: "" };
+const TREND_TEXT = { up: "Improving ▲", down: "Declining ▼", flat: "Stable" };
+
+// Shared custom tooltip for chart dots (replaces native SVG <title>, which
+// can't be styled — no bold text, no forced line breaks). contentFn(account)
+// returns the tooltip's inner HTML; delegated to `.matrix-dot` elements so it
+// works for both the Matrix and Map views without duplicating listener setup.
+function attachDotTooltip(wrap, list, contentFn) {
+  const tip = document.createElement("div");
+  tip.className = "chart-tooltip";
+  wrap.appendChild(tip);
+
+  wrap.querySelectorAll(".matrix-dot").forEach(dot => {
+    dot.addEventListener("mouseenter", () => {
+      const account = list.find(a => a.accountId === dot.dataset.accountId);
+      if (!account) return;
+      tip.innerHTML = contentFn(account);
+      tip.style.display = "block";
+    });
+    dot.addEventListener("mousemove", e => {
+      tip.style.left = `${e.clientX + 14}px`;
+      tip.style.top = `${e.clientY + 14}px`;
+    });
+    dot.addEventListener("mouseleave", () => {
+      tip.style.display = "none";
+    });
+  });
+}
 
 function renderMatrix() {
   const wrap = document.createElement("div");
@@ -379,10 +407,7 @@ function renderMatrix() {
     const r = radiusOf(a);
     const glyph = TREND_GLYPH[a.trend];
     const glyphSpan = glyph ? `<text x="${(cx + r + 2).toFixed(1)}" y="${(cy + 4).toFixed(1)}" class="trend-glyph trend-${a.trend}">${glyph}</text>` : "";
-    const yDesc = mode === "renewal" ? `renewal in ${daysFromToday(a.contract.nextRenewalDate)}d, ARR ${fmtUSD(a.contract.arrUSD)}` : `ARR ${fmtUSD(a.contract.arrUSD)}`;
-    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" class="matrix-dot risk-dot-${a.health.riskCategory}" data-account-id="${a.accountId}">
-      <title>${escapeHtml(a.accountName)} — Health ${a.health.score}, ${yDesc}, trend ${a.trend}</title>
-    </circle>${glyphSpan}`;
+    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" class="matrix-dot risk-dot-${a.health.riskCategory}" data-account-id="${a.accountId}"></circle>${glyphSpan}`;
   }).join("");
 
   // Quadrant label blocks: title + one-line description, with a background
@@ -432,7 +457,6 @@ function renderMatrix() {
   `;
 
   const selected = state.matrixSelected ? list.find(a => a.accountId === state.matrixSelected) : null;
-  const TREND_TEXT = { up: "Improving ▲", down: "Declining ▼", flat: "Stable" };
   const detailPanel = selected ? `
     <div class="matrix-detail">
       <button class="matrix-detail-close" aria-label="Close">&times;</button>
@@ -483,6 +507,14 @@ function renderMatrix() {
       render();
     });
   });
+
+  attachDotTooltip(wrap, list, a => `
+    <div class="tt-name">${escapeHtml(a.accountName)}</div>
+    <div class="tt-row"><span class="tt-label">Health Score:</span> <strong>${a.health.score}</strong> (${RISK_LABEL[a.health.riskCategory]} risk)</div>
+    <div class="tt-row"><span class="tt-label">ARR:</span> ${fmtUSD(a.contract.arrUSD)}</div>
+    ${mode === "renewal" ? `<div class="tt-row"><span class="tt-label">Renewal in:</span> ${daysFromToday(a.contract.nextRenewalDate)} days</div>` : ""}
+    <div class="tt-row"><span class="tt-label">CSAT trend:</span> ${TREND_TEXT[a.trend]}</div>
+  `);
 
   wrap.querySelector(".matrix-detail-close")?.addEventListener("click", () => {
     state.matrixSelected = null;

@@ -142,15 +142,15 @@ table.portfolio-table tbody tr:not(.detail-row):hover { background: #fafafa; }
 .quadrant-protect { fill: var(--green-bg); }
 .quadrant-monitor { fill: #f1f5f9; }
 .quadrant-nurture { fill: var(--blue-bg); }
-.quadrant-divider { stroke: var(--border); stroke-width: 1.5; stroke-dasharray: 4 4; }
-.axis-line { stroke: var(--muted); stroke-width: 1.5; }
+.quadrant-divider { stroke: var(--muted); stroke-width: 2; stroke-dasharray: 5 5; }
+.axis-line { stroke: var(--text); stroke-width: 3; }
 .quadrant-label { font-size: 14px; font-weight: 700; }
 .quadrant-desc { font-size: 11px; font-weight: 400; opacity: 0.85; }
 .ql-save { fill: #b91c1c; }
 .ql-protect { fill: #15803d; }
 .ql-monitor { fill: #475569; }
 .ql-nurture { fill: #1d4ed8; }
-.axis-title { font-size: 12px; fill: var(--muted); }
+.axis-title { font-size: 17px; font-weight: 700; fill: var(--text); }
 .matrix-dot { cursor: pointer; stroke: white; stroke-width: 1.5; }
 .matrix-dot:hover { r: 9; }
 .risk-dot-high { fill: var(--red); }
@@ -159,6 +159,23 @@ table.portfolio-table tbody tr:not(.detail-row):hover { background: #fafafa; }
 .trend-glyph { font-size: 11px; font-weight: 700; pointer-events: none; }
 .trend-glyph.trend-up { fill: var(--green); }
 .trend-glyph.trend-down { fill: var(--red); }
+
+.chart-tooltip {
+  position: fixed;
+  pointer-events: none;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-size: 12px;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.18);
+  z-index: 100;
+  max-width: 240px;
+  display: none;
+}
+.chart-tooltip .tt-name { font-weight: 700; font-size: 13px; margin-bottom: 5px; }
+.chart-tooltip .tt-row { margin: 3px 0; color: var(--text); }
+.chart-tooltip .tt-row .tt-label { color: var(--muted); }
 
 .map-svg { width: 100%; height: auto; display: block; }
 .map-ocean { fill: #eaf3fb; }
