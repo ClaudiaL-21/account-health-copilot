@@ -1,5 +1,5 @@
 import { computeHealthScore, computeExpansionScore, daysSince, daysFromToday, computeTrend } from "./scoring.js";
-import { fetchAccountInsight, askAboutAccount, fetchTeamPriority } from "./ai.js";
+import { fetchAccountInsight, askAboutAccount, fetchTeamPriority, approveAction } from "./ai.js";
 
 const RISK_LABEL = { high: "High", medium: "Medium", low: "Low" };
 const fmtUSD = n => "$" + n.toLocaleString("en-US");
@@ -17,6 +17,7 @@ let state = {
   mapSelected: null,    // accountId selected in the Map view (inline detail, no navigation)
   aiInsights: {}, // accountId -> { status: 'idle'|'loading'|'done'|'error', data, error }
   aiAsk: {},      // accountId -> { question, status, answer, error }
+  approvals: {},  // accountId -> { status: 'idle'|'pending'|'done'|'error', result, error }
   teamPriority: { status: "idle", data: null, error: null, csmId: null }, // csmId: null = whole-team scope
 };
 
@@ -336,9 +337,12 @@ function renderAiSection(container, acc) {
           <p class="nba-label risk-text-${nbaClass}">${nbaLabel}</p>
           <p><strong>${escapeHtml(nba.action)}</strong></p>
           <p class="sub">${escapeHtml(nba.rationale)}</p>
+          <div class="nba-approval"></div>
         </div>
       ` : ""}
     `;
+
+    if (nba) renderApprovalControl(container.querySelector(".nba-approval"), acc.accountId, nba);
   }
 
   const askInput = container.querySelector(".ai-ask-input");
@@ -350,6 +354,38 @@ function renderAiSection(container, acc) {
   if (ask.status === "loading") answerBox.innerHTML = `<p class="sub">Loading…</p>`;
   else if (ask.status === "error") answerBox.innerHTML = `<p class="ai-unavailable">Answer unavailable (${escapeHtml(ask.error)}).</p>`;
   else if (ask.status === "done") answerBox.innerHTML = `<p class="ai-answer">${escapeHtml(ask.answer)}</p>`;
+}
+
+function renderApprovalControl(container, accountId, nba) {
+  const approval = state.approvals[accountId] || { status: "idle" };
+
+  if (approval.status === "idle") {
+    const btn = document.createElement("button");
+    btn.className = "ai-load-btn approve-btn";
+    btn.textContent = "Approve & Send to Workflow";
+    btn.addEventListener("click", () => submitApproval(accountId, nba));
+    container.appendChild(btn);
+  } else if (approval.status === "pending") {
+    container.innerHTML = `<p class="sub">Sending…</p>`;
+  } else if (approval.status === "error") {
+    container.innerHTML = `<p class="ai-unavailable">Could not send (${escapeHtml(approval.error)}).</p>`;
+  } else if (approval.status === "done") {
+    container.innerHTML = approval.result.workflowConnected
+      ? `<p class="approval-confirm">✓ Approved and sent to your n8n workflow.</p>`
+      : `<p class="approval-confirm">✓ Approved (logged — no n8n workflow connected yet).</p>`;
+  }
+}
+
+async function submitApproval(accountId, nba) {
+  state.approvals[accountId] = { status: "pending" };
+  render();
+  try {
+    const result = await approveAction(accountId, nba);
+    state.approvals[accountId] = { status: "done", result };
+  } catch (e) {
+    state.approvals[accountId] = { status: "error", error: e.message };
+  }
+  render();
 }
 
 async function loadInsight(accountId) {

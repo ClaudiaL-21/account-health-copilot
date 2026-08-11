@@ -2,53 +2,30 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { computeHealthScore, computeExpansionScore } from "../src/scoring.js";
+import { applyGate } from "./_security.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ACCOUNTS = JSON.parse(
   readFileSync(join(__dirname, "..", "data", "accounts.json"), "utf-8")
 ).accounts;
 
-// Provider abstraction: "anthropic" (default) or "openai". Both keys can be
-// present in .env at once — AI_PROVIDER just picks which one is active, so
-// switching later is a one-line env change, not a code change.
+// Provider abstraction: "anthropic" (default), "openai", or "n8n" (delegates
+// the actual AI call to an n8n workflow via webhook — useful if your AI
+// credentials/credits live in n8n rather than here). All can be configured
+// at once — AI_PROVIDER just picks which one is active, so switching later
+// is a one-line env change, not a code change.
 const PROVIDER = (process.env.AI_PROVIDER || "anthropic").toLowerCase();
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
 const ANTHROPIC_VERSION = "2023-06-01";
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
+const N8N_ANALYZE_WEBHOOK_URL = process.env.N8N_ANALYZE_WEBHOOK_URL;
 
 function getApiKey() {
   return PROVIDER === "openai" ? process.env.OPENAI_API_KEY : process.env.ANTHROPIC_API_KEY;
 }
 
-// --- naive in-memory rate limiter -------------------------------------
-// Resets on cold start and isn't shared across concurrent instances.
-// Good enough to deter casual abuse of a public demo endpoint; a real
-// production deployment would back this with Upstash/Vercel KV instead.
-const RATE_LIMIT = 15; // requests
-const RATE_WINDOW_MS = 60_000;
-const hits = new Map();
-
-function checkRateLimit(ip) {
-  const now = Date.now();
-  const timestamps = (hits.get(ip) || []).filter(t => now - t < RATE_WINDOW_MS);
-  if (timestamps.length >= RATE_LIMIT) {
-    hits.set(ip, timestamps);
-    return false;
-  }
-  timestamps.push(now);
-  hits.set(ip, timestamps);
-  return true;
-}
-
-function getClientIp(req) {
-  const fwd = req.headers["x-forwarded-for"];
-  if (fwd) return fwd.split(",")[0].trim();
-  return req.socket?.remoteAddress || "unknown";
-}
-
-function getAllowedOrigins() {
-  return (process.env.ALLOWED_ORIGINS || "")
-    .split(",").map(s => s.trim()).filter(Boolean);
+function isProviderConfigured() {
+  return PROVIDER === "n8n" ? Boolean(N8N_ANALYZE_WEBHOOK_URL) : Boolean(getApiKey());
 }
 
 const MOCK_MODE = process.env.MOCK_AI === "true";
@@ -164,7 +141,27 @@ async function callOpenAI(apiKey, system, user, maxTokens) {
   return text;
 }
 
+// n8n mode: the actual AI call happens inside an n8n workflow (Webhook
+// trigger -> your AI node of choice -> "Respond to Webhook"). We just POST
+// the same system/user prompt and expect { "text": "<raw AI text>" } back,
+// then parse it exactly like a direct Anthropic/OpenAI response.
+async function callN8n(system, user, maxTokens) {
+  if (!N8N_ANALYZE_WEBHOOK_URL) throw new Error("N8N_ANALYZE_WEBHOOK_URL not configured");
+  const res = await fetch(N8N_ANALYZE_WEBHOOK_URL, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ system, user, maxTokens }),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`n8n webhook ${res.status}: ${text.slice(0, 300)}`);
+  }
+  const data = await res.json();
+  return data.text ?? "";
+}
+
 async function callAI(system, user, maxTokens) {
+  if (PROVIDER === "n8n") return callN8n(system, user, maxTokens);
   const apiKey = getApiKey();
   return PROVIDER === "openai"
     ? callOpenAI(apiKey, system, user, maxTokens)
@@ -290,31 +287,10 @@ Respond with ONLY this JSON schema:
 }
 
 export default async function handler(req, res) {
-  const origin = req.headers.origin || "";
-  const allowedOrigins = getAllowedOrigins();
-  const isAllowed = allowedOrigins.includes(origin);
+  if (!applyGate(req, res)) return;
 
-  if (req.method === "OPTIONS") {
-    if (isAllowed) res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-    return res.status(204).end();
-  }
-
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
-  if (!isAllowed) {
-    return res.status(403).json({ error: "Origin not allowed" });
-  }
-  res.setHeader("Access-Control-Allow-Origin", origin);
-
-  if (!checkRateLimit(getClientIp(req))) {
-    return res.status(429).json({ error: "Rate limit exceeded, please try again in a minute." });
-  }
-
-  if (!getApiKey() && !MOCK_MODE) {
-    return res.status(503).json({ error: `AI layer not configured (no API key for provider "${PROVIDER}").` });
+  if (!isProviderConfigured() && !MOCK_MODE) {
+    return res.status(503).json({ error: `AI layer not configured for provider "${PROVIDER}".` });
   }
 
   const { mode, accountId, question, csmId } = req.body || {};

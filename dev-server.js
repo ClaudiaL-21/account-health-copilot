@@ -34,6 +34,11 @@ const MIME = {
 };
 
 const { default: analyzeHandler } = await import("./api/analyze.js");
+const { default: approveActionHandler } = await import("./api/approve-action.js");
+const API_ROUTES = {
+  "/api/analyze": analyzeHandler,
+  "/api/approve-action": approveActionHandler,
+};
 
 function serveStatic(req, res) {
   let urlPath = req.url.split("?")[0];
@@ -50,7 +55,9 @@ function serveStatic(req, res) {
 }
 
 const server = createServer(async (req, res) => {
-  if (req.url.startsWith("/api/analyze")) {
+  const routePath = req.url.split("?")[0];
+  const apiHandler = API_ROUTES[routePath];
+  if (apiHandler) {
     let body = "";
     req.on("data", chunk => { body += chunk; });
     req.on("end", async () => {
@@ -64,7 +71,7 @@ const server = createServer(async (req, res) => {
       };
       // local dev has no origin header from same-origin fetches in some browsers; default to allowed
       if (!req.headers.origin) req.headers.origin = `http://localhost:${PORT}`;
-      await analyzeHandler(req, shimRes);
+      await apiHandler(req, shimRes);
     });
     return;
   }

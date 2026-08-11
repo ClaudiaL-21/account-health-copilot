@@ -2,6 +2,9 @@
   "functions": {
     "api/analyze.js": {
       "includeFiles": "data/**"
+    },
+    "api/approve-action.js": {
+      "includeFiles": "data/**"
     }
   },
   "headers": [
