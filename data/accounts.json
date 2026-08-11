@@ -20,6 +20,16 @@
       "csmId": "CSM-4",
       "name": "Wei Chen",
       "regionCoverage": "ANZ & Japan/Korea"
+    },
+    {
+      "csmId": "CSM-5",
+      "name": "Marcus Bennett",
+      "regionCoverage": "North America (USA & Canada)"
+    },
+    {
+      "csmId": "CSM-6",
+      "name": "Camila Duarte",
+      "regionCoverage": "South America"
     }
   ],
   "accounts": [
@@ -3051,6 +3061,1226 @@
         "country": "Japan",
         "lat": 35.1815,
         "lng": 136.9066
+      }
+    },
+    {
+      "accountId": "ACC-26",
+      "accountName": "Cascade Analytics Inc.",
+      "industry": "Technology",
+      "region": "Americas",
+      "subregion": "North America (USA)",
+      "csmId": "CSM-5",
+      "contract": {
+        "type": "single-year",
+        "termYears": 1,
+        "startDate": "2025-03-13",
+        "nextRenewalDate": "2027-03-13",
+        "arrUSD": 236000
+      },
+      "licensedModules": [
+        {
+          "name": "Data Activation Hub",
+          "tier": "Enterprise",
+          "licensedUsers": 58
+        },
+        {
+          "name": "Journey Orchestration",
+          "tier": "Enterprise",
+          "licensedUsers": 56
+        }
+      ],
+      "usage": {
+        "licensedUsersTotal": 118,
+        "activeUsers": 110,
+        "adoptionRatePct": 93,
+        "sessionsLast3Months": [
+          3397,
+          3754,
+          4110
+        ],
+        "sessionsTrendPct": 21
+      },
+      "support": {
+        "openTickets": 2,
+        "recurringTicketTopic": null,
+        "avgResolutionDays": 6,
+        "featureRequestsCount": 6,
+        "topFeatureRequest": "Deeper Salesforce bi-directional sync"
+      },
+      "relationship": {
+        "weeklyCSAT": [
+          {
+            "weekStartDate": "2026-06-23",
+            "score": 4.5
+          },
+          {
+            "weekStartDate": "2026-06-30",
+            "score": 5
+          },
+          {
+            "weekStartDate": "2026-07-07",
+            "score": 5
+          },
+          {
+            "weekStartDate": "2026-07-14",
+            "score": 5
+          },
+          {
+            "weekStartDate": "2026-07-21",
+            "score": 4.5
+          },
+          {
+            "weekStartDate": "2026-07-28",
+            "score": 4.5
+          },
+          {
+            "weekStartDate": "2026-08-04",
+            "score": 4.5
+          },
+          {
+            "weekStartDate": "2026-08-11",
+            "score": 5
+          }
+        ],
+        "npsHistory": [
+          {
+            "quarter": "2025-Q4",
+            "score": 10
+          },
+          {
+            "quarter": "2026-Q1",
+            "score": 10
+          },
+          {
+            "quarter": "2026-Q2",
+            "score": 10
+          }
+        ],
+        "championName": "Mateo Silva",
+        "championStatus": "active",
+        "execSponsorEngaged": true,
+        "lastInteractionDaysAgo": 4,
+        "lastQBRDate": "2026-05-03",
+        "nextQBRDate": "2026-10-29",
+        "onboardingStatus": "steady_state"
+      },
+      "freeTextArtifacts": [
+        {
+          "type": "email",
+          "date": "2026-07-20",
+          "text": "Great QBR last month, the roadmap alignment on identity resolution gave our exec team real confidence."
+        }
+      ],
+      "location": {
+        "city": "Seattle",
+        "country": "United States",
+        "lat": 47.6062,
+        "lng": -122.3321
+      }
+    },
+    {
+      "accountId": "ACC-27",
+      "accountName": "Liberty Retail Group",
+      "industry": "Retail",
+      "region": "Americas",
+      "subregion": "North America (USA)",
+      "csmId": "CSM-5",
+      "contract": {
+        "type": "multi-year",
+        "termYears": 2,
+        "startDate": "2025-03-31",
+        "nextRenewalDate": "2027-03-31",
+        "arrUSD": 263000
+      },
+      "licensedModules": [
+        {
+          "name": "Data Activation Hub",
+          "tier": "Enterprise",
+          "licensedUsers": 26
+        },
+        {
+          "name": "Identity Resolution",
+          "tier": "Standard",
+          "licensedUsers": 32
+        }
+      ],
+      "usage": {
+        "licensedUsersTotal": 140,
+        "activeUsers": 112,
+        "adoptionRatePct": 80,
+        "sessionsLast3Months": [
+          2910,
+          3201,
+          3492
+        ],
+        "sessionsTrendPct": 20
+      },
+      "support": {
+        "openTickets": 0,
+        "recurringTicketTopic": null,
+        "avgResolutionDays": 1,
+        "featureRequestsCount": 1,
+        "topFeatureRequest": "Better anomaly alerts on session drop-offs"
+      },
+      "relationship": {
+        "weeklyCSAT": [
+          {
+            "weekStartDate": "2026-06-23",
+            "score": 4.5
+          },
+          {
+            "weekStartDate": "2026-06-30",
+            "score": 4
+          },
+          {
+            "weekStartDate": "2026-07-07",
+            "score": 4
+          },
+          {
+            "weekStartDate": "2026-07-14",
+            "score": 4
+          },
+          {
+            "weekStartDate": "2026-07-21",
+            "score": 4.5
+          },
+          {
+            "weekStartDate": "2026-07-28",
+            "score": 4.5
+          },
+          {
+            "weekStartDate": "2026-08-04",
+            "score": 4
+          },
+          {
+            "weekStartDate": "2026-08-11",
+            "score": 4
+          }
+        ],
+        "npsHistory": [
+          {
+            "quarter": "2025-Q4",
+            "score": 9
+          },
+          {
+            "quarter": "2026-Q1",
+            "score": 8
+          },
+          {
+            "quarter": "2026-Q2",
+            "score": 9
+          }
+        ],
+        "championName": "Lucas Bailey",
+        "championStatus": "active",
+        "execSponsorEngaged": false,
+        "lastInteractionDaysAgo": 8,
+        "lastQBRDate": "2026-04-29",
+        "nextQBRDate": "2026-10-16",
+        "onboardingStatus": "steady_state"
+      },
+      "freeTextArtifacts": [
+        {
+          "type": "email",
+          "date": "2026-07-21",
+          "text": "We're seeing strong results from the journey orchestration module and are discussing budget for a second use case next year."
+        }
+      ],
+      "location": {
+        "city": "New York",
+        "country": "United States",
+        "lat": 40.7128,
+        "lng": -74.006
+      }
+    },
+    {
+      "accountId": "ACC-28",
+      "accountName": "Prairie Grain Logistics",
+      "industry": "Logistics",
+      "region": "Americas",
+      "subregion": "North America (USA)",
+      "csmId": "CSM-5",
+      "contract": {
+        "type": "single-year",
+        "termYears": 1,
+        "startDate": "2025-01-12",
+        "nextRenewalDate": "2027-01-12",
+        "arrUSD": 157000
+      },
+      "licensedModules": [
+        {
+          "name": "Identity Resolution",
+          "tier": "Enterprise",
+          "licensedUsers": 26
+        },
+        {
+          "name": "Offer Management",
+          "tier": "Enterprise",
+          "licensedUsers": 11
+        },
+        {
+          "name": "Data Activation Hub",
+          "tier": "Enterprise",
+          "licensedUsers": 9
+        },
+        {
+          "name": "Digital Intelligence",
+          "tier": "Advanced",
+          "licensedUsers": 9
+        }
+      ],
+      "usage": {
+        "licensedUsersTotal": 116,
+        "activeUsers": 81,
+        "adoptionRatePct": 70,
+        "sessionsLast3Months": [
+          7076,
+          7465,
+          7854
+        ],
+        "sessionsTrendPct": 11
+      },
+      "support": {
+        "openTickets": 1,
+        "recurringTicketTopic": null,
+        "avgResolutionDays": 6,
+        "featureRequestsCount": 6,
+        "topFeatureRequest": "Native support for WhatsApp as an activation channel"
+      },
+      "relationship": {
+        "weeklyCSAT": [
+          {
+            "weekStartDate": "2026-06-23",
+            "score": 4.5
+          },
+          {
+            "weekStartDate": "2026-06-30",
+            "score": 4.5
+          },
+          {
+            "weekStartDate": "2026-07-07",
+            "score": 4.5
+          },
+          {
+            "weekStartDate": "2026-07-14",
+            "score": 4.5
+          },
+          {
+            "weekStartDate": "2026-07-21",
+            "score": 4.5
+          },
+          {
+            "weekStartDate": "2026-07-28",
+            "score": 5
+          },
+          {
+            "weekStartDate": "2026-08-04",
+            "score": 4.5
+          },
+          {
+            "weekStartDate": "2026-08-11",
+            "score": 4.5
+          }
+        ],
+        "npsHistory": [
+          {
+            "quarter": "2025-Q4",
+            "score": 8
+          },
+          {
+            "quarter": "2026-Q1",
+            "score": 7
+          },
+          {
+            "quarter": "2026-Q2",
+            "score": 8
+          }
+        ],
+        "championName": "Ava Turner",
+        "championStatus": "active",
+        "execSponsorEngaged": true,
+        "lastInteractionDaysAgo": 3,
+        "lastQBRDate": "2026-04-24",
+        "nextQBRDate": "2026-09-25",
+        "onboardingStatus": "steady_state"
+      },
+      "freeTextArtifacts": [
+        {
+          "type": "email",
+          "date": "2026-08-09",
+          "text": "Just wanted to say the onboarding of our new regional team went smoothly, thanks for the fast turnaround."
+        }
+      ],
+      "location": {
+        "city": "Chicago",
+        "country": "United States",
+        "lat": 41.8781,
+        "lng": -87.6298
+      }
+    },
+    {
+      "accountId": "ACC-29",
+      "accountName": "Maple Financial Corp",
+      "industry": "Financial Services",
+      "region": "Americas",
+      "subregion": "North America (Canada)",
+      "csmId": "CSM-5",
+      "contract": {
+        "type": "multi-year",
+        "termYears": 2,
+        "startDate": "2024-12-11",
+        "nextRenewalDate": "2026-12-11",
+        "arrUSD": 284000
+      },
+      "licensedModules": [
+        {
+          "name": "Journey Orchestration",
+          "tier": "Standard",
+          "licensedUsers": 21
+        },
+        {
+          "name": "Data Activation Hub",
+          "tier": "Enterprise",
+          "licensedUsers": 10
+        },
+        {
+          "name": "Digital Intelligence",
+          "tier": "Standard",
+          "licensedUsers": 56
+        }
+      ],
+      "usage": {
+        "licensedUsersTotal": 196,
+        "activeUsers": 73,
+        "adoptionRatePct": 37,
+        "sessionsLast3Months": [
+          2320,
+          1949,
+          1578
+        ],
+        "sessionsTrendPct": -32
+      },
+      "support": {
+        "openTickets": 7,
+        "recurringTicketTopic": "API rate limits",
+        "avgResolutionDays": 19,
+        "featureRequestsCount": 3,
+        "topFeatureRequest": "Faster segment refresh rate (currently 24h, need near real-time)"
+      },
+      "relationship": {
+        "weeklyCSAT": [
+          {
+            "weekStartDate": "2026-06-23",
+            "score": 2
+          },
+          {
+            "weekStartDate": "2026-06-30",
+            "score": 2.5
+          },
+          {
+            "weekStartDate": "2026-07-07",
+            "score": 2
+          },
+          {
+            "weekStartDate": "2026-07-14",
+            "score": 2.5
+          },
+          {
+            "weekStartDate": "2026-07-21",
+            "score": 2
+          },
+          {
+            "weekStartDate": "2026-07-28",
+            "score": 2
+          },
+          {
+            "weekStartDate": "2026-08-04",
+            "score": 2
+          },
+          {
+            "weekStartDate": "2026-08-11",
+            "score": 2
+          }
+        ],
+        "npsHistory": [
+          {
+            "quarter": "2025-Q4",
+            "score": 5
+          },
+          {
+            "quarter": "2026-Q1",
+            "score": 6
+          },
+          {
+            "quarter": "2026-Q2",
+            "score": 5
+          }
+        ],
+        "championName": "Mateo Ramirez",
+        "championStatus": "unknown",
+        "execSponsorEngaged": false,
+        "lastInteractionDaysAgo": 39,
+        "lastQBRDate": "2026-03-14",
+        "nextQBRDate": "2026-09-19",
+        "onboardingStatus": "steady_state"
+      },
+      "freeTextArtifacts": [
+        {
+          "type": "ticket",
+          "date": "2026-08-08",
+          "text": "Our integration hits the API rate limit daily during campaign launches, this is blocking our team."
+        },
+        {
+          "type": "chat",
+          "date": "2026-08-03",
+          "text": "Finance is reviewing all software spend this quarter, renewal conversations may take longer than usual."
+        }
+      ],
+      "location": {
+        "city": "Toronto",
+        "country": "Canada",
+        "lat": 43.6532,
+        "lng": -79.3832
+      }
+    },
+    {
+      "accountId": "ACC-30",
+      "accountName": "Sunbelt Hospitality Group",
+      "industry": "Travel & Hospitality",
+      "region": "Americas",
+      "subregion": "North America (USA)",
+      "csmId": "CSM-5",
+      "contract": {
+        "type": "multi-year",
+        "termYears": 3,
+        "startDate": "2024-03-06",
+        "nextRenewalDate": "2027-03-06",
+        "arrUSD": 36000
+      },
+      "licensedModules": [
+        {
+          "name": "Predictive Analytics",
+          "tier": "Advanced",
+          "licensedUsers": 8
+        },
+        {
+          "name": "Offer Management",
+          "tier": "Advanced",
+          "licensedUsers": 8
+        },
+        {
+          "name": "Data Activation Hub",
+          "tier": "Enterprise",
+          "licensedUsers": 8
+        }
+      ],
+      "usage": {
+        "licensedUsersTotal": 32,
+        "activeUsers": 21,
+        "adoptionRatePct": 66,
+        "sessionsLast3Months": [
+          6010,
+          6040,
+          6070
+        ],
+        "sessionsTrendPct": 1
+      },
+      "support": {
+        "openTickets": 3,
+        "recurringTicketTopic": null,
+        "avgResolutionDays": 2,
+        "featureRequestsCount": 5,
+        "topFeatureRequest": "Native support for WhatsApp as an activation channel"
+      },
+      "relationship": {
+        "weeklyCSAT": [
+          {
+            "weekStartDate": "2026-06-23",
+            "score": 3.5
+          },
+          {
+            "weekStartDate": "2026-06-30",
+            "score": 4
+          },
+          {
+            "weekStartDate": "2026-07-07",
+            "score": 4
+          },
+          {
+            "weekStartDate": "2026-07-14",
+            "score": 4
+          },
+          {
+            "weekStartDate": "2026-07-21",
+            "score": 3.5
+          },
+          {
+            "weekStartDate": "2026-07-28",
+            "score": 4
+          },
+          {
+            "weekStartDate": "2026-08-04",
+            "score": 4
+          },
+          {
+            "weekStartDate": "2026-08-11",
+            "score": 4
+          }
+        ],
+        "npsHistory": [
+          {
+            "quarter": "2025-Q4",
+            "score": 6
+          },
+          {
+            "quarter": "2026-Q1",
+            "score": 7
+          },
+          {
+            "quarter": "2026-Q2",
+            "score": 6
+          }
+        ],
+        "championName": "Mateo Hughes",
+        "championStatus": "active",
+        "execSponsorEngaged": true,
+        "lastInteractionDaysAgo": 7,
+        "lastQBRDate": "2026-06-06",
+        "nextQBRDate": "2026-10-24",
+        "onboardingStatus": "steady_state"
+      },
+      "freeTextArtifacts": [
+        {
+          "type": "email",
+          "date": "2026-07-24",
+          "text": "Great QBR last month, the roadmap alignment on identity resolution gave our exec team real confidence."
+        }
+      ],
+      "location": {
+        "city": "Austin",
+        "country": "United States",
+        "lat": 30.2672,
+        "lng": -97.7431
+      }
+    },
+    {
+      "accountId": "ACC-31",
+      "accountName": "Andina Mining Corp",
+      "industry": "Manufacturing",
+      "region": "Americas",
+      "subregion": "South America (Chile)",
+      "csmId": "CSM-6",
+      "contract": {
+        "type": "single-year",
+        "termYears": 1,
+        "startDate": "2025-10-18",
+        "nextRenewalDate": "2026-10-18",
+        "arrUSD": 156000
+      },
+      "licensedModules": [
+        {
+          "name": "Predictive Analytics",
+          "tier": "Advanced",
+          "licensedUsers": 27
+        },
+        {
+          "name": "Digital Intelligence",
+          "tier": "Standard",
+          "licensedUsers": 5
+        },
+        {
+          "name": "Identity Resolution",
+          "tier": "Advanced",
+          "licensedUsers": 19
+        }
+      ],
+      "usage": {
+        "licensedUsersTotal": 80,
+        "activeUsers": 50,
+        "adoptionRatePct": 62,
+        "sessionsLast3Months": [
+          11166,
+          11613,
+          12059
+        ],
+        "sessionsTrendPct": 8
+      },
+      "support": {
+        "openTickets": 1,
+        "recurringTicketTopic": null,
+        "avgResolutionDays": 5,
+        "featureRequestsCount": 1,
+        "topFeatureRequest": "Self-service report builder for non-technical users"
+      },
+      "relationship": {
+        "weeklyCSAT": [
+          {
+            "weekStartDate": "2026-06-23",
+            "score": 3.5
+          },
+          {
+            "weekStartDate": "2026-06-30",
+            "score": 3.5
+          },
+          {
+            "weekStartDate": "2026-07-07",
+            "score": 4
+          },
+          {
+            "weekStartDate": "2026-07-14",
+            "score": 4
+          },
+          {
+            "weekStartDate": "2026-07-21",
+            "score": 4
+          },
+          {
+            "weekStartDate": "2026-07-28",
+            "score": 3.5
+          },
+          {
+            "weekStartDate": "2026-08-04",
+            "score": 4
+          },
+          {
+            "weekStartDate": "2026-08-11",
+            "score": 3.5
+          }
+        ],
+        "npsHistory": [
+          {
+            "quarter": "2025-Q4",
+            "score": 9
+          },
+          {
+            "quarter": "2026-Q1",
+            "score": 8
+          },
+          {
+            "quarter": "2026-Q2",
+            "score": 9
+          }
+        ],
+        "championName": "Mateo Hughes",
+        "championStatus": "active",
+        "execSponsorEngaged": false,
+        "lastInteractionDaysAgo": 15,
+        "lastQBRDate": "2026-06-12",
+        "nextQBRDate": "2026-09-25",
+        "onboardingStatus": "steady_state"
+      },
+      "freeTextArtifacts": [
+        {
+          "type": "email",
+          "date": "2026-07-23",
+          "text": "The new predictive audience feature saved our team a full day of manual segmentation last week, really impressed."
+        }
+      ],
+      "location": {
+        "city": "Santiago",
+        "country": "Chile",
+        "lat": -33.4489,
+        "lng": -70.6693
+      }
+    },
+    {
+      "accountId": "ACC-32",
+      "accountName": "Amazonia Retail S.A.",
+      "industry": "Retail",
+      "region": "Americas",
+      "subregion": "South America (Brazil)",
+      "csmId": "CSM-6",
+      "contract": {
+        "type": "multi-year",
+        "termYears": 3,
+        "startDate": "2025-06-07",
+        "nextRenewalDate": "2027-06-07",
+        "arrUSD": 232000
+      },
+      "licensedModules": [
+        {
+          "name": "Data Activation Hub",
+          "tier": "Advanced",
+          "licensedUsers": 30
+        },
+        {
+          "name": "Journey Orchestration",
+          "tier": "Standard",
+          "licensedUsers": 38
+        },
+        {
+          "name": "Predictive Analytics",
+          "tier": "Enterprise",
+          "licensedUsers": 30
+        },
+        {
+          "name": "Offer Management",
+          "tier": "Advanced",
+          "licensedUsers": 47
+        }
+      ],
+      "usage": {
+        "licensedUsersTotal": 194,
+        "activeUsers": 126,
+        "adoptionRatePct": 65,
+        "sessionsLast3Months": [
+          2349,
+          2279,
+          2208
+        ],
+        "sessionsTrendPct": -6
+      },
+      "support": {
+        "openTickets": 4,
+        "recurringTicketTopic": null,
+        "avgResolutionDays": 6,
+        "featureRequestsCount": 5,
+        "topFeatureRequest": "Native support for WhatsApp as an activation channel"
+      },
+      "relationship": {
+        "weeklyCSAT": [
+          {
+            "weekStartDate": "2026-06-23",
+            "score": 3
+          },
+          {
+            "weekStartDate": "2026-06-30",
+            "score": 3
+          },
+          {
+            "weekStartDate": "2026-07-07",
+            "score": 3
+          },
+          {
+            "weekStartDate": "2026-07-14",
+            "score": 3
+          },
+          {
+            "weekStartDate": "2026-07-21",
+            "score": 3
+          },
+          {
+            "weekStartDate": "2026-07-28",
+            "score": 3
+          },
+          {
+            "weekStartDate": "2026-08-04",
+            "score": 3.5
+          },
+          {
+            "weekStartDate": "2026-08-11",
+            "score": 3.5
+          }
+        ],
+        "npsHistory": [
+          {
+            "quarter": "2025-Q4",
+            "score": 5
+          },
+          {
+            "quarter": "2026-Q1",
+            "score": 6
+          },
+          {
+            "quarter": "2026-Q2",
+            "score": 6
+          }
+        ],
+        "championName": "Grace Bennett",
+        "championStatus": "unknown",
+        "execSponsorEngaged": false,
+        "lastInteractionDaysAgo": 33,
+        "lastQBRDate": "2026-05-31",
+        "nextQBRDate": "2026-08-24",
+        "onboardingStatus": "steady_state"
+      },
+      "freeTextArtifacts": [
+        {
+          "type": "chat",
+          "date": "2026-07-25",
+          "text": "Quick check-in, everything running smoothly on our end, no blockers to report."
+        }
+      ],
+      "location": {
+        "city": "São Paulo",
+        "country": "Brazil",
+        "lat": -23.5505,
+        "lng": -46.6333
+      }
+    },
+    {
+      "accountId": "ACC-33",
+      "accountName": "Pampas Insurance Group",
+      "industry": "Insurance",
+      "region": "Americas",
+      "subregion": "South America (Argentina)",
+      "csmId": "CSM-6",
+      "contract": {
+        "type": "multi-year",
+        "termYears": 3,
+        "startDate": "2025-09-25",
+        "nextRenewalDate": "2026-09-25",
+        "arrUSD": 228000
+      },
+      "licensedModules": [
+        {
+          "name": "Journey Orchestration",
+          "tier": "Enterprise",
+          "licensedUsers": 5
+        },
+        {
+          "name": "Digital Intelligence",
+          "tier": "Enterprise",
+          "licensedUsers": 13
+        },
+        {
+          "name": "Predictive Analytics",
+          "tier": "Advanced",
+          "licensedUsers": 25
+        },
+        {
+          "name": "Offer Management",
+          "tier": "Enterprise",
+          "licensedUsers": 35
+        }
+      ],
+      "usage": {
+        "licensedUsersTotal": 204,
+        "activeUsers": 135,
+        "adoptionRatePct": 66,
+        "sessionsLast3Months": [
+          4358,
+          4380,
+          4402
+        ],
+        "sessionsTrendPct": 1
+      },
+      "support": {
+        "openTickets": 2,
+        "recurringTicketTopic": null,
+        "avgResolutionDays": 2,
+        "featureRequestsCount": 3,
+        "topFeatureRequest": "Native support for WhatsApp as an activation channel"
+      },
+      "relationship": {
+        "weeklyCSAT": [
+          {
+            "weekStartDate": "2026-06-23",
+            "score": 4.5
+          },
+          {
+            "weekStartDate": "2026-06-30",
+            "score": 4.5
+          },
+          {
+            "weekStartDate": "2026-07-07",
+            "score": 4.5
+          },
+          {
+            "weekStartDate": "2026-07-14",
+            "score": 4.5
+          },
+          {
+            "weekStartDate": "2026-07-21",
+            "score": 4
+          },
+          {
+            "weekStartDate": "2026-07-28",
+            "score": 4.5
+          },
+          {
+            "weekStartDate": "2026-08-04",
+            "score": 5
+          },
+          {
+            "weekStartDate": "2026-08-11",
+            "score": 4.5
+          }
+        ],
+        "npsHistory": [
+          {
+            "quarter": "2025-Q4",
+            "score": 10
+          },
+          {
+            "quarter": "2026-Q1",
+            "score": 9
+          },
+          {
+            "quarter": "2026-Q2",
+            "score": 9
+          }
+        ],
+        "championName": "Ava Ramirez",
+        "championStatus": "unknown",
+        "execSponsorEngaged": false,
+        "lastInteractionDaysAgo": 5,
+        "lastQBRDate": "2026-03-16",
+        "nextQBRDate": "2026-09-27",
+        "onboardingStatus": "steady_state"
+      },
+      "freeTextArtifacts": [
+        {
+          "type": "email",
+          "date": "2026-08-07",
+          "text": "We're seeing strong results from the journey orchestration module and are discussing budget for a second use case next year."
+        }
+      ],
+      "location": {
+        "city": "Buenos Aires",
+        "country": "Argentina",
+        "lat": -34.6037,
+        "lng": -58.3816
+      }
+    },
+    {
+      "accountId": "ACC-34",
+      "accountName": "Rio Digital Bank",
+      "industry": "Financial Services",
+      "region": "Americas",
+      "subregion": "South America (Brazil)",
+      "csmId": "CSM-6",
+      "contract": {
+        "type": "single-year",
+        "termYears": 1,
+        "startDate": "2025-10-01",
+        "nextRenewalDate": "2026-10-01",
+        "arrUSD": 186000
+      },
+      "licensedModules": [
+        {
+          "name": "Offer Management",
+          "tier": "Enterprise",
+          "licensedUsers": 47
+        },
+        {
+          "name": "Identity Resolution",
+          "tier": "Standard",
+          "licensedUsers": 45
+        },
+        {
+          "name": "Predictive Analytics",
+          "tier": "Enterprise",
+          "licensedUsers": 27
+        },
+        {
+          "name": "Journey Orchestration",
+          "tier": "Advanced",
+          "licensedUsers": 29
+        }
+      ],
+      "usage": {
+        "licensedUsersTotal": 186,
+        "activeUsers": 58,
+        "adoptionRatePct": 31,
+        "sessionsLast3Months": [
+          8352,
+          7266,
+          6180
+        ],
+        "sessionsTrendPct": -26
+      },
+      "support": {
+        "openTickets": 9,
+        "recurringTicketTopic": null,
+        "avgResolutionDays": 2,
+        "featureRequestsCount": 2,
+        "topFeatureRequest": "More granular role-based access control for regional admins"
+      },
+      "relationship": {
+        "weeklyCSAT": [
+          {
+            "weekStartDate": "2026-06-23",
+            "score": 2
+          },
+          {
+            "weekStartDate": "2026-06-30",
+            "score": 2
+          },
+          {
+            "weekStartDate": "2026-07-07",
+            "score": 2
+          },
+          {
+            "weekStartDate": "2026-07-14",
+            "score": 2.5
+          },
+          {
+            "weekStartDate": "2026-07-21",
+            "score": 2
+          },
+          {
+            "weekStartDate": "2026-07-28",
+            "score": 2
+          },
+          {
+            "weekStartDate": "2026-08-04",
+            "score": 2
+          },
+          {
+            "weekStartDate": "2026-08-11",
+            "score": 2
+          }
+        ],
+        "npsHistory": [
+          {
+            "quarter": "2025-Q4",
+            "score": 5
+          },
+          {
+            "quarter": "2026-Q1",
+            "score": 5
+          },
+          {
+            "quarter": "2026-Q2",
+            "score": 4
+          }
+        ],
+        "championName": "Santiago Silva",
+        "championStatus": "recently_departed",
+        "execSponsorEngaged": false,
+        "lastInteractionDaysAgo": 75,
+        "lastQBRDate": "2026-04-21",
+        "nextQBRDate": "2026-10-17",
+        "onboardingStatus": "steady_state"
+      },
+      "freeTextArtifacts": [
+        {
+          "type": "ticket",
+          "date": "2026-07-29",
+          "text": "We still can't export the cross-module report our exec team needs for board reporting."
+        },
+        {
+          "type": "email",
+          "date": "2026-07-28",
+          "text": "Just a heads up, our main admin and platform owner left the company last month, we're still figuring out who owns this relationship internally."
+        },
+        {
+          "type": "chat",
+          "date": "2026-08-02",
+          "text": "Finance is reviewing all software spend this quarter, renewal conversations may take longer than usual."
+        }
+      ],
+      "location": {
+        "city": "Rio de Janeiro",
+        "country": "Brazil",
+        "lat": -22.9068,
+        "lng": -43.1729
+      }
+    },
+    {
+      "accountId": "ACC-35",
+      "accountName": "Andes Telecom",
+      "industry": "Telecommunications",
+      "region": "Americas",
+      "subregion": "South America (Colombia)",
+      "csmId": "CSM-6",
+      "contract": {
+        "type": "single-year",
+        "termYears": 1,
+        "startDate": "2025-08-11",
+        "nextRenewalDate": "2027-08-11",
+        "arrUSD": 305000
+      },
+      "licensedModules": [
+        {
+          "name": "Predictive Analytics",
+          "tier": "Enterprise",
+          "licensedUsers": 19
+        },
+        {
+          "name": "Offer Management",
+          "tier": "Advanced",
+          "licensedUsers": 68
+        }
+      ],
+      "usage": {
+        "licensedUsersTotal": 171,
+        "activeUsers": 101,
+        "adoptionRatePct": 59,
+        "sessionsLast3Months": [
+          4376,
+          4310,
+          4245
+        ],
+        "sessionsTrendPct": -3
+      },
+      "support": {
+        "openTickets": 2,
+        "recurringTicketTopic": "SSO / login failures",
+        "avgResolutionDays": 10,
+        "featureRequestsCount": 6,
+        "topFeatureRequest": "Improved consent management for APAC privacy regulations"
+      },
+      "relationship": {
+        "weeklyCSAT": [
+          {
+            "weekStartDate": "2026-06-23",
+            "score": 4
+          },
+          {
+            "weekStartDate": "2026-06-30",
+            "score": 4
+          },
+          {
+            "weekStartDate": "2026-07-07",
+            "score": 3.5
+          },
+          {
+            "weekStartDate": "2026-07-14",
+            "score": 4
+          },
+          {
+            "weekStartDate": "2026-07-21",
+            "score": 3.5
+          },
+          {
+            "weekStartDate": "2026-07-28",
+            "score": 4
+          },
+          {
+            "weekStartDate": "2026-08-04",
+            "score": 4
+          },
+          {
+            "weekStartDate": "2026-08-11",
+            "score": 4
+          }
+        ],
+        "npsHistory": [
+          {
+            "quarter": "2025-Q4",
+            "score": 6
+          },
+          {
+            "quarter": "2026-Q1",
+            "score": 7
+          },
+          {
+            "quarter": "2026-Q2",
+            "score": 6
+          }
+        ],
+        "championName": "Mateo Silva",
+        "championStatus": "active",
+        "execSponsorEngaged": false,
+        "lastInteractionDaysAgo": 24,
+        "lastQBRDate": "2026-05-30",
+        "nextQBRDate": "2026-08-28",
+        "onboardingStatus": "steady_state"
+      },
+      "freeTextArtifacts": [
+        {
+          "type": "ticket",
+          "date": "2026-07-30",
+          "text": "Our field team in the regional offices keeps getting logged out mid-session, IT has flagged it three times now."
+        }
+      ],
+      "location": {
+        "city": "Bogotá",
+        "country": "Colombia",
+        "lat": 4.711,
+        "lng": -74.0721
       }
     }
   ]
