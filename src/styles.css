@@ -34,7 +34,9 @@ body {
 }
 header { padding: 20px 28px 8px; }
 header h1 { margin: 0 0 4px; font-size: 20px; color: var(--navy); }
-header p { margin: 0; color: var(--muted); font-size: 13px; }
+header p { margin: 0; color: var(--muted); font-size: 13px; max-width: 60ch; }
+.brand { display: flex; align-items: center; gap: 14px; }
+.brand-icon { width: 48px; height: 48px; flex-shrink: 0; }
 
 .disclaimer {
   margin: 12px 28px 0;
