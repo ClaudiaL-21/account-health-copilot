@@ -11,12 +11,13 @@ let state = {
   accounts: [], csms: [], view: "portfolio",
   filters: { csm: "all", region: "all", risk: "all", expansion: "all", trend: "all" },
   sort: { key: "score", dir: "asc" }, expanded: null, // asc = lowest Health Score (most concerning) first
+  feedbackSort: { key: "count", dir: "desc" },
   matrixSelected: null, // accountId selected in the Matrix view (inline detail, no navigation)
   matrixMode: "value",  // "value" = Health x ARR, "renewal" = Health x days-to-renewal (bubble = ARR)
   mapSelected: null,    // accountId selected in the Map view (inline detail, no navigation)
   aiInsights: {}, // accountId -> { status: 'idle'|'loading'|'done'|'error', data, error }
   aiAsk: {},      // accountId -> { question, status, answer, error }
-  teamPriority: { status: "idle", data: null, error: null },
+  teamPriority: { status: "idle", data: null, error: null, csmId: null }, // csmId: null = whole-team scope
 };
 
 async function init() {
@@ -124,6 +125,10 @@ function renderSortHeader(label, key) {
 function renderPortfolio() {
   const wrap = document.createElement("div");
   const list = getSorted(getFilteredAccounts());
+
+  if (state.filters.csm !== "all") {
+    wrap.appendChild(renderPriorityBox(state.filters.csm, `AI Priorities for ${csmName(state.filters.csm)}`));
+  }
 
   const summary = document.createElement("div");
   summary.className = "summary-bar";
@@ -633,6 +638,9 @@ function initLeafletMap(list) {
   });
 }
 
+const SENTIMENT_LABEL = { frustrated: "Frustrated", neutral: "Neutral", patient: "Patient" };
+const SENTIMENT_RISK = { frustrated: "high", neutral: "medium", patient: "low" };
+
 function renderFeedback() {
   const wrap = document.createElement("div");
   const list = getFilteredAccounts();
@@ -645,15 +653,25 @@ function renderFeedback() {
     groups[req].accounts.push(a);
   });
 
-  const rows = Object.entries(groups)
-    .map(([request, { accounts }]) => ({
+  const rows = Object.entries(groups).map(([request, { accounts }]) => {
+    const withSince = accounts.filter(a => a.support.featureRequestSince);
+    const oldestDays = withSince.length
+      ? Math.max(...withSince.map(a => daysSince(a.support.featureRequestSince)))
+      : null;
+    const sentimentCounts = { frustrated: 0, neutral: 0, patient: 0 };
+    accounts.forEach(a => {
+      if (a.support.featureRequestSentiment) sentimentCounts[a.support.featureRequestSentiment]++;
+    });
+    return {
       request,
       count: accounts.length,
       totalArr: accounts.reduce((s, a) => s + a.contract.arrUSD, 0),
       avgHealth: Math.round(accounts.reduce((s, a) => s + a.health.score, 0) / accounts.length),
+      oldestDays,
+      sentimentCounts,
       accounts,
-    }))
-    .sort((a, b) => b.count - a.count);
+    };
+  });
 
   if (rows.length === 0) {
     wrap.innerHTML = `<p class="sub">No feature requests recorded for the currently filtered accounts.</p>`;
@@ -673,31 +691,54 @@ function renderFeedback() {
 
   const intro = document.createElement("p");
   intro.className = "sub";
-  intro.textContent = "Aggregated across the currently filtered accounts — not AI-generated, just counting. Helps spot a recurring ask across many customers instead of reacting to whoever asked loudest.";
+  intro.textContent = "Aggregated across the currently filtered accounts — not AI-generated, just counting. \"Oldest Ask\" and \"Sentiment\" are estimated from each account's risk trajectory (a proxy, not a live satisfaction survey) — click a column to sort.";
   wrap.appendChild(intro);
+
+  const sorted = [...rows].sort((a, b) => {
+    const { key, dir } = state.feedbackSort;
+    let va, vb;
+    if (key === "arr") { va = a.totalArr; vb = b.totalArr; }
+    else if (key === "health") { va = a.avgHealth; vb = b.avgHealth; }
+    else if (key === "oldest") { va = a.oldestDays ?? -1; vb = b.oldestDays ?? -1; }
+    else { va = a.count; vb = b.count; }
+    return dir === "asc" ? va - vb : vb - va;
+  });
 
   const table = document.createElement("table");
   table.className = "portfolio-table";
-  table.innerHTML = `
-    <thead>
-      <tr>
-        <th>Feature Request</th>
-        <th># Accounts</th>
-        <th>Total ARR</th>
-        <th>Avg Health Score</th>
-        <th>Requesting Accounts</th>
-      </tr>
-    </thead>
-  `;
+  const thead = document.createElement("thead");
+  const headRow = document.createElement("tr");
+  const reqTh = document.createElement("th");
+  reqTh.textContent = "Feature Request";
+  headRow.appendChild(reqTh);
+  headRow.appendChild(renderFeedbackSortHeader("# Accounts", "count"));
+  headRow.appendChild(renderFeedbackSortHeader("Total ARR", "arr"));
+  headRow.appendChild(renderFeedbackSortHeader("Avg Health Score", "health"));
+  headRow.appendChild(renderFeedbackSortHeader("Oldest Ask", "oldest"));
+  const sentimentTh = document.createElement("th");
+  sentimentTh.textContent = "Sentiment";
+  headRow.appendChild(sentimentTh);
+  const reqAccTh = document.createElement("th");
+  reqAccTh.textContent = "Requesting Accounts";
+  headRow.appendChild(reqAccTh);
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+
   const tbody = document.createElement("tbody");
-  rows.forEach(r => {
+  sorted.forEach(r => {
     const tr = document.createElement("tr");
     const healthCat = r.avgHealth >= 70 ? "low" : r.avgHealth >= 40 ? "medium" : "high";
+    const sentimentBadges = ["frustrated", "neutral", "patient"]
+      .filter(s => r.sentimentCounts[s] > 0)
+      .map(s => `<span class="status-pill risk-${SENTIMENT_RISK[s]}">${r.sentimentCounts[s]} ${SENTIMENT_LABEL[s]}</span>`)
+      .join(" ");
     tr.innerHTML = `
       <td class="account-cell">${escapeHtml(r.request)}</td>
       <td><span class="score-num">${r.count}</span></td>
       <td>${fmtUSD(r.totalArr)}</td>
       <td><span class="score-num risk-text-${healthCat}">${r.avgHealth}</span></td>
+      <td class="sub">${r.oldestDays != null ? r.oldestDays + "d" : "—"}</td>
+      <td>${sentimentBadges || "—"}</td>
       <td class="sub">${r.accounts.map(a => escapeHtml(a.accountName)).join(", ")}</td>
     `;
     tbody.appendChild(tr);
@@ -708,31 +749,55 @@ function renderFeedback() {
   return wrap;
 }
 
-function renderTeam() {
-  const wrap = document.createElement("div");
+function renderFeedbackSortHeader(label, key) {
+  const th = document.createElement("th");
+  th.className = "sortable";
+  th.textContent = label + (state.feedbackSort.key === key ? (state.feedbackSort.dir === "asc" ? " ▲" : " ▼") : "");
+  th.addEventListener("click", () => {
+    if (state.feedbackSort.key === key) state.feedbackSort.dir = state.feedbackSort.dir === "asc" ? "desc" : "asc";
+    else { state.feedbackSort.key = key; state.feedbackSort.dir = "desc"; }
+    render();
+  });
+  return th;
+}
 
-  const priorityBox = document.createElement("div");
-  priorityBox.className = "team-priority-box";
-  priorityBox.innerHTML = `<h4>AI Weekly Priorities <span class="ai-disclaimer">— AI-generated, may be inaccurate, verify before acting</span></h4><div class="team-priority-body"></div>`;
-  const body = priorityBox.querySelector(".team-priority-body");
+function renderPriorityBox(scopeCsmId, title) {
+  const box = document.createElement("div");
+  box.className = "team-priority-box";
+  box.innerHTML = `<h4>${escapeHtml(title)} <span class="ai-disclaimer">— AI-generated, may be inaccurate, verify before acting</span></h4><div class="team-priority-body"></div>`;
+  const body = box.querySelector(".team-priority-body");
+  const tp = state.teamPriority;
+  const inScope = tp.csmId === (scopeCsmId || null);
 
-  if (state.teamPriority.status === "idle") {
+  if (!inScope || tp.status === "idle") {
     const btn = document.createElement("button");
     btn.className = "ai-load-btn";
-    btn.textContent = "Load AI Prioritization for the Whole Team";
-    btn.addEventListener("click", loadTeamPriority);
+    btn.textContent = scopeCsmId ? "Load AI Prioritization for This Portfolio" : "Load AI Prioritization for the Whole Team";
+    btn.addEventListener("click", () => loadTeamPriority(scopeCsmId));
     body.appendChild(btn);
-  } else if (state.teamPriority.status === "loading") {
+  } else if (tp.status === "loading") {
     body.innerHTML = `<p class="sub">Loading…</p>`;
-  } else if (state.teamPriority.status === "error") {
-    body.innerHTML = `<p class="ai-unavailable">Unavailable (${escapeHtml(state.teamPriority.error)}).</p>`;
-  } else if (state.teamPriority.status === "done") {
-    const items = (state.teamPriority.data.priorities || []).map(p => `
+  } else if (tp.status === "error") {
+    body.innerHTML = `<p class="ai-unavailable">Unavailable (${escapeHtml(tp.error)}).</p>`;
+  } else if (tp.status === "done") {
+    const items = (tp.data.priorities || []).map(p => `
       <li><strong>${escapeHtml(p.accountName)}</strong> — <span class="sub">${escapeHtml(p.reason)}</span></li>
     `).join("");
     body.innerHTML = `<ol class="priority-list">${items}</ol>`;
   }
-  wrap.appendChild(priorityBox);
+  return box;
+}
+
+function goToCsmPortfolio(csmId) {
+  state.filters.csm = csmId;
+  document.getElementById("filter-csm").value = csmId;
+  state.view = "portfolio";
+  render();
+}
+
+function renderTeam() {
+  const wrap = document.createElement("div");
+  wrap.appendChild(renderPriorityBox(null, "AI Weekly Priorities"));
 
   const grid = document.createElement("div");
   grid.className = "team-view";
@@ -761,20 +826,22 @@ function renderTeam() {
         <div><span class="stat-num">${upcomingRenewals}</span><span class="stat-label">Renewals within 90 days</span></div>
         <div><span class="stat-num">${overdueQBRs}</span><span class="stat-label">QBR overdue</span></div>
       </div>
+      <p class="sub csm-card-link">View portfolio & AI-analyze →</p>
     `;
+    card.addEventListener("click", () => goToCsmPortfolio(csm.csmId));
     grid.appendChild(card);
   });
   return wrap;
 }
 
-async function loadTeamPriority() {
-  state.teamPriority = { status: "loading" };
+async function loadTeamPriority(csmId) {
+  state.teamPriority = { status: "loading", csmId: csmId || null };
   render();
   try {
-    const data = await fetchTeamPriority();
-    state.teamPriority = { status: "done", data };
+    const data = await fetchTeamPriority(csmId);
+    state.teamPriority = { status: "done", data, csmId: csmId || null };
   } catch (e) {
-    state.teamPriority = { status: "error", error: e.message };
+    state.teamPriority = { status: "error", error: e.message, csmId: csmId || null };
   }
   render();
 }
