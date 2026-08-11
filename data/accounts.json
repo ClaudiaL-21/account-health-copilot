@@ -142,9 +142,34 @@
       },
       "freeTextArtifacts": [
         {
-          "type": "chat",
-          "date": "2026-08-03",
-          "text": "Quick check-in, everything running smoothly on our end, no blockers to report."
+          "type": "csm_note",
+          "date": "2026-04-22",
+          "author": "Priya Nair",
+          "text": "Quarterly review with Tom Murphy and the Alpenbank digital team today. Adoption sits at 57% across the three licensed modules, with Journey Orchestration usage strongest but Offer Management still lagging — only 4 of 12 planned offer templates are live. Tom flagged that his team is stretched thin after two analysts rotated off the account, but exec sponsor Klaus Wieser joined the last 15 minutes and reaffirmed budget for Q3 expansion. Next steps: send updated onboarding checklist for the two new analysts and schedule a Digital Intelligence dashboard walkthrough."
+        },
+        {
+          "type": "customer_email",
+          "date": "2026-05-14",
+          "author": "Tom Murphy",
+          "text": "Priya, wanted to flag that our marketing ops folks are getting inconsistent results when triggering journeys off the new mortgage-refinance segment — sometimes the Journey Orchestration step skips the SMS branch entirely. I've logged ticket #48213 for this. Separately, can we get someone from your team to help us map our compliance approval workflow into Offer Management before the July product launch? Timing is tight given our internal audit cycle."
+        },
+        {
+          "type": "csm_note",
+          "date": "2026-06-03",
+          "author": "Priya Nair",
+          "text": "Support escalation call on ticket #48213 — engineering confirmed it's a segment-sync timing issue between Digital Intelligence and Journey Orchestration, root cause identified, fix targeted for the mid-June release. Tom was audibly frustrated, noting this is the second SMS-branch bug in three months and that his compliance team is now double-checking every journey manually. Session trend data still shows only a modest 3% uptick month-over-month, well below the 15% we projected after the Q1 kickoff, so I'm flagging this account as needing closer attention going into July."
+        },
+        {
+          "type": "customer_chat",
+          "date": "2026-06-27",
+          "author": "Tom Murphy",
+          "text": "quick one - is there a way to clone an existing offer template in Offer Management instead of building from scratch each time? doing the July launch offers manually is eating way too much of my team's week. also ticket #48213 fix seems to have landed, SMS branch triggered correctly on our test segment yesterday, thanks for pushing that through"
+        },
+        {
+          "type": "csm_note",
+          "date": "2026-08-04",
+          "author": "Priya Nair",
+          "text": "Mid-year check-in with Tom and Klaus Wieser. Klaus reiterated strong exec-level commitment and asked for a formal ROI readout ahead of the September budget cycle, which is a good signal. That said, adoption has plateaued at 57% for the second straight quarter and a second open ticket (#49102, related to Digital Intelligence report export timeouts) is still unresolved after two weeks — Tom seemed less engaged than usual and mentioned he's fielding pressure internally about the flat usage numbers. Planning a dedicated Offer Management template-cloning workshop for late August to unblock the launch-cycle friction and rebuild momentum before the ROI review."
         }
       ],
       "location": {
@@ -611,9 +636,34 @@
       },
       "freeTextArtifacts": [
         {
-          "type": "email",
-          "date": "2026-07-19",
-          "text": "We're seeing strong results from the journey orchestration module and are discussing budget for a second use case next year."
+          "type": "csm_note",
+          "date": "2026-04-18",
+          "author": "Priya Nair",
+          "text": "QBR with Anna Garcia and the Zurich merchandising team today; adoption sits at 71% with sessions up 17% quarter-over-quarter, driven largely by Journey Orchestration usage across their loyalty campaigns. Anna flagged that Offer Management's discount-stacking rules still confuse two regional managers, so I'm scheduling a targeted workshop for early May. Exec sponsor Markus Lindqvist joined for the first 15 minutes and asked pointed questions about Digital Intelligence's forecasting accuracy, which is a good sign of top-down interest. Next step: send workshop invite and pull a usage breakdown by canton before next call."
+        },
+        {
+          "type": "customer_chat",
+          "date": "2026-05-06",
+          "author": "Anna Garcia",
+          "text": "quick one - the offer stacking workshop yesterday was great, my team finally gets why the tiered discounts were overriding the seasonal promo. can you send the recording to our Geneva store ops lead too? also curious if Digital Intelligence can pull sell-through data at the SKU level, we're trying to cut down on markdown waste before Q3."
+        },
+        {
+          "type": "csm_note",
+          "date": "2026-05-29",
+          "author": "Priya Nair",
+          "text": "Follow-up call focused on Digital Intelligence SKU-level reporting request from Anna's May 6 message; product team confirmed the drill-down exists but isn't enabled on Helvetia's current config, so I'm submitting an enablement request. Sessions trend continues climbing, now roughly 22% above the Q1 baseline, and Anna mentioned Journey Orchestration is now running 9 live campaigns versus 4 in March. No open support tickets this cycle, which is the first fully clean month we've had with this account. Flagged internally as a strong candidate for the upcoming expansion conversation given the sponsor's engagement."
+        },
+        {
+          "type": "customer_email",
+          "date": "2026-07-02",
+          "author": "Anna Garcia",
+          "text": "Hi Priya, wanted to loop you in before our board review next week - the markdown reduction pilot using Digital Intelligence's SKU drill-down cut waste by about 12% across our Basel and Bern stores, and leadership is impressed. Markus has asked me to explore whether we could extend Offer Management to our wholesale division, which currently isn't licensed. Could we set up a call with your solutions team to scope what that would take, ideally before end of July?"
+        },
+        {
+          "type": "csm_note",
+          "date": "2026-08-04",
+          "author": "Priya Nair",
+          "text": "Scoping call with Anna, Markus, and their wholesale ops director went well - walked through how Offer Management's rule engine would map to wholesale tiered pricing, and they seemed satisfied with the fit. Current adoption is now 71% platform-wide but usage intensity is clearly rising, sessions trend holding at 17% with three new Journey Orchestration workflows launched last month for back-to-school campaigns. Sent over a rough expansion proposal for wholesale licensing and looped in our AE, Daniel Weiss, to formalize pricing. This account has gone from stable to genuinely expansion-ready in under four months - recommend prioritizing a fast turnaround on the proposal."
         }
       ],
       "location": {
@@ -737,14 +787,34 @@
       },
       "freeTextArtifacts": [
         {
-          "type": "ticket",
-          "date": "2026-07-25",
-          "text": "Data activation to our ad platforms is delayed by 48h+, our campaigns are running on stale segments."
+          "type": "csm_note",
+          "date": "2026-04-18",
+          "author": "Sarah Novak (CSM)",
+          "text": "QBR with Liam Khan and two ops leads today. Liam flagged that the Predictive Analytics forecast feed has been out of sync with their SAP TMS instance since the March release, causing dispatchers to distrust the recommendations. Adoption sits at 29% across the four modules, and Liam admitted only his team of six actually logs in weekly. Agreed to escalate the SAP connector issue to Tier 2 and follow up in two weeks."
         },
         {
-          "type": "email",
-          "date": "2026-07-30",
-          "text": "Just a heads up, our main admin and platform owner left the company last month, we're still figuring out who owns this relationship internally."
+          "type": "customer_email",
+          "date": "2026-05-06",
+          "author": "Liam Khan",
+          "text": "Sarah, wanted to flag that ticket #4471 on the Journey Orchestration triggers still hasn't moved since we opened it three weeks ago — routes for the Budapest hub are firing duplicate customer notifications. This is the third integration bug this quarter and my team is starting to route around the platform entirely for daily planning. Can someone from engineering actually get on a call this time instead of asking us to re-send logs?"
+        },
+        {
+          "type": "csm_note",
+          "date": "2026-05-29",
+          "author": "Sarah Novak (CSM)",
+          "text": "Learned today via LinkedIn and an out-of-office reply that Liam Khan has left Danube Logistics as of last week — no formal handoff notice from the account. Reached out to his manager, Petra Vogel, who seems unaware of the depth of our open issues (9 tickets, 5 tagged integration-related). Sessions are down 25% quarter over quarter per the usage dashboard; no exec sponsor identified on their side to help stabilize the relationship. Next step: schedule intro call with Petra and push internally for a senior support engineer to close out the backlog."
+        },
+        {
+          "type": "customer_chat",
+          "date": "2026-06-24",
+          "author": "Petra Vogel",
+          "text": "hi Sarah - still trying to get my bearings here since Liam left. the Digital Intelligence dashboards two of my analysts rely on have been showing stale data for like 2 weeks now, is that a known issue? honestly nobody on my side has time to chase tickets right now, we're understaffed"
+        },
+        {
+          "type": "customer_email",
+          "date": "2026-08-04",
+          "author": "Petra Vogel",
+          "text": "Sarah, following up after our call was rescheduled twice — we now have 9 open tickets, some dating back to April, and the Offer Management module hasn't synced pricing updates correctly for our Austrian freight contracts in over a month, which caused a billing discrepancy with one of our carriers. Adoption on our end has dropped further since we've told several teams to stop relying on the platform until things stabilize. I need a concrete remediation plan by next week or I'll need to raise this with our procurement team ahead of renewal."
         }
       ],
       "location": {
@@ -1105,19 +1175,34 @@
       },
       "freeTextArtifacts": [
         {
-          "type": "ticket",
-          "date": "2026-07-26",
-          "text": "The scheduled report export has failed silently for the past two weeks, nobody noticed until Monday."
+          "type": "csm_note",
+          "date": "2026-04-17",
+          "author": "Elin Kaasa (CSM)",
+          "text": "Quarterly check-in with Jonas Bianchi went reasonably well; he flagged that Journey Orchestration adoption has stalled at around 30% across the team because the campaign builder keeps timing out on flows with more than 8 steps. I walked him through a workaround using sub-journeys but he was clearly frustrated this is still an issue after two prior tickets. Agreed to escalate the timeout bug internally and follow up in two weeks with a fix ETA."
         },
         {
-          "type": "email",
-          "date": "2026-07-21",
-          "text": "Just a heads up, our main admin and platform owner left the company last month, we're still figuring out who owns this relationship internally."
+          "type": "customer_email",
+          "date": "2026-05-06",
+          "author": "Jonas Bianchi, Head of Digital Channels, NordVolt Energy",
+          "text": "Elin, following up on the sub-journey workaround - it helped short term but our team has basically stopped building anything beyond simple two-step flows in Journey Orchestration because of the reliability concerns. We also still have three open tickets on the Offer Management side related to eligibility rules not syncing correctly with our billing segments. Can we get a real timeline on both fronts before our June planning cycle?"
         },
         {
-          "type": "chat",
-          "date": "2026-07-28",
-          "text": "We've been asked to justify the current tier ahead of renewal, usage numbers would help our internal case."
+          "type": "csm_note",
+          "date": "2026-06-02",
+          "author": "Elin Kaasa (CSM)",
+          "text": "Difficult call today - Jonas mentioned he's leaving NordVolt at the end of the month for a role outside energy, and no successor has been named yet. He was candid that adoption has slipped further; usage sessions are down noticeably quarter over quarter, and Digital Intelligence dashboards haven't been opened by his team in over three weeks. No exec sponsor has been looped in on any of this, which is a real risk given the open ticket count now stands at 7. Need to push hard for a transition plan and get someone above Jonas engaged before he's gone."
+        },
+        {
+          "type": "customer_chat",
+          "date": "2026-06-24",
+          "author": "Kristoffer Lund, Marketing Operations, NordVolt Energy",
+          "text": "hey - Jonas's last day was Friday, I'm covering some of his stuff but honestly I don't have login access to Offer Management yet and nobody's briefed me on the open tickets. saw an email about eligibility rule sync errors but no idea what state that's in. can someone send me a summary?"
+        },
+        {
+          "type": "csm_note",
+          "date": "2026-08-01",
+          "author": "Elin Kaasa (CSM)",
+          "text": "Attempted to schedule a health-check call for three weeks running; Kristoffer finally responded saying he's stretched thin covering Jonas's old responsibilities plus his own and can't commit to a regular cadence right now. Adoption rate has held flat at 30% with sessions trend now down 19% over the period, and none of the 7 open tickets have moved since May. No exec sponsor identified despite two requests to leadership at NordVolt; flagging this account as at-risk and escalating internally for a renewal-risk review ahead of Q4."
         }
       ],
       "location": {
@@ -1231,19 +1316,34 @@
       },
       "freeTextArtifacts": [
         {
-          "type": "ticket",
-          "date": "2026-08-05",
-          "text": "Users in our EU offices keep getting logged out mid-session, IT has flagged it three times now."
+          "type": "csm_note",
+          "date": "2026-04-18",
+          "author": "Priya Nandakumar",
+          "text": "Quarterly check-in with Yuki Berg today. Adoption of Predictive Analytics is still hovering around 24% and Yuki flagged that the forecasting dashboards for the Rotterdam fleet team haven't been touched since February. Also raised three SSO login failures affecting the fleet ops group — I've logged tickets and looped in support. Yuki seemed distracted, mentioned some internal reorg but didn't elaborate."
         },
         {
-          "type": "email",
-          "date": "2026-07-12",
-          "text": "With Site 5 restructuring, our original sponsor moved to a different division, we don't have a clear internal owner right now."
+          "type": "customer_email",
+          "date": "2026-05-06",
+          "author": "Yuki Berg",
+          "text": "Priya, wanted to flag that our team is getting locked out of Data Activation Hub again this week — same SSO token expiry issue as last month, tickets #4471 and #4483 still unresolved. This is the fourth time in six weeks and it's starting to erode trust with the regional managers who rely on the daily activation exports. Can we get someone from engineering on a call rather than another tier-1 response?"
         },
         {
-          "type": "chat",
-          "date": "2026-08-03",
-          "text": "We've been asked to justify the current tier ahead of renewal, usage numbers would help our internal case."
+          "type": "csm_note",
+          "date": "2026-06-02",
+          "author": "Priya Nandakumar",
+          "text": "Learned today via LinkedIn that Yuki Berg has left Benelux Mobility Group as of last week — no formal handoff or notice from the account. Reached out to their IT director, Bram Willemsen, who wasn't aware Yuki was the primary point of contact for our platform. Session counts are down sharply, adoption rate now sitting at 18% overall, and there are still 5 open SSO tickets. This account has no exec sponsor engaged, which makes the champion loss especially risky right now."
+        },
+        {
+          "type": "customer_chat",
+          "date": "2026-07-09",
+          "author": "Bram Willemsen",
+          "text": "hey, following up on the SSO mess - our fleet analysts still can't reliably get into the Predictive Analytics module, half the team just gave up logging daily. also nobody here really knows how the Data Activation Hub reporting is supposed to work since Yuki left. can someone walk us through it again? feels like we're paying for stuff nobody uses anymore"
+        },
+        {
+          "type": "csm_note",
+          "date": "2026-08-01",
+          "author": "Priya Nandakumar",
+          "text": "Ran a recovery call with Bram Willemsen and two analysts. Sessions are down 35% quarter over quarter and adoption has slipped to 16%, the lowest we've recorded for this account. Seven SSO tickets remain open, three past 30 days, and Bram confirmed there's still no assigned successor to Yuki's role internally. Escalating to support leadership for the login issue and requesting a joint call with their VP of Operations before renewal conversations start in Q4, since there's currently zero exec engagement on our side either."
         }
       ],
       "location": {
@@ -1362,9 +1462,34 @@
       },
       "freeTextArtifacts": [
         {
-          "type": "ticket",
-          "date": "2026-08-08",
-          "text": "Users in our EU offices keep getting logged out mid-session, IT has flagged it three times now."
+          "type": "csm_note",
+          "date": "2026-04-18",
+          "author": "Astrid Nilsen (CSM)",
+          "text": "QBR with Liam Murphy and the Fjord Telecom ops team today. Adoption sits at 38%, driven mostly by Offer Management usage in the Oslo billing team; Journey Orchestration is barely touched outside one onboarding flow. Liam flagged that three of his colleagues have been locked out of SSO intermittently since the March IdP update — logged as tickets but still unresolved. Agreed to escalate the SSO issue internally and follow up with a Predictive Analytics use case demo next month."
+        },
+        {
+          "type": "customer_chat",
+          "date": "2026-05-06",
+          "author": "Liam Murphy",
+          "text": "hey, another SSO failure this morning for two of our contact center leads — same SAML assertion error as last time (ticket #4471). this is the 4th time in six weeks and it's starting to erode trust internally. can someone from engineering actually look at the root cause instead of just resetting sessions?"
+        },
+        {
+          "type": "customer_email",
+          "date": "2026-06-02",
+          "author": "Liam Murphy, Head of Digital Channels, Fjord Telecom",
+          "text": "Astrid, following up on our call — we now have 7 open tickets, all tracing back to authentication problems, and our regional director is asking why we're paying for Journey Orchestration when half the team can't reliably log in. Session volume is down noticeably this quarter (our internal tracking shows about -14% week over week) and I'm getting pressure to justify the renewal. I need a concrete fix timeline, not another workaround, by end of next week."
+        },
+        {
+          "type": "csm_note",
+          "date": "2026-06-25",
+          "author": "Astrid Nilsen (CSM)",
+          "text": "Escalation call with exec sponsor Henrik Solberg and Liam. Support confirmed the SSO issue is tied to a certificate rotation mismatch on our IdP connector, fix targeted for early July but slipped once already. Henrik was visibly frustrated, noting Predictive Analytics deployment has stalled entirely because the data team can't get consistent access to run scheduled models. Committed to a weekly status update until all 7 tickets close and offered a temporary bypass login for critical users in the meantime."
+        },
+        {
+          "type": "customer_chat",
+          "date": "2026-08-04",
+          "author": "Liam Murphy",
+          "text": "checking in before our next sync — still 7 tickets open, the bypass logins you gave us are clunky and two people reverted to not using the platform at all. adoption on our end feels like it's going backwards, not forwards. honestly not sure how I frame this internally for the renewal conversation in Q4 if the login issue isn't actually resolved by then."
         }
       ],
       "location": {
@@ -1609,9 +1734,34 @@
       },
       "freeTextArtifacts": [
         {
-          "type": "email",
-          "date": "2026-07-31",
-          "text": "The new predictive audience feature saved our team a full day of manual segmentation last week, really impressed."
+          "type": "csm_note",
+          "date": "2026-04-17",
+          "author": "Priya Shah",
+          "text": "Quarterly review with Jonas Kobayashi and two of his analysts today. Adoption sits at 71% overall, but Predictive Analytics usage is lagging behind the other three modules — only 3 of 12 seats logged in this month. Jonas wants to run a lunch-and-learn for his editorial ops team to push utilization; I'll help build the agenda and pull a usage breakdown by team before then."
+        },
+        {
+          "type": "customer_email",
+          "date": "2026-05-06",
+          "author": "Jonas Kobayashi",
+          "text": "Priya, quick update — the lunch-and-learn went well, we had 9 people join and got good questions on the churn-risk model inside Predictive Analytics. Separately, our Digital Intelligence dashboards flagged a 14% lift in engagement on our Dutch-language newsletter after we retooled subject lines using the recommendations, so leadership is paying attention now. Can we get 30 minutes next week to talk about whether Journey Orchestration could handle our subscriber win-back flow too?"
+        },
+        {
+          "type": "csm_note",
+          "date": "2026-05-19",
+          "author": "Priya Shah",
+          "text": "Met with Jonas and, for the first time, VP of Subscriber Growth Eef Willemsen joined as exec sponsor. They're keen to expand Journey Orchestration to cover a win-back flow for ~40,000 lapsed subscribers, currently run manually via a third-party tool. Sessions trend is up to 26% month-over-month, which Eef specifically called out as evidence the platform is 'sticking.' Next step: scope a pilot journey with the CS engineering team and get pricing for additional Journey Orchestration capacity."
+        },
+        {
+          "type": "customer_chat",
+          "date": "2026-06-24",
+          "author": "Jonas Kobayashi",
+          "text": "hey Priya — quick one, the win-back pilot journey went live yesterday for the first 5k subscriber batch. open rates already beating our old manual campaign by like 6 points. Eef wants to see this in front of the board deck next month, any chance you can pull a one-pager with before/after numbers?"
+        },
+        {
+          "type": "csm_note",
+          "date": "2026-08-04",
+          "author": "Priya Shah",
+          "text": "Check-in call — full win-back rollout across all 40k lapsed subscribers is now live in Journey Orchestration, and Jonas reports a 22% reactivation rate versus 9% under the old manual process. Overall adoption has climbed to 71% with Predictive Analytics finally gaining traction after the May training push. Jonas floated expanding the Offer Management module to their sister brand in Belgium and asked me to loop in sales for a scoping conversation next month — flagging this as a strong expansion opportunity for Q3."
         }
       ],
       "location": {
@@ -1962,14 +2112,34 @@
       },
       "freeTextArtifacts": [
         {
-          "type": "ticket",
-          "date": "2026-07-29",
-          "text": "The scheduled report export has failed silently for the past two weeks, nobody noticed until Monday."
+          "type": "csm_note",
+          "date": "2026-04-18",
+          "author": "Priya Shenoy (CSM)",
+          "text": "Quarterly check-in with Noah Novak and two analysts from the fraud ops team. Noah flagged that the Identity Resolution match-rate dashboard is useful but exports keep truncating at 5,000 rows, which is blocking their monthly RBI compliance packet. Adoption still sitting around 31% across the license, mostly concentrated in Digital Intelligence's event stream view. Agreed to file a support ticket and I'll chase engineering for a timeline."
         },
         {
-          "type": "chat",
+          "type": "customer_email",
+          "date": "2026-05-06",
+          "author": "Noah Novak",
+          "text": "Priya, following up on ticket #4471 - the CSV export cap is still an issue and now it's also happening in the audit trail report, not just identity match logs. Our compliance team is asking why we're paying for a platform that can't produce a complete report for a mid-size branch dataset. Can you get me an actual date instead of 'we're looking into it'?"
+        },
+        {
+          "type": "csm_note",
+          "date": "2026-06-02",
+          "author": "Priya Shenoy (CSM)",
+          "text": "Support queue for Ganges now at 5 open tickets, four of them variations on export/reporting limits across Digital Intelligence and Identity Resolution modules. Session activity down noticeably over the last 30 days - usage report shows a 33% drop versus March, concentrated in the branch-level dashboards. Noah was noncommittal on scheduling a working session and mentioned his team has started pulling raw data manually into Excel instead, which is a bad sign. No exec sponsor has ever engaged on this account, so escalation options are thin."
+        },
+        {
+          "type": "customer_chat",
+          "date": "2026-06-27",
+          "author": "Noah Novak",
+          "text": "hey - quick one, is there any workaround for the export limit yet? our regional risk lead asked me directly why match-rate numbers in the platform don't tie to what we reported last month. not a great conversation to be having tbh"
+        },
+        {
+          "type": "csm_note",
           "date": "2026-08-04",
-          "text": "Finance is reviewing all software spend this quarter, renewal conversations may take longer than usual."
+          "author": "Priya Shenoy (CSM)",
+          "text": "Attempted to schedule a QBR for the third time this quarter - Noah pushed it back again, citing internal reprioritization, and didn't loop in anyone else from his team this time. Open tickets are now at 6, still dominated by the same reporting/export theme first raised in April with no permanent fix shipped. Usage continues to slide; adoption is flat at 31% and I have real concern Noah's engagement itself is wavering given the last two meeting cancellations. Plan to request internal escalation to get product commitment on export limits before renewal conversations start, and to try reaching Noah's manager directly given lack of exec sponsor on our side."
         }
       ],
       "location": {
@@ -2335,14 +2505,34 @@
       },
       "freeTextArtifacts": [
         {
-          "type": "ticket",
-          "date": "2026-08-08",
-          "text": "New team members still don't have proper training material, we're relying on tribal knowledge."
+          "type": "csm_note",
+          "date": "2026-04-18",
+          "author": "Priya Nandakumar",
+          "text": "Quarterly check-in with Hana Garcia and two analysts from the risk team. Adoption is sitting at 34% with Identity Resolution barely touched — Hana admitted her team never finished the onboarding curriculum from January. Agreed to schedule a refresher session on Predictive Analytics scoring models for early May; Hana flagged that her VP still hasn't seen a live demo of Offer Management, which is a gap I want to close before renewal conversations start."
         },
         {
-          "type": "chat",
+          "type": "customer_chat",
+          "date": "2026-05-06",
+          "author": "Hana Garcia",
+          "text": "hey, sorry had to push the training again — two people on my team are out for Songkran make-up leave. also the Data Activation Hub sync to our CRM threw errors again yesterday, ticket #4471. can someone senior look at it, this is the third time this quarter"
+        },
+        {
+          "type": "csm_note",
+          "date": "2026-06-02",
+          "author": "Priya Nandakumar",
+          "text": "Support queue for Lotus now at 6 open tickets, most tagged onboarding/training gaps rather than true bugs — a sign the team is still guessing at basic workflows. Session usage down noticeably month over month; pulled the dashboard and weekly active users dropped from 41 to roughly 29. Reached out to Hana to propose a structured 4-week enablement plan covering all four modules but haven't heard back in five business days, which is unusual for her."
+        },
+        {
+          "type": "customer_email",
+          "date": "2026-06-27",
+          "author": "Hana Garcia",
+          "text": "Priya, apologies for the delay — things have been chaotic here, we had a reorg in the analytics function and I'm now covering two roles. Honestly the Offer Management module still feels like a black box to my team; we've only launched two offers through it in six months versus the dozen we'd planned. I don't think leadership above me is even aware of how underused this is, and I'm not in a position to escalate that right now."
+        },
+        {
+          "type": "csm_note",
           "date": "2026-08-04",
-          "text": "Finance is reviewing all software spend this quarter, renewal conversations may take longer than usual."
+          "author": "Priya Nandakumar",
+          "text": "Open tickets have climbed to 8, still dominated by onboarding/training gaps, and adoption has slipped further to 34% with sessions down 29% over the period. Hana was unresponsive to my last two outreach attempts and I've gotten no confirmation on her current role or whether she's still the right point of contact — LinkedIn shows no title change but internal contacts have gone quiet. No exec sponsor engaged on their side to escalate to, so I'm flagging this account as at-risk for the QBR and recommending we attempt a direct outreach to Hana's manager before the next renewal cycle."
         }
       ],
       "location": {
@@ -2572,9 +2762,34 @@
       },
       "freeTextArtifacts": [
         {
-          "type": "email",
-          "date": "2026-07-24",
-          "text": "Great QBR last month, the roadmap alignment on identity resolution gave our exec team real confidence."
+          "type": "csm_note",
+          "date": "2026-04-18",
+          "author": "Daniel Park",
+          "text": "Quarterly review with Ingrid Rossi and two analysts from the risk modeling team. Adoption sits at 73% across Predictive Analytics and Journey Orchestration, up from 68% last quarter, mostly driven by the fraud-scoring workflows the risk team built out. Ingrid flagged that the churn-prediction model's refresh cadence (currently every 72 hours) feels too slow for their credit card default use case. Agreed to loop in our data science team to explore a faster refresh tier before next review."
+        },
+        {
+          "type": "customer_email",
+          "date": "2026-05-06",
+          "author": "Ingrid Rossi",
+          "text": "Daniel, wanted to flag two things before our sync next week. First, the export job in Journey Orchestration timed out twice this month when pushing segment lists over 50,000 records to our CRM — support ticket #48211 is open on this. Second, our exec sponsor Min-jun Cho asked whether Predictive Analytics could support a new use case around wealth management client attrition; he's keen to discuss expansion if the current modules keep performing this well."
+        },
+        {
+          "type": "csm_note",
+          "date": "2026-06-02",
+          "author": "Daniel Park",
+          "text": "Call with Ingrid and Min-jun Cho to discuss the wealth management attrition use case. Sessions trend is up 13% month over month, and Ingrid confirmed the fraud-scoring pipeline is now catching roughly 22% more anomalies than their legacy rules engine. Min-jun asked for a proposal covering an additional Predictive Analytics seat allocation for the wealth division — sending pricing scenarios by end of week. Ticket #48211 (export timeout) still open, engineering says fix targeted for the June 15 release."
+        },
+        {
+          "type": "customer_chat",
+          "date": "2026-07-09",
+          "author": "Ingrid Rossi",
+          "text": "quick one — the export timeout fix seems to be working, ran a 68k record push yesterday with no issues, thanks. also min-jun mentioned in our leadership meeting that he wants the wealth mgmt attrition pilot scoped by end of Q3. can we grab 30 min this week to talk numbers and timeline?"
+        },
+        {
+          "type": "customer_email",
+          "date": "2026-08-04",
+          "author": "Ingrid Rossi",
+          "text": "Daniel, following up after Friday's call — the wealth management pilot proposal looks solid, Min-jun is on board to move forward pending final budget sign-off, likely mid-September. Separately, adoption on Journey Orchestration keeps climbing (we're now running 9 active journeys vs. 5 in April), though we still have that open ticket (#49027) on the segment sync delay we discussed. Overall really pleased with where things stand and excited about expanding scope."
         }
       ],
       "location": {
@@ -2809,9 +3024,34 @@
       },
       "freeTextArtifacts": [
         {
-          "type": "ticket",
-          "date": "2026-07-28",
-          "text": "Data activation to our ad platforms is delayed by 48h+, our campaigns are running on stale segments."
+          "type": "csm_note",
+          "date": "2026-04-17",
+          "author": "Priya Nathan",
+          "text": "QBR with Sofia O'Sullivan and her data lead today. Adoption sits at 54% with Predictive Analytics well used but Data Activation Hub still lagging — Sofia flagged that the nightly sync from their POS system into the Hub keeps dropping SKU-level records for their Perth stores. Opened ticket #4821 to investigate; Sofia is patient but wants a root cause before their winter sale campaign in June. No exec sponsor present again — worth pushing for one before renewal conversations start."
+        },
+        {
+          "type": "customer_email",
+          "date": "2026-05-06",
+          "author": "Sofia O'Sullivan",
+          "text": "Hi Priya, following up on ticket #4821 — the integration team confirmed it's still dropping about 8% of SKU records nightly, which is throwing off our Offer Management segments for the loyalty tiers. Can we get a firmer ETA than 'investigating'? We're trying to launch the June promo using Predictive Analytics forecasts and I don't want bad data feeding the offer logic."
+        },
+        {
+          "type": "customer_chat",
+          "date": "2026-05-28",
+          "author": "Sofia O'Sullivan",
+          "text": "quick one - support said the SKU sync fix (#4821) is deployed but we're still seeing gaps for our Adelaide store group specifically. also two new tickets went in this week for the same connector, feels like whack-a-mole. can someone senior take a look before next week's promo push?"
+        },
+        {
+          "type": "csm_note",
+          "date": "2026-06-19",
+          "author": "Priya Nathan",
+          "text": "Escalated the Adelaide sync issue to engineering leadership; they identified a timezone offset bug in the connector causing partial record drops, patch scheduled for early July. Sofia remains engaged and hasn't lost confidence yet, but noted internally her ops director is starting to ask why integration issues keep recurring — four tickets now open across the account. Session activity is flat month-over-month (no growth in Offer Management usage), so I want to get a working demo of the fixed connector in front of her team ASAP to rebuild momentum."
+        },
+        {
+          "type": "customer_email",
+          "date": "2026-07-30",
+          "author": "Sofia O'Sullivan",
+          "text": "Priya, the connector patch seems to have helped — Adelaide numbers look complete for the past two weeks and our Predictive Analytics forecasts finally match actuals within a few percent. Still cautious given the history, but wanted to acknowledge the improvement. One ask: can we get a proper integration health dashboard so my team can self-monitor instead of finding gaps after the fact?"
         }
       ],
       "location": {
