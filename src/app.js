@@ -37,6 +37,7 @@ function bindControls() {
   document.getElementById("tab-matrix").addEventListener("click", () => { state.view = "matrix"; render(); });
   document.getElementById("tab-map").addEventListener("click", () => { state.view = "map"; render(); });
   document.getElementById("tab-team").addEventListener("click", () => { state.view = "team"; render(); });
+  document.getElementById("tab-feedback").addEventListener("click", () => { state.view = "feedback"; render(); });
 
   const csmSelect = document.getElementById("filter-csm");
   state.csms.forEach(c => {
@@ -95,6 +96,7 @@ function render() {
   document.getElementById("tab-matrix").classList.toggle("active", state.view === "matrix");
   document.getElementById("tab-map").classList.toggle("active", state.view === "map");
   document.getElementById("tab-team").classList.toggle("active", state.view === "team");
+  document.getElementById("tab-feedback").classList.toggle("active", state.view === "feedback");
   document.getElementById("filters").style.display = state.view === "team" ? "none" : "flex";
 
   const root = document.getElementById("app");
@@ -102,6 +104,7 @@ function render() {
   if (state.view === "portfolio") root.appendChild(renderPortfolio());
   else if (state.view === "matrix") root.appendChild(renderMatrix());
   else if (state.view === "map") root.appendChild(renderMap());
+  else if (state.view === "feedback") root.appendChild(renderFeedback());
   else root.appendChild(renderTeam());
 }
 
@@ -602,6 +605,81 @@ function renderMap() {
     render();
     document.getElementById(`detail-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
   });
+
+  return wrap;
+}
+
+function renderFeedback() {
+  const wrap = document.createElement("div");
+  const list = getFilteredAccounts();
+
+  const groups = {};
+  list.forEach(a => {
+    const req = a.support.topFeatureRequest;
+    if (!req) return;
+    if (!groups[req]) groups[req] = { accounts: [] };
+    groups[req].accounts.push(a);
+  });
+
+  const rows = Object.entries(groups)
+    .map(([request, { accounts }]) => ({
+      request,
+      count: accounts.length,
+      totalArr: accounts.reduce((s, a) => s + a.contract.arrUSD, 0),
+      avgHealth: Math.round(accounts.reduce((s, a) => s + a.health.score, 0) / accounts.length),
+      accounts,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  if (rows.length === 0) {
+    wrap.innerHTML = `<p class="sub">No feature requests recorded for the currently filtered accounts.</p>`;
+    return wrap;
+  }
+
+  const requesters = new Set(list.filter(a => a.support.topFeatureRequest).map(a => a.accountId)).size;
+
+  const summary = document.createElement("div");
+  summary.className = "summary-bar";
+  summary.innerHTML = `
+    <div class="summary-chip neutral">${rows.length} distinct requests</div>
+    <div class="summary-chip neutral">${requesters} accounts with a request</div>
+    <div class="summary-chip neutral">${list.length} accounts in view</div>
+  `;
+  wrap.appendChild(summary);
+
+  const intro = document.createElement("p");
+  intro.className = "sub";
+  intro.textContent = "Aggregated across the currently filtered accounts — not AI-generated, just counting. Helps spot a recurring ask across many customers instead of reacting to whoever asked loudest.";
+  wrap.appendChild(intro);
+
+  const table = document.createElement("table");
+  table.className = "portfolio-table";
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Feature Request</th>
+        <th># Accounts</th>
+        <th>Total ARR</th>
+        <th>Avg Health Score</th>
+        <th>Requesting Accounts</th>
+      </tr>
+    </thead>
+  `;
+  const tbody = document.createElement("tbody");
+  rows.forEach(r => {
+    const tr = document.createElement("tr");
+    const healthCat = r.avgHealth >= 70 ? "low" : r.avgHealth >= 40 ? "medium" : "high";
+    tr.innerHTML = `
+      <td class="account-cell">${escapeHtml(r.request)}</td>
+      <td><span class="score-num">${r.count}</span></td>
+      <td>${fmtUSD(r.totalArr)}</td>
+      <td><span class="score-num risk-text-${healthCat}">${r.avgHealth}</span></td>
+      <td class="sub">${r.accounts.map(a => escapeHtml(a.accountName)).join(", ")}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
 
   return wrap;
 }
