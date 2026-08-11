@@ -183,7 +183,41 @@
       "valueMilestone": {
         "achievedDate": "2026-04-28",
         "description": "Champion Tom Murphy presented the platform's ROI to their own leadership team, unprompted."
-      }
+      },
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 59
+        },
+        {
+          "date": "2026-06-30",
+          "score": 60
+        },
+        {
+          "date": "2026-07-07",
+          "score": 61
+        },
+        {
+          "date": "2026-07-14",
+          "score": 62
+        },
+        {
+          "date": "2026-07-21",
+          "score": 54
+        },
+        {
+          "date": "2026-07-28",
+          "score": 55
+        },
+        {
+          "date": "2026-08-04",
+          "score": 56
+        },
+        {
+          "date": "2026-08-11",
+          "score": 58
+        }
+      ]
     },
     {
       "accountId": "ACC-02",
@@ -302,7 +336,41 @@
         "lat": 45.4642,
         "lng": 9.19
       },
-      "valueMilestone": null
+      "valueMilestone": null,
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 41
+        },
+        {
+          "date": "2026-06-30",
+          "score": 42
+        },
+        {
+          "date": "2026-07-07",
+          "score": 43
+        },
+        {
+          "date": "2026-07-14",
+          "score": 35
+        },
+        {
+          "date": "2026-07-21",
+          "score": 36
+        },
+        {
+          "date": "2026-07-28",
+          "score": 37
+        },
+        {
+          "date": "2026-08-04",
+          "score": 38
+        },
+        {
+          "date": "2026-08-11",
+          "score": 39
+        }
+      ]
     },
     {
       "accountId": "ACC-03",
@@ -424,7 +492,41 @@
       "valueMilestone": {
         "achievedDate": "2026-06-03",
         "description": "198 of 250 licensed users are now active — the account's highest adoption rate on record."
-      }
+      },
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 75
+        },
+        {
+          "date": "2026-06-30",
+          "score": 76
+        },
+        {
+          "date": "2026-07-07",
+          "score": 68
+        },
+        {
+          "date": "2026-07-14",
+          "score": 69
+        },
+        {
+          "date": "2026-07-21",
+          "score": 70
+        },
+        {
+          "date": "2026-07-28",
+          "score": 71
+        },
+        {
+          "date": "2026-08-04",
+          "score": 72
+        },
+        {
+          "date": "2026-08-11",
+          "score": 72
+        }
+      ]
     },
     {
       "accountId": "ACC-04",
@@ -546,7 +648,41 @@
       "valueMilestone": {
         "achievedDate": "2026-04-29",
         "description": "Went live with Journey Orchestration across the full team after a successful pilot phase."
-      }
+      },
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 75
+        },
+        {
+          "date": "2026-06-30",
+          "score": 67
+        },
+        {
+          "date": "2026-07-07",
+          "score": 68
+        },
+        {
+          "date": "2026-07-14",
+          "score": 69
+        },
+        {
+          "date": "2026-07-21",
+          "score": 70
+        },
+        {
+          "date": "2026-07-28",
+          "score": 71
+        },
+        {
+          "date": "2026-08-04",
+          "score": 72
+        },
+        {
+          "date": "2026-08-11",
+          "score": 71
+        }
+      ]
     },
     {
       "accountId": "ACC-05",
@@ -698,7 +834,41 @@
       "valueMilestone": {
         "achievedDate": "2026-07-09",
         "description": "Reached an NPS of 9 this quarter — the account's best score in the last year."
-      }
+      },
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 59
+        },
+        {
+          "date": "2026-06-30",
+          "score": 65
+        },
+        {
+          "date": "2026-07-07",
+          "score": 71
+        },
+        {
+          "date": "2026-07-14",
+          "score": 77
+        },
+        {
+          "date": "2026-07-21",
+          "score": 77
+        },
+        {
+          "date": "2026-07-28",
+          "score": 83
+        },
+        {
+          "date": "2026-08-04",
+          "score": 89
+        },
+        {
+          "date": "2026-08-11",
+          "score": 94
+        }
+      ]
     },
     {
       "accountId": "ACC-06",
@@ -852,7 +1022,41 @@
         "lat": 47.4979,
         "lng": 19.0402
       },
-      "valueMilestone": null
+      "valueMilestone": null,
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 30
+        },
+        {
+          "date": "2026-06-30",
+          "score": 28
+        },
+        {
+          "date": "2026-07-07",
+          "score": 26
+        },
+        {
+          "date": "2026-07-14",
+          "score": 19
+        },
+        {
+          "date": "2026-07-21",
+          "score": 18
+        },
+        {
+          "date": "2026-07-28",
+          "score": 16
+        },
+        {
+          "date": "2026-08-04",
+          "score": 14
+        },
+        {
+          "date": "2026-08-11",
+          "score": 10
+        }
+      ]
     },
     {
       "accountId": "ACC-07",
@@ -979,7 +1183,41 @@
       "valueMilestone": {
         "achievedDate": "2026-04-30",
         "description": "Crossed 33,607 total sessions in Predictive Analytics over the last 3 months."
-      }
+      },
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 68
+        },
+        {
+          "date": "2026-06-30",
+          "score": 69
+        },
+        {
+          "date": "2026-07-07",
+          "score": 70
+        },
+        {
+          "date": "2026-07-14",
+          "score": 71
+        },
+        {
+          "date": "2026-07-21",
+          "score": 72
+        },
+        {
+          "date": "2026-07-28",
+          "score": 73
+        },
+        {
+          "date": "2026-08-04",
+          "score": 74
+        },
+        {
+          "date": "2026-08-11",
+          "score": 70
+        }
+      ]
     },
     {
       "accountId": "ACC-08",
@@ -1106,7 +1344,41 @@
       "valueMilestone": {
         "achievedDate": "2026-07-10",
         "description": "150 of 217 licensed users are now active — the account's highest adoption rate on record."
-      }
+      },
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 74
+        },
+        {
+          "date": "2026-06-30",
+          "score": 75
+        },
+        {
+          "date": "2026-07-07",
+          "score": 76
+        },
+        {
+          "date": "2026-07-14",
+          "score": 77
+        },
+        {
+          "date": "2026-07-21",
+          "score": 78
+        },
+        {
+          "date": "2026-07-28",
+          "score": 79
+        },
+        {
+          "date": "2026-08-04",
+          "score": 71
+        },
+        {
+          "date": "2026-08-11",
+          "score": 75
+        }
+      ]
     },
     {
       "accountId": "ACC-09",
@@ -1253,7 +1525,41 @@
         "lat": 59.9139,
         "lng": 10.7522
       },
-      "valueMilestone": null
+      "valueMilestone": null,
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 55
+        },
+        {
+          "date": "2026-06-30",
+          "score": 51
+        },
+        {
+          "date": "2026-07-07",
+          "score": 48
+        },
+        {
+          "date": "2026-07-14",
+          "score": 44
+        },
+        {
+          "date": "2026-07-21",
+          "score": 40
+        },
+        {
+          "date": "2026-07-28",
+          "score": 31
+        },
+        {
+          "date": "2026-08-04",
+          "score": 28
+        },
+        {
+          "date": "2026-08-11",
+          "score": 24
+        }
+      ]
     },
     {
       "accountId": "ACC-10",
@@ -1397,7 +1703,41 @@
         "lat": 52.3676,
         "lng": 4.9041
       },
-      "valueMilestone": null
+      "valueMilestone": null,
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 34
+        },
+        {
+          "date": "2026-06-30",
+          "score": 31
+        },
+        {
+          "date": "2026-07-07",
+          "score": 29
+        },
+        {
+          "date": "2026-07-14",
+          "score": 21
+        },
+        {
+          "date": "2026-07-21",
+          "score": 19
+        },
+        {
+          "date": "2026-07-28",
+          "score": 16
+        },
+        {
+          "date": "2026-08-04",
+          "score": 14
+        },
+        {
+          "date": "2026-08-11",
+          "score": 9
+        }
+      ]
     },
     {
       "accountId": "ACC-11",
@@ -1546,7 +1886,41 @@
         "lat": 60.3913,
         "lng": 5.3221
       },
-      "valueMilestone": null
+      "valueMilestone": null,
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 61
+        },
+        {
+          "date": "2026-06-30",
+          "score": 57
+        },
+        {
+          "date": "2026-07-07",
+          "score": 49
+        },
+        {
+          "date": "2026-07-14",
+          "score": 45
+        },
+        {
+          "date": "2026-07-21",
+          "score": 42
+        },
+        {
+          "date": "2026-07-28",
+          "score": 38
+        },
+        {
+          "date": "2026-08-04",
+          "score": 35
+        },
+        {
+          "date": "2026-08-11",
+          "score": 28
+        }
+      ]
     },
     {
       "accountId": "ACC-12",
@@ -1673,7 +2047,41 @@
       "valueMilestone": {
         "achievedDate": "2026-06-13",
         "description": "24 of 28 licensed users are now active — the account's highest adoption rate on record."
-      }
+      },
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 69
+        },
+        {
+          "date": "2026-06-30",
+          "score": 68
+        },
+        {
+          "date": "2026-07-07",
+          "score": 71
+        },
+        {
+          "date": "2026-07-14",
+          "score": 75
+        },
+        {
+          "date": "2026-07-21",
+          "score": 78
+        },
+        {
+          "date": "2026-07-28",
+          "score": 82
+        },
+        {
+          "date": "2026-08-04",
+          "score": 80
+        },
+        {
+          "date": "2026-08-11",
+          "score": 85
+        }
+      ]
     },
     {
       "accountId": "ACC-13",
@@ -1830,7 +2238,41 @@
       "valueMilestone": {
         "achievedDate": "2026-05-09",
         "description": "Went live with Journey Orchestration across the full team after a successful pilot phase."
-      }
+      },
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 65
+        },
+        {
+          "date": "2026-06-30",
+          "score": 69
+        },
+        {
+          "date": "2026-07-07",
+          "score": 73
+        },
+        {
+          "date": "2026-07-14",
+          "score": 77
+        },
+        {
+          "date": "2026-07-21",
+          "score": 81
+        },
+        {
+          "date": "2026-07-28",
+          "score": 80
+        },
+        {
+          "date": "2026-08-04",
+          "score": 84
+        },
+        {
+          "date": "2026-08-11",
+          "score": 88
+        }
+      ]
     },
     {
       "accountId": "ACC-14",
@@ -1952,7 +2394,41 @@
       "valueMilestone": {
         "achievedDate": "2026-07-19",
         "description": "Reached an NPS of 9 this quarter — the account's best score in the last year."
-      }
+      },
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 73
+        },
+        {
+          "date": "2026-06-30",
+          "score": 74
+        },
+        {
+          "date": "2026-07-07",
+          "score": 75
+        },
+        {
+          "date": "2026-07-14",
+          "score": 76
+        },
+        {
+          "date": "2026-07-21",
+          "score": 77
+        },
+        {
+          "date": "2026-07-28",
+          "score": 78
+        },
+        {
+          "date": "2026-08-04",
+          "score": 70
+        },
+        {
+          "date": "2026-08-11",
+          "score": 74
+        }
+      ]
     },
     {
       "accountId": "ACC-15",
@@ -2079,7 +2555,41 @@
       "valueMilestone": {
         "achievedDate": "2026-06-14",
         "description": "Champion Priya Fischer presented the platform's ROI to their own leadership team, unprompted."
-      }
+      },
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 56
+        },
+        {
+          "date": "2026-06-30",
+          "score": 61
+        },
+        {
+          "date": "2026-07-07",
+          "score": 67
+        },
+        {
+          "date": "2026-07-14",
+          "score": 67
+        },
+        {
+          "date": "2026-07-21",
+          "score": 73
+        },
+        {
+          "date": "2026-07-28",
+          "score": 78
+        },
+        {
+          "date": "2026-08-04",
+          "score": 84
+        },
+        {
+          "date": "2026-08-11",
+          "score": 87
+        }
+      ]
     },
     {
       "accountId": "ACC-16",
@@ -2223,7 +2733,41 @@
         "lat": 19.076,
         "lng": 72.8777
       },
-      "valueMilestone": null
+      "valueMilestone": null,
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 46
+        },
+        {
+          "date": "2026-06-30",
+          "score": 45
+        },
+        {
+          "date": "2026-07-07",
+          "score": 38
+        },
+        {
+          "date": "2026-07-14",
+          "score": 37
+        },
+        {
+          "date": "2026-07-21",
+          "score": 35
+        },
+        {
+          "date": "2026-07-28",
+          "score": 34
+        },
+        {
+          "date": "2026-08-04",
+          "score": 32
+        },
+        {
+          "date": "2026-08-11",
+          "score": 28
+        }
+      ]
     },
     {
       "accountId": "ACC-17",
@@ -2352,7 +2896,41 @@
         "lat": 12.9716,
         "lng": 77.5946
       },
-      "valueMilestone": null
+      "valueMilestone": null,
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 48
+        },
+        {
+          "date": "2026-06-30",
+          "score": 49
+        },
+        {
+          "date": "2026-07-07",
+          "score": 50
+        },
+        {
+          "date": "2026-07-14",
+          "score": 42
+        },
+        {
+          "date": "2026-07-21",
+          "score": 43
+        },
+        {
+          "date": "2026-07-28",
+          "score": 44
+        },
+        {
+          "date": "2026-08-04",
+          "score": 45
+        },
+        {
+          "date": "2026-08-11",
+          "score": 46
+        }
+      ]
     },
     {
       "accountId": "ACC-18",
@@ -2474,7 +3052,41 @@
       "valueMilestone": {
         "achievedDate": "2026-06-15",
         "description": "Went live with Data Activation Hub across the full team after a successful pilot phase."
-      }
+      },
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 60
+        },
+        {
+          "date": "2026-06-30",
+          "score": 65
+        },
+        {
+          "date": "2026-07-07",
+          "score": 70
+        },
+        {
+          "date": "2026-07-14",
+          "score": 75
+        },
+        {
+          "date": "2026-07-21",
+          "score": 79
+        },
+        {
+          "date": "2026-07-28",
+          "score": 79
+        },
+        {
+          "date": "2026-08-04",
+          "score": 84
+        },
+        {
+          "date": "2026-08-11",
+          "score": 89
+        }
+      ]
     },
     {
       "accountId": "ACC-19",
@@ -2628,7 +3240,41 @@
         "lat": 13.7563,
         "lng": 100.5018
       },
-      "valueMilestone": null
+      "valueMilestone": null,
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 63
+        },
+        {
+          "date": "2026-06-30",
+          "score": 59
+        },
+        {
+          "date": "2026-07-07",
+          "score": 55
+        },
+        {
+          "date": "2026-07-14",
+          "score": 51
+        },
+        {
+          "date": "2026-07-21",
+          "score": 43
+        },
+        {
+          "date": "2026-07-28",
+          "score": 39
+        },
+        {
+          "date": "2026-08-04",
+          "score": 35
+        },
+        {
+          "date": "2026-08-11",
+          "score": 30
+        }
+      ]
     },
     {
       "accountId": "ACC-20",
@@ -2750,7 +3396,41 @@
       "valueMilestone": {
         "achievedDate": "2026-07-28",
         "description": "Crossed 6,567 total sessions in Journey Orchestration over the last 3 months."
-      }
+      },
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 79
+        },
+        {
+          "date": "2026-06-30",
+          "score": 80
+        },
+        {
+          "date": "2026-07-07",
+          "score": 81
+        },
+        {
+          "date": "2026-07-14",
+          "score": 82
+        },
+        {
+          "date": "2026-07-21",
+          "score": 83
+        },
+        {
+          "date": "2026-07-28",
+          "score": 84
+        },
+        {
+          "date": "2026-08-04",
+          "score": 76
+        },
+        {
+          "date": "2026-08-11",
+          "score": 80
+        }
+      ]
     },
     {
       "accountId": "ACC-21",
@@ -2897,7 +3577,41 @@
       "valueMilestone": {
         "achievedDate": "2026-06-23",
         "description": "158 of 216 licensed users are now active — the account's highest adoption rate on record."
-      }
+      },
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 53
+        },
+        {
+          "date": "2026-06-30",
+          "score": 53
+        },
+        {
+          "date": "2026-07-07",
+          "score": 58
+        },
+        {
+          "date": "2026-07-14",
+          "score": 63
+        },
+        {
+          "date": "2026-07-21",
+          "score": 69
+        },
+        {
+          "date": "2026-07-28",
+          "score": 74
+        },
+        {
+          "date": "2026-08-04",
+          "score": 74
+        },
+        {
+          "date": "2026-08-11",
+          "score": 80
+        }
+      ]
     },
     {
       "accountId": "ACC-22",
@@ -3019,7 +3733,41 @@
       "valueMilestone": {
         "achievedDate": "2026-05-19",
         "description": "Went live with Offer Management across the full team after a successful pilot phase."
-      }
+      },
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 64
+        },
+        {
+          "date": "2026-06-30",
+          "score": 65
+        },
+        {
+          "date": "2026-07-07",
+          "score": 66
+        },
+        {
+          "date": "2026-07-14",
+          "score": 67
+        },
+        {
+          "date": "2026-07-21",
+          "score": 59
+        },
+        {
+          "date": "2026-07-28",
+          "score": 60
+        },
+        {
+          "date": "2026-08-04",
+          "score": 61
+        },
+        {
+          "date": "2026-08-11",
+          "score": 63
+        }
+      ]
     },
     {
       "accountId": "ACC-23",
@@ -3168,7 +3916,41 @@
         "lat": -37.8136,
         "lng": 144.9631
       },
-      "valueMilestone": null
+      "valueMilestone": null,
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 52
+        },
+        {
+          "date": "2026-06-30",
+          "score": 53
+        },
+        {
+          "date": "2026-07-07",
+          "score": 54
+        },
+        {
+          "date": "2026-07-14",
+          "score": 46
+        },
+        {
+          "date": "2026-07-21",
+          "score": 47
+        },
+        {
+          "date": "2026-07-28",
+          "score": 48
+        },
+        {
+          "date": "2026-08-04",
+          "score": 49
+        },
+        {
+          "date": "2026-08-11",
+          "score": 50
+        }
+      ]
     },
     {
       "accountId": "ACC-24",
@@ -3287,7 +4069,41 @@
         "lat": -36.8485,
         "lng": 174.7633
       },
-      "valueMilestone": null
+      "valueMilestone": null,
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 59
+        },
+        {
+          "date": "2026-06-30",
+          "score": 60
+        },
+        {
+          "date": "2026-07-07",
+          "score": 52
+        },
+        {
+          "date": "2026-07-14",
+          "score": 53
+        },
+        {
+          "date": "2026-07-21",
+          "score": 54
+        },
+        {
+          "date": "2026-07-28",
+          "score": 55
+        },
+        {
+          "date": "2026-08-04",
+          "score": 56
+        },
+        {
+          "date": "2026-08-11",
+          "score": 56
+        }
+      ]
     },
     {
       "accountId": "ACC-25",
@@ -3416,7 +4232,41 @@
         "lat": 35.1815,
         "lng": 136.9066
       },
-      "valueMilestone": null
+      "valueMilestone": null,
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 56
+        },
+        {
+          "date": "2026-06-30",
+          "score": 48
+        },
+        {
+          "date": "2026-07-07",
+          "score": 49
+        },
+        {
+          "date": "2026-07-14",
+          "score": 50
+        },
+        {
+          "date": "2026-07-21",
+          "score": 51
+        },
+        {
+          "date": "2026-07-28",
+          "score": 52
+        },
+        {
+          "date": "2026-08-04",
+          "score": 53
+        },
+        {
+          "date": "2026-08-11",
+          "score": 52
+        }
+      ]
     },
     {
       "accountId": "ACC-26",
@@ -3537,7 +4387,41 @@
       "valueMilestone": {
         "achievedDate": "2026-07-30",
         "description": "110 of 118 licensed users are now active — the account's highest adoption rate on record."
-      }
+      },
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 100
+        },
+        {
+          "date": "2026-06-30",
+          "score": 96
+        },
+        {
+          "date": "2026-07-07",
+          "score": 95
+        },
+        {
+          "date": "2026-07-14",
+          "score": 94
+        },
+        {
+          "date": "2026-07-21",
+          "score": 94
+        },
+        {
+          "date": "2026-07-28",
+          "score": 93
+        },
+        {
+          "date": "2026-08-04",
+          "score": 87
+        },
+        {
+          "date": "2026-08-11",
+          "score": 87
+        }
+      ]
     },
     {
       "accountId": "ACC-27",
@@ -3658,7 +4542,41 @@
       "valueMilestone": {
         "achievedDate": "2026-06-25",
         "description": "Went live with Identity Resolution across the full team after a successful pilot phase."
-      }
+      },
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 78
+        },
+        {
+          "date": "2026-06-30",
+          "score": 79
+        },
+        {
+          "date": "2026-07-07",
+          "score": 80
+        },
+        {
+          "date": "2026-07-14",
+          "score": 81
+        },
+        {
+          "date": "2026-07-21",
+          "score": 82
+        },
+        {
+          "date": "2026-07-28",
+          "score": 83
+        },
+        {
+          "date": "2026-08-04",
+          "score": 84
+        },
+        {
+          "date": "2026-08-11",
+          "score": 81
+        }
+      ]
     },
     {
       "accountId": "ACC-28",
@@ -3789,7 +4707,41 @@
       "valueMilestone": {
         "achievedDate": "2026-05-21",
         "description": "Reached an NPS of 8 this quarter — the account's best score in the last year."
-      }
+      },
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 82
+        },
+        {
+          "date": "2026-06-30",
+          "score": 83
+        },
+        {
+          "date": "2026-07-07",
+          "score": 84
+        },
+        {
+          "date": "2026-07-14",
+          "score": 85
+        },
+        {
+          "date": "2026-07-21",
+          "score": 86
+        },
+        {
+          "date": "2026-07-28",
+          "score": 87
+        },
+        {
+          "date": "2026-08-04",
+          "score": 88
+        },
+        {
+          "date": "2026-08-11",
+          "score": 84
+        }
+      ]
     },
     {
       "accountId": "ACC-29",
@@ -3917,7 +4869,41 @@
         "lat": 43.6532,
         "lng": -79.3832
       },
-      "valueMilestone": null
+      "valueMilestone": null,
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 53
+        },
+        {
+          "date": "2026-06-30",
+          "score": 50
+        },
+        {
+          "date": "2026-07-07",
+          "score": 46
+        },
+        {
+          "date": "2026-07-14",
+          "score": 38
+        },
+        {
+          "date": "2026-07-21",
+          "score": 34
+        },
+        {
+          "date": "2026-07-28",
+          "score": 31
+        },
+        {
+          "date": "2026-08-04",
+          "score": 27
+        },
+        {
+          "date": "2026-08-11",
+          "score": 22
+        }
+      ]
     },
     {
       "accountId": "ACC-30",
@@ -4043,7 +5029,41 @@
       "valueMilestone": {
         "achievedDate": "2026-07-03",
         "description": "21 of 32 licensed users are now active — the account's highest adoption rate on record."
-      }
+      },
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 79
+        },
+        {
+          "date": "2026-06-30",
+          "score": 80
+        },
+        {
+          "date": "2026-07-07",
+          "score": 72
+        },
+        {
+          "date": "2026-07-14",
+          "score": 73
+        },
+        {
+          "date": "2026-07-21",
+          "score": 74
+        },
+        {
+          "date": "2026-07-28",
+          "score": 75
+        },
+        {
+          "date": "2026-08-04",
+          "score": 76
+        },
+        {
+          "date": "2026-08-11",
+          "score": 76
+        }
+      ]
     },
     {
       "accountId": "ACC-31",
@@ -4169,7 +5189,41 @@
       "valueMilestone": {
         "achievedDate": "2026-05-29",
         "description": "Went live with Identity Resolution across the full team after a successful pilot phase."
-      }
+      },
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 81
+        },
+        {
+          "date": "2026-06-30",
+          "score": 73
+        },
+        {
+          "date": "2026-07-07",
+          "score": 74
+        },
+        {
+          "date": "2026-07-14",
+          "score": 75
+        },
+        {
+          "date": "2026-07-21",
+          "score": 76
+        },
+        {
+          "date": "2026-07-28",
+          "score": 77
+        },
+        {
+          "date": "2026-08-04",
+          "score": 78
+        },
+        {
+          "date": "2026-08-11",
+          "score": 77
+        }
+      ]
     },
     {
       "accountId": "ACC-32",
@@ -4300,7 +5354,41 @@
       "valueMilestone": {
         "achievedDate": "2026-04-24",
         "description": "Reached an NPS of 6 this quarter — the account's best score in the last year."
-      }
+      },
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 13
+        },
+        {
+          "date": "2026-06-30",
+          "score": 19
+        },
+        {
+          "date": "2026-07-07",
+          "score": 24
+        },
+        {
+          "date": "2026-07-14",
+          "score": 30
+        },
+        {
+          "date": "2026-07-21",
+          "score": 31
+        },
+        {
+          "date": "2026-07-28",
+          "score": 37
+        },
+        {
+          "date": "2026-08-04",
+          "score": 42
+        },
+        {
+          "date": "2026-08-11",
+          "score": 47
+        }
+      ]
     },
     {
       "accountId": "ACC-33",
@@ -4431,7 +5519,41 @@
       "valueMilestone": {
         "achievedDate": "2026-07-04",
         "description": "Champion Ava Ramirez presented the platform's ROI to their own leadership team, unprompted."
-      }
+      },
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 63
+        },
+        {
+          "date": "2026-06-30",
+          "score": 64
+        },
+        {
+          "date": "2026-07-07",
+          "score": 65
+        },
+        {
+          "date": "2026-07-14",
+          "score": 66
+        },
+        {
+          "date": "2026-07-21",
+          "score": 67
+        },
+        {
+          "date": "2026-07-28",
+          "score": 68
+        },
+        {
+          "date": "2026-08-04",
+          "score": 69
+        },
+        {
+          "date": "2026-08-11",
+          "score": 66
+        }
+      ]
     },
     {
       "accountId": "ACC-34",
@@ -4569,7 +5691,41 @@
         "lat": -22.9068,
         "lng": -43.1729
       },
-      "valueMilestone": null
+      "valueMilestone": null,
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 16
+        },
+        {
+          "date": "2026-06-30",
+          "score": 17
+        },
+        {
+          "date": "2026-07-07",
+          "score": 18
+        },
+        {
+          "date": "2026-07-14",
+          "score": 19
+        },
+        {
+          "date": "2026-07-21",
+          "score": 20
+        },
+        {
+          "date": "2026-07-28",
+          "score": 21
+        },
+        {
+          "date": "2026-08-04",
+          "score": 22
+        },
+        {
+          "date": "2026-08-11",
+          "score": 18
+        }
+      ]
     },
     {
       "accountId": "ACC-35",
@@ -4690,7 +5846,41 @@
       "valueMilestone": {
         "achievedDate": "2026-04-25",
         "description": "101 of 171 licensed users are now active — the account's highest adoption rate on record."
-      }
+      },
+      "healthScoreHistory": [
+        {
+          "date": "2026-06-23",
+          "score": 52
+        },
+        {
+          "date": "2026-06-30",
+          "score": 53
+        },
+        {
+          "date": "2026-07-07",
+          "score": 54
+        },
+        {
+          "date": "2026-07-14",
+          "score": 55
+        },
+        {
+          "date": "2026-07-21",
+          "score": 56
+        },
+        {
+          "date": "2026-07-28",
+          "score": 57
+        },
+        {
+          "date": "2026-08-04",
+          "score": 49
+        },
+        {
+          "date": "2026-08-11",
+          "score": 53
+        }
+      ]
     }
   ]
 }

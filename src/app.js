@@ -204,6 +204,35 @@ function renderPortfolio() {
   return wrap;
 }
 
+function renderScoreTrend(history) {
+  const first = history[0].score;
+  const last = history[history.length - 1].score;
+  const diff = last - first;
+  const weeks = history.length - 1;
+  const color = diff <= -8 ? "var(--red)" : diff >= 8 ? "var(--green)" : "var(--muted)";
+  const summary = diff <= -8
+    ? `Health Score fell from ${first} to ${last} over the last ${weeks} weeks.`
+    : diff >= 8
+      ? `Health Score rose from ${first} to ${last} over the last ${weeks} weeks.`
+      : `Health Score stayed roughly steady around ${last} over the last ${weeks} weeks.`;
+
+  const w = 180, h = 36, pad = 3;
+  const points = history.map((p, i) => {
+    const x = pad + (i / (history.length - 1)) * (w - pad * 2);
+    const y = pad + (1 - p.score / 100) * (h - pad * 2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+
+  return `
+    <div class="score-trend">
+      <svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" class="score-sparkline">
+        <polyline points="${points}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+      </svg>
+      <p class="sub">${escapeHtml(summary)}</p>
+    </div>
+  `;
+}
+
 function renderAccountDetail(acc) {
   const div = document.createElement("div");
   div.className = "account-detail";
@@ -234,11 +263,14 @@ function renderAccountDetail(acc) {
     ? `<div class="milestone-box"><p class="milestone-label">Value Milestone — ${fmtDate(acc.valueMilestone.achievedDate)}</p><p>${escapeHtml(acc.valueMilestone.description)}</p></div>`
     : "";
 
+  const scoreTrend = acc.healthScoreHistory ? renderScoreTrend(acc.healthScoreHistory) : "";
+
   div.innerHTML = `
     <div class="detail-grid">
       <div>
         <h4>Score Breakdown</h4>
         <p class="sub">Risk points per criterion — the total is subtracted from the Health Score (100). Health Score ${acc.health.score} = 100 − ${Math.round(acc.health.criteria.reduce((s, c) => s + c.points, 0))} risk points.</p>
+        ${scoreTrend}
         <table class="breakdown-table"><tbody>${criteriaRows}</tbody></table>
       </div>
       <div>
@@ -414,10 +446,16 @@ function renderMatrix() {
     if (maxY === minY) return marginTop + plotH / 2;
     return marginTop + (1 - (yPlot - minY) / (maxY - minY)) * plotH;
   };
+  // Bubble size encodes a signal beyond the two axes: renewal mode already
+  // plots ARR on neither axis, so size = ARR fills that gap. Value mode
+  // already puts ARR on the Y axis, so size = Expansion Score instead —
+  // turning it into a 3-signal view (risk × value × growth potential).
   const radiusOf = a => {
-    if (mode !== "renewal") return 7;
-    if (maxArr === minArr) return 9;
-    return 5 + ((a.contract.arrUSD - minArr) / (maxArr - minArr)) * 11;
+    if (mode === "renewal") {
+      if (maxArr === minArr) return 9;
+      return 5 + ((a.contract.arrUSD - minArr) / (maxArr - minArr)) * 11;
+    }
+    return 5 + (a.expansion.score / 100) * 11;
   };
 
   const quadrantX = xScale(healthMid);
@@ -472,7 +510,7 @@ function renderMatrix() {
       <!-- axis titles -->
       <text x="${marginLeft + plotW / 2}" y="${H - 12}" class="axis-title" text-anchor="middle">Health Score →</text>
       <text x="16" y="${marginTop + plotH / 2}" class="axis-title" text-anchor="middle" transform="rotate(-90, 16, ${marginTop + plotH / 2})">${mode === "renewal" ? "Renewal urgency →" : "ARR →"}</text>
-      ${mode === "renewal" ? `<text x="${marginLeft + plotW / 2}" y="${marginTop - 4}" class="axis-title" text-anchor="middle">(bubble size = ARR)</text>` : ""}
+      <text x="${marginLeft + plotW / 2}" y="${marginTop - 4}" class="axis-title" text-anchor="middle">(bubble size = ${mode === "renewal" ? "ARR" : "Expansion Score"})</text>
 
       ${dots}
     </svg>
@@ -497,7 +535,7 @@ function renderMatrix() {
 
   const modeDesc = mode === "renewal"
     ? `X: Health Score, Y: renewal urgency (sooner = higher), bubble size: ARR. Quadrant lines split at Health ${healthMid} and the median renewal date of the filtered accounts.`
-    : `X: Health Score, Y: ARR. Quadrant lines split at Health ${healthMid} and median ARR (${fmtUSD(Math.round(mode === "renewal" ? 0 : yPlotMedian))}) of the filtered accounts.`;
+    : `X: Health Score, Y: ARR, bubble size: Expansion Score (bigger = more upsell potential). Quadrant lines split at Health ${healthMid} and median ARR (${fmtUSD(Math.round(yPlotMedian))}) of the filtered accounts.`;
 
   wrap.innerHTML = `
     <div class="matrix-toggle">
@@ -534,7 +572,7 @@ function renderMatrix() {
     <div class="tt-name">${escapeHtml(a.accountName)}</div>
     <div class="tt-row"><span class="tt-label">Health Score:</span> <strong>${a.health.score}</strong> (${RISK_LABEL[a.health.riskCategory]} risk)</div>
     <div class="tt-row"><span class="tt-label">ARR:</span> ${fmtUSD(a.contract.arrUSD)}</div>
-    ${mode === "renewal" ? `<div class="tt-row"><span class="tt-label">Renewal in:</span> ${daysFromToday(a.contract.nextRenewalDate)} days</div>` : ""}
+    ${mode === "renewal" ? `<div class="tt-row"><span class="tt-label">Renewal in:</span> ${daysFromToday(a.contract.nextRenewalDate)} days</div>` : `<div class="tt-row"><span class="tt-label">Expansion:</span> ${a.expansion.score} (${a.expansion.category})</div>`}
     <div class="tt-row"><span class="tt-label">CSAT trend:</span> ${TREND_TEXT[a.trend]}</div>
   `);
 
