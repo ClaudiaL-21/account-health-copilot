@@ -56,11 +56,11 @@ Das Projekt demonstriert die Fähigkeit, Customer-Success-Strategie, Customer Va
 |---|---|
 | Priorisierte Portfolioübersicht | ✅ Portfolio-Tab, sortiert nach Health Score |
 | Transparenter Health Score | ✅ 8-Kriterien-Engine, vollständig offengelegt |
-| Sichtbare Score-Veränderungen | ❌ **Fehlt** — nur CSAT/NPS-Trend vorhanden, kein Verlauf des Health Scores selbst über Zeit |
+| Sichtbare Score-Veränderungen | ✅ Health-Score-Sparkline + Textzusammenfassung ("fiel von 48 auf 9 in 7 Wochen") pro Account |
 | Sichtbare Risikotreiber | ✅ Score-Breakdown mit Gewichtung + Rohwert |
-| AI-generierte Account Summary | ✅ vorhanden, aber ohne explizite Unsicherheits-Angabe |
-| Begründete Next Best Action | ⚠️ aktuell 1–3 Empfehlungen statt einer einzigen, klar begründeten |
-| n8n-Workflow mit menschlicher Freigabe | ❌ **komplett neu zu bauen** |
+| AI-generierte Account Summary | ✅ inkl. explizitem Confidence-Level (high/medium/low + Begründung) |
+| Begründete Next Best Action | ✅ genau eine Aktion, kategorisiert als Risk Mitigation oder Growth |
+| n8n-Workflow mit menschlicher Freigabe | ✅ "Approve & Send to Workflow"-Button je Next Best Action, plus optionaler n8n-Provider für die AI-Analyse selbst (siehe [06_n8n_integration.md](06_n8n_integration.md)) |
 | Primärnutzerin passt zum Datenset | ✅ 35 Accounts, 6 CSMs, je 5–7 Accounts pro CSM — im Zielkorridor |
 | Kein reines Churn-Alarmsystem | ✅ Matrix (Health×ARR, Health×Renewal) + Expansion Score zeigen auch Wachstum, nicht nur Risiko |
 
@@ -73,16 +73,18 @@ Das Projekt demonstriert die Fähigkeit, Customer-Success-Strategie, Customer Va
 - Renewal in ~2 Monaten
 - Freitext-Zitat erwähnt explizit Budget-Rechtfertigung vor Renewal
 
-Fehlt: ein explizites "Value Milestone verfehlt"-Signal — dieses Konzept existiert im aktuellen Datenmodell noch nicht (siehe unten).
+Value Milestone ist inzwischen im Datenmodell vorhanden (`valueMilestone: {achievedDate, description}`, für Accounts mit echter Traktion — Health Score ≥ 60 oder Adoption ≥ 55 %).
 
-## Lücken für die nächste Phase (Scope/Architektur/Datenmodell)
+## Lücken für die nächste Phase (Scope/Architektur/Datenmodell) — Status
 
-1. **Health-Score-Verlauf** — Score-History statt nur Snapshot ("fiel in 6 Wochen von 48 auf 9")
-2. **Genau eine Next Best Action** statt Liste — Prompt-Anpassung
-3. **Unsicherheit explizit benennen** in der Account Summary (z. B. "nur 2 Textquellen, geringe Konfidenz")
-4. **Value-Milestone-Feld** im Datenmodell (`valueMilestones: [{name, status, dueDate}]`) — neu
-5. **n8n Human-Approval-Workflow** — eigene Infrastruktur, größtes offenes Stück
-6. **Positiv-/Wachstumsszenario** als eigene Next-Best-Action-Kategorie (Upsell-Empfehlung, nicht nur Risiko-Fix) — teilweise durch Matrix/Expansion Score abgedeckt
+1. ✅ **Health-Score-Verlauf** — `healthScoreHistory` (8 Wochenpunkte, deterministisch, endet exakt auf dem live berechneten Score), Sparkline + Zusammenfassungssatz in der Account-Detailansicht
+2. ✅ **Genau eine Next Best Action** — `nextBestAction` mit `category` (`risk_mitigation`/`growth`) statt Liste
+3. ✅ **Unsicherheit explizit benennen** — `confidence: {level, reason}` im AI-Insight-Schema
+4. ✅ **Value-Milestone-Feld** im Datenmodell — `valueMilestone: {achievedDate, description}`, deterministisch vergeben an Accounts mit echter Traktion
+5. ✅ **n8n Human-Approval-Workflow** — "Approve & Send to Workflow"-Button, `/api/approve-action`-Endpunkt; zusätzlich optionaler `AI_PROVIDER=n8n`, der die AI-Analyse selbst an einen n8n-Webhook delegiert. Details: [06_n8n_integration.md](06_n8n_integration.md)
+6. ✅ **Positiv-/Wachstumsszenario** als eigene Next-Best-Action-Kategorie (`category: "growth"`), verstärkt durch das Value-Milestone-Feld als Kontext für die AI
+
+Alle sechs Lücken sind geschlossen. Offene, bewusst zurückgestellte Punkte: Vercel-Deployment (siehe Non-Goals/Portfolio-Ziel — wird erst aktiviert, wenn alles final ist), und das tatsächliche Zusammenklicken der n8n-Workflows selbst (Webhook-Nodes, AI-Node, Respond-Node) in der n8n-Oberfläche.
 
 ## Non-Goals (bestätigt)
 
