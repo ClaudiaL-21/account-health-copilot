@@ -1,9 +1,9 @@
 {
-  "name": "account-health-copilot",
+  "name": "customer-success-ai-hub",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Portfolio project: Account Health & Churn Risk dashboard with an Anthropic-powered AI insight layer. All data fictional.",
+  "description": "CS AI Signal Hub — an AI-powered Customer Success prototype that turns fragmented customer signals into transparent priorities, explainable Health Scores, and human-approved next actions. All data fictional.",
   "scripts": {
     "dev:static": "npx --yes serve . -l 5173",
     "dev:local": "node dev-server.js",
