@@ -533,17 +533,8 @@ function renderMatrix() {
   return wrap;
 }
 
-// Stylized, low-detail continent silhouettes (equirectangular lng/lat points).
-// Not coastline-accurate — just enough shape for orientation behind the dots,
-// which are positioned by real city coordinates.
-const CONTINENTS = [
-  { name: "N. America", points: [[-165,68],[-168,60],[-155,58],[-135,58],[-130,50],[-125,40],[-117,32],[-108,22],[-97,16],[-88,14],[-83,9],[-77,8],[-80,18],[-81,25],[-80,31],[-75,35],[-70,41],[-66,44],[-60,47],[-55,51],[-65,58],[-75,62],[-85,68],[-95,70],[-110,72],[-130,71],[-150,71],[-165,68]] },
-  { name: "S. America", points: [[-79,9],[-77,3],[-75,-3],[-70,-8],[-70,-18],[-70,-23],[-68,-27],[-70,-33],[-73,-42],[-73,-50],[-68,-55],[-65,-54],[-62,-48],[-58,-38],[-53,-33],[-48,-24],[-40,-14],[-35,-8],[-40,-2],[-50,1],[-60,5],[-66,8],[-72,9],[-79,9]] },
-  { name: "Europe", points: [[-9,38],[-6,36],[-1,37],[3,42],[7,44],[10,44],[14,41],[19,40],[23,37],[27,40],[29,41],[30,46],[28,46],[30,50],[24,52],[19,54],[14,54],[8,54],[5,51],[2,51],[-3,49],[-1,50],[-5,50],[-8,52],[-6,55],[-3,58],[5,58],[11,59],[18,60],[24,66],[28,70],[20,70],[15,66],[10,63],[3,60],[-9,38]] },
-  { name: "Africa", points: [[-17,15],[-16,12],[-13,8],[-9,5],[-4,5],[3,7],[9,4],[9,-2],[12,-6],[13,-13],[12,-18],[15,-22],[18,-27],[20,-30],[25,-34],[28,-32],[32,-26],[33,-20],[35,-15],[39,-12],[40,-2],[42,4],[43,11],[42,15],[39,15],[37,17],[35,20],[32,22],[33,27],[32,31],[25,31],[20,32],[15,32],[10,33],[8,33],[0,35],[-6,35],[-8,33],[-13,28],[-16,21],[-17,15]] },
-  { name: "Asia", points: [[27,40],[29,37],[35,37],[35,32],[38,30],[42,30],[48,28],[50,25],[56,26],[58,22],[62,25],[66,24],[68,24],[71,30],[75,32],[78,30],[80,28],[83,28],[88,27],[92,27],[95,29],[98,25],[100,21],[104,22],[106,20],[108,16],[106,10],[104,10],[102,4],[103,1],[104,-3],[110,-6],[115,-8],[120,-8],[124,0],[122,10],[120,15],[121,18],[122,24],[121,28],[125,32],[129,35],[130,37],[132,35],[140,36],[142,38],[142,42],[145,44],[143,46],[140,45],[135,45],[130,44],[125,42],[123,40],[120,40],[115,40],[105,42],[95,45],[85,50],[75,52],[65,55],[55,60],[45,65],[40,68],[35,68],[30,65],[28,55],[27,40]] },
-  { name: "Australia", points: [[113,-22],[114,-25],[115,-28],[117,-32],[119,-34],[122,-34],[126,-32],[129,-31],[132,-32],[135,-34],[137,-35],[140,-38],[144,-38],[147,-38],[150,-37],[150,-33],[153,-28],[153,-24],[149,-20],[145,-16],[142,-11],[137,-12],[132,-12],[130,-13],[128,-15],[124,-17],[122,-18],[118,-20],[113,-22]] },
-];
+const RISK_HEX = { high: "#dc2626", medium: "#d97706", low: "#16a34a" };
+let leafletMapInstance = null;
 
 function renderMap() {
   const wrap = document.createElement("div");
@@ -553,43 +544,6 @@ function renderMap() {
     wrap.innerHTML = `<p class="sub">No accounts with location data match the current filters.</p>`;
     return wrap;
   }
-
-  const W = 960, H = 480;
-  const lngToX = lng => (lng + 180) / 360 * W;
-  const latToY = lat => (90 - lat) / 180 * H;
-
-  const continentPaths = CONTINENTS.map(c => {
-    const d = c.points.map(([lng, lat], i) => `${i === 0 ? "M" : "L"}${lngToX(lng).toFixed(1)},${latToY(lat).toFixed(1)}`).join(" ") + " Z";
-    return `<path d="${d}" class="continent" />`;
-  }).join("");
-
-  const graticule = [];
-  for (let lng = -150; lng <= 150; lng += 30) {
-    graticule.push(`<line x1="${lngToX(lng)}" y1="0" x2="${lngToX(lng)}" y2="${H}" class="graticule-line" />`);
-  }
-  for (let lat = -60; lat <= 60; lat += 30) {
-    graticule.push(`<line x1="0" y1="${latToY(lat)}" x2="${W}" y2="${latToY(lat)}" class="graticule-line" />`);
-  }
-  graticule.push(`<line x1="0" y1="${latToY(0)}" x2="${W}" y2="${latToY(0)}" class="graticule-equator" />`);
-
-  const dots = list.map(a => {
-    const cx = lngToX(a.location.lng);
-    const cy = latToY(a.location.lat);
-    const glyph = TREND_GLYPH[a.trend];
-    const glyphSpan = glyph ? `<text x="${(cx + 10).toFixed(1)}" y="${(cy + 4).toFixed(1)}" class="trend-glyph trend-${a.trend}">${glyph}</text>` : "";
-    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="6" class="matrix-dot risk-dot-${a.health.riskCategory}" data-account-id="${a.accountId}">
-      <title>${escapeHtml(a.accountName)} — ${escapeHtml(a.location.city)}, ${escapeHtml(a.location.country)} — Health ${a.health.score}</title>
-    </circle>${glyphSpan}`;
-  }).join("");
-
-  const svg = `
-    <svg viewBox="0 0 ${W} ${H}" class="map-svg">
-      <rect x="0" y="0" width="${W}" height="${H}" class="map-ocean" />
-      ${graticule.join("")}
-      ${continentPaths}
-      ${dots}
-    </svg>
-  `;
 
   const selected = state.mapSelected ? list.find(a => a.accountId === state.mapSelected) : null;
   const detailPanel = selected ? `
@@ -607,8 +561,8 @@ function renderMap() {
   ` : "";
 
   wrap.innerHTML = `
-    <p class="sub">Fictional HQ location per account (stylized world outline, not to scale). Dot color = risk level, ▲/▼ = CSAT trend. Click a dot for details.</p>
-    <div class="matrix-wrap">${svg}</div>
+    <p class="sub">Fictional HQ location per account, plotted on real OpenStreetMap data. Dot color = risk level. Click a marker for details.</p>
+    <div id="leaflet-map" class="leaflet-map"></div>
     ${detailPanel}
     <div class="summary-bar" style="margin-top:14px;">
       <div class="summary-chip risk-high">● High risk</div>
@@ -616,13 +570,6 @@ function renderMap() {
       <div class="summary-chip risk-low">● Low risk</div>
     </div>
   `;
-
-  wrap.querySelectorAll(".matrix-dot").forEach(dot => {
-    dot.addEventListener("click", () => {
-      state.mapSelected = dot.dataset.accountId;
-      render();
-    });
-  });
 
   wrap.querySelector(".matrix-detail-close")?.addEventListener("click", () => {
     state.mapSelected = null;
@@ -638,7 +585,52 @@ function renderMap() {
     document.getElementById(`detail-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
   });
 
+  // The map div isn't attached to the live DOM yet when renderMap() runs —
+  // render() appends the returned wrap right after this returns. Defer
+  // Leaflet init to the next tick so the container has a real size.
+  setTimeout(() => initLeafletMap(list), 0);
+
   return wrap;
+}
+
+function initLeafletMap(list) {
+  const el = document.getElementById("leaflet-map");
+  if (!el || typeof L === "undefined") return;
+
+  if (leafletMapInstance) {
+    leafletMapInstance.remove();
+    leafletMapInstance = null;
+  }
+
+  const map = L.map(el, { scrollWheelZoom: true }).setView([20, 10], 2);
+  leafletMapInstance = map;
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 18,
+  }).addTo(map);
+
+  list.forEach(a => {
+    const marker = L.circleMarker([a.location.lat, a.location.lng], {
+      radius: 8,
+      color: "#ffffff",
+      weight: 1.5,
+      fillColor: RISK_HEX[a.health.riskCategory],
+      fillOpacity: 0.9,
+    }).addTo(map);
+
+    marker.bindTooltip(`
+      <div class="tt-name">${escapeHtml(a.accountName)}</div>
+      <div class="tt-row">${escapeHtml(a.location.city)}, ${escapeHtml(a.location.country)}</div>
+      <div class="tt-row"><span class="tt-label">Health Score:</span> <strong>${a.health.score}</strong> (${RISK_LABEL[a.health.riskCategory]} risk)</div>
+      <div class="tt-row"><span class="tt-label">CSAT trend:</span> ${TREND_TEXT[a.trend]}</div>
+    `, { direction: "top", className: "leaflet-chart-tooltip", sticky: true });
+
+    marker.on("click", () => {
+      state.mapSelected = a.accountId;
+      render();
+    });
+  });
 }
 
 function renderFeedback() {

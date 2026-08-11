@@ -177,11 +177,27 @@ table.portfolio-table tbody tr:not(.detail-row):hover { background: #fafafa; }
 .chart-tooltip .tt-row { margin: 3px 0; color: var(--text); }
 .chart-tooltip .tt-row .tt-label { color: var(--muted); }
 
-.map-svg { width: 100%; height: auto; display: block; }
-.map-ocean { fill: #eaf3fb; }
-.continent { fill: #d9e6d3; stroke: #c3d4bc; stroke-width: 1; }
-.graticule-line { stroke: #ffffff; stroke-width: 1; }
-.graticule-equator { stroke: #ffffff; stroke-width: 1.5; stroke-dasharray: 3 3; }
+.leaflet-map {
+  height: 480px;
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+/* Leaflet's own tooltip chrome, restyled to match .chart-tooltip */
+.leaflet-chart-tooltip {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 6px !important;
+  padding: 9px 12px !important;
+  font-size: 12px !important;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.18) !important;
+  color: var(--text);
+}
+.leaflet-chart-tooltip .tt-name { font-weight: 700; font-size: 13px; margin-bottom: 5px; }
+.leaflet-chart-tooltip .tt-row { margin: 3px 0; }
+.leaflet-chart-tooltip .tt-row .tt-label { color: var(--muted); }
+.leaflet-chart-tooltip::before { display: none; }
 
 .matrix-toggle { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
 .matrix-toggle-btn {
