@@ -1,0 +1,211 @@
+﻿{
+    "name":  "CS AI Hub Approval",
+    "nodes":  [
+                  {
+                      "parameters":  {
+                                         "httpMethod":  "POST",
+                                         "authentication":  "headerAuth",
+                                         "responseMode":  "responseNode",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.webhook",
+                      "typeVersion":  2.1,
+                      "position":  [
+                                       -272,
+                                       -48
+                                   ],
+                      "name":  "Webhook"
+                  },
+                  {
+                      "parameters":  {
+                                         "respondWith":  "json",
+                                         "responseBody":  "{\n  \"status\": \"sent\",\n  \"workflowConnected\": true\n}",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.respondToWebhook",
+                      "typeVersion":  1.5,
+                      "position":  [
+                                       432,
+                                       -48
+                                   ],
+                      "name":  "Respond to Webhook"
+                  },
+                  {
+                      "parameters":  {
+                                         "operation":  "append",
+                                         "sheetName":  {
+                                                           "__rl":  true,
+                                                           "value":  "gid=0",
+                                                           "mode":  "list",
+                                                           "cachedResultName":  "Approvals",
+                                                           "cachedResultUrl":  "https://docs.google.com/spreadsheets/d/1amDljq7NX7XDa2ibh3B2QNU5G_rrrzraTx_5W9BPOQ0/edit#gid=0"
+                                                       },
+                                         "columns":  {
+                                                         "mappingMode":  "defineBelow",
+                                                         "value":  {
+                                                                       "Datum (approvedAt)":  "={{ DateTime.fromISO($json.body.approvedAt).setZone(\u0027Europe/Berlin\u0027).toFormat(\u0027dd.MM.yyyy HH:mm\u0027) }}",
+                                                                       "Account (accountName)":  "={{ $json.body.accountName }}",
+                                                                       "CSM (csmName)":  "={{ $json.body.csmName }}",
+                                                                       "Account ID (ACC)":  "={{ $json.body.accountId }}",
+                                                                       "Action (action)":  "={{ $json.body.action }}",
+                                                                       "Kategorie (category)":  "={{ $json.body.category }}",
+                                                                       "Begründung (rationale)":  "={{ $json.body.rationale }}",
+                                                                       "row_number":  0
+                                                                   },
+                                                         "matchingColumns":  {
+
+                                                                             },
+                                                         "schema":  [
+                                                                        {
+                                                                            "displayName":  "Datum (approvedAt)",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "displayName":  "Account ID (ACC)",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "displayName":  "Account (accountName)",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "displayName":  "CSM (csmName)",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "displayName":  "Action (action)",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "displayName":  "Kategorie (category)",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "displayName":  "Begründung (rationale)",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "string",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "removed":  false
+                                                                        },
+                                                                        {
+                                                                            "displayName":  "row_number",
+                                                                            "required":  false,
+                                                                            "defaultMatch":  false,
+                                                                            "display":  true,
+                                                                            "type":  "number",
+                                                                            "canBeUsedToMatch":  true,
+                                                                            "readOnly":  true,
+                                                                            "removed":  false
+                                                                        }
+                                                                    ],
+                                                         "attemptToConvertTypes":  false,
+                                                         "convertFieldsToString":  false
+                                                     },
+                                         "options":  {
+                                                         "cellFormat":  "USER_ENTERED"
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.googleSheets",
+                      "typeVersion":  4.7,
+                      "position":  [
+                                       -48,
+                                       -48
+                                   ],
+                      "name":  "Append row in sheet"
+                  },
+                  {
+                      "parameters":  {
+                                         "subject":  "=[Action approved] {{ $json[\u0027Kategorie (category)\u0027] }} · {{ $json[\u0027Account (accountName)\u0027] }}",
+                                         "message":  "=\u003ctable role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color:#f4f6f8;padding:32px 12px;\"\u003e\u003ctr\u003e\u003ctd align=\"center\"\u003e\u003ctable role=\"presentation\" width=\"640\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:640px;width:100%;background-color:#ffffff;border-radius:10px;overflow:hidden;border:1px solid #e5e7eb;box-shadow:0 1px 3px rgba(15,23,42,0.07);\"\u003e\u003ctr\u003e\u003ctd style=\"background-color:#153450;padding:16px 28px;border-top:3px solid #14b8a6;\"\u003e\u003ctable role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\"\u003e\u003ctr\u003e\u003ctd style=\"font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;color:#ffffff;\"\u003eCustomer Success AI Hub\u003c/td\u003e\u003c/tr\u003e\u003c/table\u003e\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd style=\"padding:14px 28px 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;\"\u003eAction approved\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd style=\"padding:14px 28px 0;\"\u003e\u003ctable role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\"\u003e\u003ctr\u003e\u003ctd style=\"background-color:{{ $json[\u0027Kategorie (category)\u0027] === \u0027risk_mitigation\u0027 ? \u0027#fef2f2\u0027 : \u0027#ecfdf3\u0027 }};border-radius:999px;padding:5px 14px;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:.03em;text-transform:uppercase;color:{{ $json[\u0027Kategorie (category)\u0027] === \u0027risk_mitigation\u0027 ? \u0027#dc2626\u0027 : \u0027#16a34a\u0027 }};\"\u003e{{ $json[\u0027Kategorie (category)\u0027] }}\u003c/td\u003e\u003c/tr\u003e\u003c/table\u003e\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd style=\"padding:18px 28px 16px;font-family:Arial,Helvetica,sans-serif;font-size:12.5px;color:#6b7280;border-bottom:1px solid #e5e7eb;\"\u003e\u003cstrong style=\"color:#1f2937;\"\u003e{{ $json[\u0027Account (accountName)\u0027] }}\u003c/strong\u003e \u0026middot; Account ID {{ $json[\u0027Account ID (ACC)\u0027] }} \u0026middot; CSM {{ $json[\u0027CSM (csmName)\u0027] }} \u0026middot; Approved {{ $json[\u0027Datum (approvedAt)\u0027] }}\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd style=\"padding:20px 28px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:.03em;\"\u003eRecommended action\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd style=\"padding:8px 28px 0;\"\u003e\u003ctable role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color:#ecfdfa;border-radius:8px;\"\u003e\u003ctr\u003e\u003ctd width=\"4\" style=\"background-color:#14b8a6;border-radius:8px 0 0 8px;\"\u003e\u0026nbsp;\u003c/td\u003e\u003ctd style=\"padding:14px 16px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#1f2937;font-weight:600;\"\u003e{{ $json[\u0027Action (action)\u0027] }}\u003c/td\u003e\u003c/tr\u003e\u003c/table\u003e\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd style=\"padding:16px 28px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;color:#6b7280;text-transform:uppercase;letter-spacing:.03em;\"\u003eRationale\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd style=\"padding:8px 28px 0 28px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.5;color:#374151;\"\u003e{{ $json[\u0027Begründung (rationale)\u0027] }}\u003c/td\u003e\u003c/tr\u003e\u003ctr\u003e\u003ctd style=\"padding:24px 28px;border-top:1px solid #e5e7eb;\"\u003e\u003cp style=\"margin:0;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#9ca3af;line-height:1.5;\"\u003eAI-generated suggestion, reviewed and approved by a human before sending.\u003c/p\u003e\u003c/td\u003e\u003c/tr\u003e\u003c/table\u003e\u003c/td\u003e\u003c/tr\u003e\u003c/table\u003e",
+                                         "options":  {
+
+                                                     }
+                                     },
+                      "type":  "n8n-nodes-base.gmail",
+                      "typeVersion":  2.2,
+                      "position":  [
+                                       192,
+                                       -48
+                                   ],
+                      "name":  "Send a message"
+                  }
+              ],
+    "pinData":  {
+
+                },
+    "connections":  {
+                        "Webhook":  {
+                                        "main":  {
+                                                     "node":  "Append row in sheet",
+                                                     "type":  "main",
+                                                     "index":  0
+                                                 }
+                                    },
+                        "Append row in sheet":  {
+                                                    "main":  {
+                                                                 "node":  "Send a message",
+                                                                 "type":  "main",
+                                                                 "index":  0
+                                                             }
+                                                },
+                        "Send a message":  {
+                                               "main":  {
+                                                            "node":  "Respond to Webhook",
+                                                            "type":  "main",
+                                                            "index":  0
+                                                        }
+                                           }
+                    },
+    "active":  true,
+    "settings":  {
+                     "executionOrder":  "v1",
+                     "binaryMode":  "separate",
+                     "availableInMCP":  false
+                 },
+    "meta":  {
+                 "templateCredsSetupCompleted":  true,
+                 "instanceId":  "c7c6732612f371ece85bad3980d0232c4c37b661169bdc3800c645e7b066ff77"
+             },
+    "nodeGroups":  {
+
+                   },
+    "tags":  {
+
+             }
+}

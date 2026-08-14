@@ -17,12 +17,14 @@ const initialsOf = name => (name || "").trim().split(/\s+/).slice(0, 2).map(w =>
 
 let state = {
   accounts: [], csms: [], view: "portfolio",
-  filters: { csm: "all", region: "all", risk: "all", expansion: "all", trend: "all" },
+  filters: { csm: "all", region: "all", risk: "all", expansion: "all", trend: "all", search: "" },
   sort: { key: "score", dir: "asc" }, expanded: null, // asc = lowest Health Score (most concerning) first
   feedbackSort: { key: "count", dir: "desc" },
   matrixSelected: null, // accountId selected in the Matrix view (inline detail, no navigation)
-  matrixMode: "value",  // "value" = Health x ARR, "renewal" = Health x days-to-renewal (bubble = ARR)
+  matrixMode: "value",  // "value" = Value Realization x Strategic Value, "renewal" = Health x days-to-renewal (bubble = ARR)
+  renewalWindowDays: 90, // Renewal Radar time filter: 30 | 60 | 90 | 180 | "all"
   mapSelected: null,    // accountId selected in the Map view (inline detail, no navigation)
+  mapMode: "health",    // "health" | "arr" | "renewal" — what the marker size encodes on the Map
   aiInsights: {}, // accountId -> { status: 'idle'|'loading'|'done'|'error', data, error }
   aiAsk: {},      // accountId -> { question, status, answer, error }
   approvals: {},  // accountId -> { status: 'idle'|'pending'|'done'|'error', result, error }
@@ -76,15 +78,27 @@ function bindControls() {
 
   const trendSelect = document.getElementById("filter-trend");
   trendSelect.addEventListener("change", e => { state.filters.trend = e.target.value; render(); });
+
+  // PO polish — compact account search: filters the same getFilteredAccounts()
+  // list every other filter and the Portfolio Copilot already read from, so
+  // it composes with the dropdown filters and the Copilot's scope for free
+  // instead of needing a second, parallel filtering path. Client-side only —
+  // no backend/AI call. Uses "input" (not "change") so results update as the
+  // CSM types. #filters (and this field) is static markup outside render()'s
+  // #app root, so the input itself is never recreated — no focus loss.
+  const searchInput = document.getElementById("filter-search");
+  searchInput.addEventListener("input", e => { state.filters.search = e.target.value; render(); });
 }
 
 function getFilteredAccounts() {
+  const search = state.filters.search.trim().toLowerCase();
   return state.accounts.filter(a =>
     (state.filters.csm === "all" || a.csmId === state.filters.csm) &&
     (state.filters.region === "all" || a.region === state.filters.region) &&
     (state.filters.risk === "all" || a.health.riskCategory === state.filters.risk) &&
     (state.filters.expansion === "all" || a.expansion.category === state.filters.expansion) &&
-    (state.filters.trend === "all" || a.trend === state.filters.trend)
+    (state.filters.trend === "all" || a.trend === state.filters.trend) &&
+    (!search || a.accountName.toLowerCase().includes(search) || a.accountId.toLowerCase().includes(search))
   );
 }
 
@@ -251,7 +265,7 @@ function renderPortfolio() {
   wrap.appendChild(legend);
 
   const table = document.createElement("table");
-  table.className = "portfolio-table";
+  table.className = "portfolio-table portfolio-main-table";
   const thead = document.createElement("thead");
   const headRow = document.createElement("tr");
   headRow.appendChild(renderSortHeader("Account", "name"));
@@ -273,7 +287,7 @@ function renderPortfolio() {
     const row = document.createElement("tr");
     row.className = `risk-row-${acc.health.riskCategory}${state.expanded === acc.accountId ? " row-expanded" : ""}`;
     row.innerHTML = `
-      <td class="account-cell">${escapeHtml(acc.accountName)}<div class="sub">${escapeHtml(acc.industry)}</div></td>
+      <td class="account-cell">${escapeHtml(acc.accountName)}<div class="sub">${escapeHtml(acc.industry)} · ${escapeHtml(acc.accountId)}</div></td>
       <td>${acc.region}<div class="sub">${escapeHtml(acc.subregion)}</div></td>
       <td>${escapeHtml(csmName(acc.csmId))}</td>
       <td>${fmtUSD(acc.contract.arrUSD)}</td>
@@ -297,7 +311,7 @@ function renderPortfolio() {
       detailRow.id = `detail-${acc.accountId}`;
       detailRow.className = "detail-row";
       const td = document.createElement("td");
-      td.colSpan = 10;
+      td.colSpan = 11;
       td.appendChild(renderAccountDetail(acc));
       detailRow.appendChild(td);
       tbody.appendChild(detailRow);
@@ -344,27 +358,16 @@ function renderScoreTrend(history) {
       ? `Health Score rose from ${first} to ${last} over the last ${weeks} weeks.`
       : `Health Score stayed roughly steady around ${last} over the last ${weeks} weeks.`;
 
-  // Sprint 06 — real x-axis under the trend line, with a calendar-date range
-  // and (width permitting) intermediate ticks. The pre-existing plot geometry
-  // below (padTop/plotH/gridlines/polyline/start-end dots+labels, all on a
-  // fixed 0-100 y-scale) is untouched — plotH stays 48 regardless of tier, so
-  // the line's own shape never changes; the axis is purely additive height
-  // beneath it. Tick density is picked from window width, since the card this
-  // renders into shares its available width with a sibling column only above
-  // the existing 700px detail-grid breakpoint (see .detail-grid in styles.css) —
-  // narrower than that, it's the sole, full-width column.
-  // Sprint 09 — from 901px up, .score-trend lays the graph and the
-  // percent/summary text out side by side (see styles.css), so the graph
-  // needs a narrower intrinsic width to leave the text room to breathe;
-  // below that it's still full-width and stacked, so it can stay wider.
-  const tier = window.innerWidth >= 1200 ? { w: 170, midCount: 1 }
-    : window.innerWidth >= 901 ? { w: 150, midCount: 0 }
-    : window.innerWidth >= 700 ? { w: 260, midCount: 1 }
-    : { w: 200, midCount: 0 };
-  const w = tier.w;
-  const padTop = 6, padBottom = 6, padRight = 8, plotH = 48, xAxisH = 18;
+  // PO polish — Sprint 06's original per-viewport width tiers existed because
+  // this chart used to stand alone at full column width; now it always sits
+  // in a fixed 50/50 .trend-row next to the CSAT chart, so a single fixed
+  // geometry (shared 1:1 with renderCsatTrend below) replaces the tiers.
+  // Using the *same* viewBox dimensions in both charts means the browser's
+  // normal (uniform, non-distorting) aspect-ratio scaling — not a stretched
+  // preserveAspectRatio="none" — is enough to keep their rendered heights
+  // equal, since .trend-row gives both an equal share of the row's width.
+  const w = 200, padTop = 10, plotH = 42, padBottom = 8, xAxisH = 16, axisLabelW = 24, padRight = 8;
   const h = padTop + plotH + padBottom + xAxisH;
-  const axisLabelW = 24;
   const plotX0 = axisLabelW, plotW = w - axisLabelW - padRight;
   const yFor = score => padTop + (1 - score / 100) * plotH;
   const xFor = i => plotX0 + (i / (history.length - 1)) * plotW;
@@ -379,7 +382,7 @@ function renderScoreTrend(history) {
 
   const axisLineY = padTop + plotH + padBottom;
   const xAxisLine = `<line x1="${plotX0}" y1="${axisLineY}" x2="${(plotX0 + plotW).toFixed(1)}" y2="${axisLineY}" stroke="var(--border)" stroke-width="1" />`;
-  const tickIndices = pickTickIndices(history.length, tier.midCount);
+  const tickIndices = pickTickIndices(history.length, 0);
   const xAxisTicks = tickIndices.map(i => {
     const x = xFor(i).toFixed(1);
     const anchor = i === 0 ? "start" : i === history.length - 1 ? "end" : "middle";
@@ -396,21 +399,101 @@ function renderScoreTrend(history) {
 
   return `
     <div class="score-trend">
-      <svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" class="score-sparkline" role="img">
-        <title>${escapeHtml(axisTitle)}</title>
-        ${gridlines}
-        <polyline points="${points}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
-        <circle cx="${firstX}" cy="${yFor(first).toFixed(1)}" r="2.5" fill="var(--muted)" />
-        <text x="${firstX}" y="${(yFor(first) - 6).toFixed(1)}" text-anchor="start" font-size="9" fill="var(--muted)">${first}</text>
-        <circle cx="${lastX}" cy="${yFor(last).toFixed(1)}" r="2.5" fill="${color}" />
-        <text x="${lastX}" y="${(yFor(last) - 6).toFixed(1)}" text-anchor="end" font-size="9" font-weight="700" fill="${color}">${last}</text>
-        ${xAxisLine}
-        ${xAxisTicks}
-      </svg>
-      <div class="score-trend-info">
-        <div class="score-trend-pct" style="color:${color};">${arrow} ${pctLabel}<span class="sub"> over ${weeks} weeks</span></div>
-        <p class="sub">${escapeHtml(summary)}</p>
+      <p class="score-trend-title">Health Score trend</p>
+      <div class="score-trend-row">
+        <svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" class="score-sparkline" role="img">
+          <title>${escapeHtml(axisTitle)}</title>
+          ${gridlines}
+          <polyline points="${points}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+          <circle cx="${firstX}" cy="${yFor(first).toFixed(1)}" r="2.5" fill="var(--muted)" />
+          <text x="${firstX}" y="${(yFor(first) - 6).toFixed(1)}" text-anchor="start" font-size="9" fill="var(--muted)">${first}</text>
+          <circle cx="${lastX}" cy="${yFor(last).toFixed(1)}" r="2.5" fill="${color}" />
+          <text x="${lastX}" y="${(yFor(last) - 6).toFixed(1)}" text-anchor="end" font-size="9" font-weight="700" fill="${color}">${last}</text>
+          ${xAxisLine}
+          ${xAxisTicks}
+        </svg>
+        <div class="score-trend-pct-block">
+          <div class="score-trend-pct" style="color:${color};">${arrow} ${pctLabel}</div>
+          <div class="score-trend-pct-caption">over ${weeks} weeks</div>
+        </div>
       </div>
+      <p class="sub">${escapeHtml(summary)}</p>
+    </div>
+  `;
+}
+
+// PO polish: a compact CSAT Trend (8 weeks) mini-chart, shown next to the
+// Health Score trend so both trends are visible at a glance — the existing
+// "CSAT Trend (8 weeks)" criterion row in the breakdown table stays exactly
+// as-is (it explains the risk-points contribution; this chart is purely a
+// visual companion). Data is account.relationship.weeklyCSAT, the same 8
+// weekly {weekStartDate, score} points src/scoring.js's scoreCSATTrend()
+// already uses — no new or invented data. CSAT is a 0-5 scale (not 0-100
+// like the Health Score), so the "meaningful move" thresholds below are the
+// same 8%-of-range rule as renderScoreTrend (8% of 5 = 0.4), just rescaled.
+// Shares its axis-labeling and geometry approach with renderScoreTrend (see
+// that function's comment) rather than using viewport-based width tiers: it
+// always sits in a fixed half-width column next to the Health Score trend,
+// not stand-alone full-width.
+function renderCsatTrend(weeklyCSAT) {
+  const first = weeklyCSAT[0].score;
+  const last = weeklyCSAT[weeklyCSAT.length - 1].score;
+  const diff = last - first;
+  const weeks = weeklyCSAT.length - 1;
+  const color = diff <= -0.4 ? "var(--red)" : diff >= 0.4 ? "var(--green)" : "var(--muted)";
+  const arrow = diff <= -0.4 ? "▼" : diff >= 0.4 ? "▲" : "";
+  const pct = first > 0 ? Math.round((diff / first) * 100) : 0;
+  const pctLabel = `${diff > 0 ? "+" : ""}${pct}%`;
+  const summary = diff <= -0.4
+    ? `CSAT fell from ${first.toFixed(1)} to ${last.toFixed(1)} over the last ${weeks} weeks.`
+    : diff >= 0.4
+      ? `CSAT rose from ${first.toFixed(1)} to ${last.toFixed(1)} over the last ${weeks} weeks.`
+      : `CSAT stayed roughly steady around ${last.toFixed(1)} over the last ${weeks} weeks.`;
+
+  // Same geometry (viewBox width/height, padding, axis-label gutter) as
+  // renderScoreTrend on purpose — matching aspect ratios are what let both
+  // charts render at the same pixel height via normal (uniform, non-
+  // distorting) scaling once .trend-row gives them equal width. Only the Y
+  // domain (0-5 instead of 0-100) and tick values differ.
+  const w = 200, padTop = 10, plotH = 42, padBottom = 8, xAxisH = 16, axisLabelW = 24, padRight = 8;
+  const h = padTop + plotH + padBottom + xAxisH;
+  const plotX0 = axisLabelW, plotW = w - axisLabelW - padRight;
+  const yFor = score => padTop + (1 - score / 5) * plotH;
+  const xFor = i => plotX0 + (i / (weeklyCSAT.length - 1)) * plotW;
+  const points = weeklyCSAT.map((wk, i) => `${xFor(i).toFixed(1)},${yFor(wk.score).toFixed(1)}`).join(" ");
+  const gridlines = [0, 2.5, 5].map(v => `
+    <line x1="${plotX0}" y1="${yFor(v).toFixed(1)}" x2="${w - padRight}" y2="${yFor(v).toFixed(1)}" stroke="var(--border)" stroke-width="1" stroke-dasharray="2,2" />
+    <text x="${plotX0 - 4}" y="${(yFor(v) + 3).toFixed(1)}" text-anchor="end" font-size="8" fill="var(--muted)">${v}</text>
+  `).join("");
+  const axisLineY = padTop + plotH + padBottom;
+  const xAxisLine = `<line x1="${plotX0}" y1="${axisLineY}" x2="${(plotX0 + plotW).toFixed(1)}" y2="${axisLineY}" stroke="var(--border)" stroke-width="1" />`;
+  const xAxisTicks = `
+    <text x="${plotX0}" y="${axisLineY + 13}" text-anchor="start" font-size="9" fill="var(--muted)">${escapeHtml(fmtAxisDate(weeklyCSAT[0].weekStartDate))}</text>
+    <text x="${(plotX0 + plotW).toFixed(1)}" y="${axisLineY + 13}" text-anchor="end" font-size="9" fill="var(--muted)">${escapeHtml(fmtAxisDate(weeklyCSAT[weeklyCSAT.length - 1].weekStartDate))}</text>
+  `;
+  const axisTitle = `CSAT trend, ${fmtDate(weeklyCSAT[0].weekStartDate)} to ${fmtDate(weeklyCSAT[weeklyCSAT.length - 1].weekStartDate)}: started at ${first.toFixed(1)}, ended at ${last.toFixed(1)}.`;
+
+  return `
+    <div class="score-trend csat-trend">
+      <p class="score-trend-title">CSAT trend</p>
+      <div class="score-trend-row">
+        <svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" class="score-sparkline" role="img">
+          <title>${escapeHtml(axisTitle)}</title>
+          ${gridlines}
+          <polyline points="${points}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+          <circle cx="${xFor(0).toFixed(1)}" cy="${yFor(first).toFixed(1)}" r="2.5" fill="var(--muted)" />
+          <text x="${xFor(0).toFixed(1)}" y="${(yFor(first) - 6).toFixed(1)}" text-anchor="start" font-size="9" fill="var(--muted)">${first.toFixed(1)}</text>
+          <circle cx="${xFor(weeklyCSAT.length - 1).toFixed(1)}" cy="${yFor(last).toFixed(1)}" r="2.5" fill="${color}" />
+          <text x="${xFor(weeklyCSAT.length - 1).toFixed(1)}" y="${(yFor(last) - 6).toFixed(1)}" text-anchor="end" font-size="9" font-weight="700" fill="${color}">${last.toFixed(1)}</text>
+          ${xAxisLine}
+          ${xAxisTicks}
+        </svg>
+        <div class="score-trend-pct-block">
+          <div class="score-trend-pct" style="color:${color};">${arrow} ${pctLabel}</div>
+          <div class="score-trend-pct-caption">over ${weeks} weeks</div>
+        </div>
+      </div>
+      <p class="sub">${escapeHtml(summary)}</p>
     </div>
   `;
 }
@@ -446,13 +529,15 @@ function renderAccountDetail(acc) {
     : "";
 
   const scoreTrend = acc.healthScoreHistory ? renderScoreTrend(acc.healthScoreHistory) : "";
+  const csatTrend = acc.relationship.weeklyCSAT ? renderCsatTrend(acc.relationship.weeklyCSAT) : "";
+  const trendRow = (scoreTrend || csatTrend) ? `<div class="trend-row">${scoreTrend}${csatTrend}</div>` : "";
 
   div.innerHTML = `
     <div class="detail-grid">
       <div>
         <h4>Score Breakdown</h4>
         <p class="sub">Risk points per criterion — the total is subtracted from the Health Score (100). Health Score ${acc.health.score} = 100 − ${Math.round(acc.health.criteria.reduce((s, c) => s + c.points, 0))} risk points.</p>
-        ${scoreTrend}
+        ${trendRow}
         <table class="breakdown-table"><tbody>${criteriaRows}</tbody></table>
       </div>
       <div>
@@ -764,8 +849,9 @@ function attachDotTooltip(wrap, list, contentFn) {
 
 function renderMatrix() {
   const wrap = document.createElement("div");
+  wrap.className = "matrix-view";
   const list = getFilteredAccounts();
-  wrap.appendChild(renderViewHeader("Matrix", "Health Score against value or renewal urgency — spot which accounts need attention first."));
+  wrap.appendChild(renderViewHeader("Matrix", "Value Realization against Strategic Value, or renewal urgency — spot which accounts need attention first."));
 
   if (list.length === 0) {
     const empty = document.createElement("p");
@@ -776,52 +862,113 @@ function renderMatrix() {
   }
 
   const mode = state.matrixMode;
+
+  // Sprint 14B — Renewal Radar time filter: only accounts renewing within
+  // the selected window are plotted/counted in renewal mode. "all" removes
+  // the upper bound entirely (still excludes already-past renewal dates,
+  // none of which exist in this dataset relative to the fixed reference
+  // date anyway). Value mode is untouched by this — it keeps using the
+  // full filtered `list`.
+  const renewalWindow = state.renewalWindowDays;
+  const renewalWindowLimit = renewalWindow === "all" ? Infinity : renewalWindow;
+  const renewalWindowLabel = renewalWindow === "all" ? "any time" : `the next ${renewalWindow} days`;
+  const displayList = mode === "renewal"
+    ? list.filter(a => { const d = daysFromToday(a.contract.nextRenewalDate); return d >= 0 && d <= renewalWindowLimit; })
+    : list;
+
+  if (displayList.length === 0) {
+    const wrapEmpty = document.createElement("div");
+    wrapEmpty.innerHTML = `
+      <div class="matrix-toggle">
+        <button class="matrix-toggle-btn active" data-mode="renewal">Renewal Radar (Health × Time-to-Renewal)</button>
+        <button class="matrix-toggle-btn" data-mode="value">Value Matrix (Value Realization × Strategic Value)</button>
+      </div>
+      <p class="sub">No accounts in the current filters have an upcoming renewal within ${renewalWindowLabel}.</p>
+    `;
+    wrap.appendChild(wrapEmpty);
+    wrap.querySelectorAll(".matrix-toggle-btn").forEach(btn => {
+      btn.addEventListener("click", () => { state.matrixMode = btn.dataset.mode; state.matrixSelected = null; render(); });
+    });
+    return wrap;
+  }
+
   const W = 820, H = 520;
-  const marginLeft = 70, marginRight = 24, marginTop = 20, marginBottom = 50;
+  const marginLeft = 70, marginRight = 24, marginTop = 40, marginBottom = 50;
   const plotW = W - marginLeft - marginRight;
   const plotH = H - marginTop - marginBottom;
-  const healthMid = 50;
+  const xMid = 50;
 
-  const arrValues = list.map(a => a.contract.arrUSD);
+  const arrValues = displayList.map(a => a.contract.arrUSD);
   const minArr = Math.min(...arrValues);
   const maxArr = Math.max(...arrValues);
 
+  // Sprint 14B — Value Matrix axes, using the closest available proxy fields
+  // (see the sprint report: no dedicated "value realization" field exists in
+  // the demo data, so this composes from existing computed/raw fields
+  // rather than inventing a new one):
+  //   X = Value Realization  → usage.adoptionRatePct (how much of the
+  //       licensed product the account actually uses)
+  //   Y = Strategic / Revenue Value → expansion.score (the app's existing
+  //       0-100 growth/upsell composite — closer to "strategic potential"
+  //       than raw ARR, which is already the bubble size)
+  // Renewal mode is unchanged: X = Health Score, Y = -days-to-renewal.
+  const xPlotOf = a => mode === "value" ? a.usage.adoptionRatePct : a.health.score;
   // yPlot is the value actually placed on the Y axis (higher = nearer the top).
-  // Value mode: yPlot = ARR (bigger deal = higher up).
-  // Renewal mode: yPlot = -daysToRenewal (sooner renewal = higher up = more urgent).
-  const yPlotOf = a => mode === "renewal" ? -daysFromToday(a.contract.nextRenewalDate) : a.contract.arrUSD;
-  const yPlotValues = list.map(yPlotOf);
+  // Value mode: yPlot = Expansion Score. Renewal mode: yPlot = -daysToRenewal
+  // (sooner renewal = higher up = more urgent).
+  const yPlotOf = a => mode === "renewal" ? -daysFromToday(a.contract.nextRenewalDate) : a.expansion.score;
+  const yPlotValues = displayList.map(yPlotOf);
   const minY = Math.min(...yPlotValues);
   const maxY = Math.max(...yPlotValues);
   const yPlotMedian = median(yPlotValues);
 
-  const xScale = health => marginLeft + (health / 100) * plotW;
+  const xScale = v => marginLeft + (v / 100) * plotW;
   const yScale = yPlot => {
     if (maxY === minY) return marginTop + plotH / 2;
     return marginTop + (1 - (yPlot - minY) / (maxY - minY)) * plotH;
   };
-  // Bubble size encodes a signal beyond the two axes: renewal mode already
-  // plots ARR on neither axis, so size = ARR fills that gap. Value mode
-  // already puts ARR on the Y axis, so size = Expansion Score instead —
-  // turning it into a 3-signal view (risk × value × growth potential).
+  // Bubble size = ARR in both modes now (Sprint 14B): renewal mode already
+  // used this (ARR is on neither axis there); value mode used to size by
+  // Expansion Score, now matches the spec's "bubble size = ARR" directly —
+  // Expansion Score still drives the Y axis instead, so no signal is lost.
   const radiusOf = a => {
-    if (mode === "renewal") {
-      if (maxArr === minArr) return 9;
-      return 5 + ((a.contract.arrUSD - minArr) / (maxArr - minArr)) * 11;
-    }
-    return 5 + (a.expansion.score / 100) * 11;
+    if (maxArr === minArr) return 9;
+    return 5 + ((a.contract.arrUSD - minArr) / (maxArr - minArr)) * 11;
   };
 
-  const quadrantX = xScale(healthMid);
+  const quadrantX = xScale(xMid);
   const quadrantY = yScale(yPlotMedian);
 
-  const dots = list.map(a => {
-    const cx = xScale(a.health.score);
+  // Rough scale reference so the axes aren't just unlabeled lines — three
+  // ticks per axis (start/mid/end), not a full gridline system. X is always
+  // a fixed 0-100 domain (Health Score or Adoption %); Y uses the actual
+  // plotted min/median/max for whichever metric is on it this mode
+  // (Expansion Score, or renewal urgency in days, converting the negated
+  // yPlot back to real days).
+  const xTickVals = [0, 50, 100];
+  const xTicks = xTickVals.map((v, i) => {
+    const anchor = i === 0 ? "start" : i === xTickVals.length - 1 ? "end" : "middle";
+    return `<text x="${xScale(v).toFixed(1)}" y="${(marginTop + plotH + 16).toFixed(1)}" class="axis-tick" text-anchor="${anchor}">${v}</text>`;
+  }).join("");
+  const yTickVals = [minY, yPlotMedian, maxY];
+  const yTickLabel = v => mode === "renewal" ? `${Math.round(-v)}d` : String(Math.round(v));
+  const yTicks = yTickVals.map(v =>
+    `<text x="${(marginLeft - 8).toFixed(1)}" y="${(yScale(v) + 3).toFixed(1)}" class="axis-tick" text-anchor="end">${yTickLabel(v)}</text>`
+  ).join("");
+
+  const dots = displayList.map(a => {
+    const cx = xScale(xPlotOf(a));
     const cy = yScale(yPlotOf(a));
     const r = radiusOf(a);
     const glyph = TREND_GLYPH[a.trend];
     const glyphSpan = glyph ? `<text x="${(cx + r + 2).toFixed(1)}" y="${(cy + 4).toFixed(1)}" class="trend-glyph trend-${a.trend}">${glyph}</text>` : "";
-    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" class="matrix-dot risk-dot-${a.health.riskCategory}" data-account-id="${a.accountId}"></circle>${glyphSpan}`;
+    // Renewal Radar — a dashed outer ring makes at-risk renewals within the
+    // selected window ("Critical": high risk + renewing within the window)
+    // clearly stand out beyond just their red fill color.
+    const criticalRing = (mode === "renewal" && a.health.riskCategory === "high")
+      ? `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(r + 3).toFixed(1)}" class="matrix-dot-critical-ring"></circle>`
+      : "";
+    return `${criticalRing}<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" class="matrix-dot risk-dot-${a.health.riskCategory}" data-account-id="${a.accountId}"></circle>${glyphSpan}`;
   }).join("");
 
   // Quadrant label blocks: title + one-line description, with a background
@@ -832,10 +979,18 @@ function renderMatrix() {
     { x: marginLeft + 12, y: marginTop + plotH - 34, anchor: "start", cls: "ql-monitor", title: "Fix Quietly", desc: "At risk, renewal is distant. Fix before urgent." },
     { x: marginLeft + plotW - 12, y: marginTop + plotH - 34, anchor: "end", cls: "ql-nurture", title: "Steady — Low Touch", desc: "Healthy, renewal is distant. No rush." },
   ] : [
-    { x: marginLeft + 12, y: marginTop + 12, anchor: "start", cls: "ql-save", title: "Save — Priority", desc: "High value, at risk. Act now." },
-    { x: marginLeft + plotW - 12, y: marginTop + 12, anchor: "end", cls: "ql-protect", title: "Protect & Expand", desc: "High value, healthy. Nurture & upsell." },
-    { x: marginLeft + 12, y: marginTop + plotH - 34, anchor: "start", cls: "ql-monitor", title: "Monitor", desc: "Lower value, at risk. Watch, don't panic." },
-    { x: marginLeft + plotW - 12, y: marginTop + plotH - 34, anchor: "end", cls: "ql-nurture", title: "Nurture / Grow", desc: "Lower value, healthy. Growth candidate." },
+    // Sprint 14B — Value Matrix quadrant naming: X = Value Realization
+    // (Adoption %, low→high), Y = Strategic Value (Expansion Score,
+    // low→high). Top-left = strategically important but under-using the
+    // product = the biggest hidden risk, hence "Reassess"; top-right = both
+    // high = the accounts worth protecting and using as proof points;
+    // bottom-left = neither high = low-touch maintenance; bottom-right =
+    // realizing value already but not yet strategically large = the best
+    // growth candidates.
+    { x: marginLeft + 12, y: marginTop + 12, anchor: "start", cls: "ql-save", title: "Reassess", desc: "Strategic account, low value realization. Find out why." },
+    { x: marginLeft + plotW - 12, y: marginTop + 12, anchor: "end", cls: "ql-protect", title: "Protect & Prove Value", desc: "High realization, high strategic value. Protect & showcase." },
+    { x: marginLeft + 12, y: marginTop + plotH - 34, anchor: "start", cls: "ql-monitor", title: "Maintain", desc: "Lower realization, lower strategic value. Low-touch upkeep." },
+    { x: marginLeft + plotW - 12, y: marginTop + plotH - 34, anchor: "end", cls: "ql-nurture", title: "Grow", desc: "Realizing value well. Grow the strategic footprint." },
   ];
   const labelBlocks = quadrantLabels.map(l => `
     <text x="${l.x}" y="${l.y}" class="quadrant-label ${l.cls}" text-anchor="${l.anchor}">${escapeHtml(l.title)}</text>
@@ -858,19 +1013,23 @@ function renderMatrix() {
       <line x1="${marginLeft}" y1="${marginTop + plotH}" x2="${marginLeft + plotW}" y2="${marginTop + plotH}" class="axis-line" />
       <line x1="${marginLeft}" y1="${marginTop}" x2="${marginLeft}" y2="${marginTop + plotH}" class="axis-line" />
 
+      <!-- rough axis scale (start/mid/end ticks, not a full gridline system) -->
+      ${xTicks}
+      ${yTicks}
+
       <!-- quadrant labels (title + description) -->
       ${labelBlocks}
 
       <!-- axis titles -->
-      <text x="${marginLeft + plotW / 2}" y="${H - 12}" class="axis-title" text-anchor="middle">Health Score →</text>
-      <text x="16" y="${marginTop + plotH / 2}" class="axis-title" text-anchor="middle" transform="rotate(-90, 16, ${marginTop + plotH / 2})">${mode === "renewal" ? "Renewal urgency →" : "ARR →"}</text>
-      <text x="${marginLeft + plotW / 2}" y="${marginTop - 4}" class="axis-title" text-anchor="middle">(bubble size = ${mode === "renewal" ? "ARR" : "Expansion Score"})</text>
+      <text x="${marginLeft + plotW / 2}" y="${H - 12}" class="axis-title" text-anchor="middle">${mode === "renewal" ? "Health Score" : "Value Realization (Adoption %)"} →</text>
+      <text x="16" y="${marginTop + plotH / 2}" class="axis-title" text-anchor="middle" transform="rotate(-90, 16, ${marginTop + plotH / 2})">${mode === "renewal" ? "Renewal urgency →" : "Strategic / Revenue Value →"}</text>
+      <text x="${marginLeft + plotW / 2}" y="16" class="axis-title" text-anchor="middle">ARR (bubble size)</text>
 
       ${dots}
     </svg>
   `;
 
-  const selected = state.matrixSelected ? list.find(a => a.accountId === state.matrixSelected) : null;
+  const selected = state.matrixSelected ? displayList.find(a => a.accountId === state.matrixSelected) : null;
   const detailPanel = selected ? `
     <div class="matrix-detail">
       <button class="matrix-detail-close" aria-label="Close">&times;</button>
@@ -882,14 +1041,35 @@ function renderMatrix() {
         <div><span class="stat-num exp-text-${selected.expansion.category}">${selected.expansion.score}</span><span class="stat-label">Expansion</span></div>
         <div><span class="stat-num">${daysFromToday(selected.contract.nextRenewalDate)}d</span><span class="stat-label">To Renewal</span></div>
       </div>
-      <p class="sub">Top driver: ${escapeHtml(selected.health.criteria[0].label)} (${escapeHtml(String(selected.health.criteria[0].rawValue))})</p>
+      <p class="sub">CSM: ${escapeHtml(csmName(selected.csmId))} · Top risk signal: ${escapeHtml(selected.health.criteria[0].label)} (${escapeHtml(String(selected.health.criteria[0].rawValue))})</p>
       <button class="ai-load-btn matrix-detail-link">View full details in Portfolio →</button>
     </div>
   ` : "";
 
+  // Sprint 14B — no dedicated "value realization" field exists in the demo
+  // data, so this is the proxy call-out required by the sprint brief: made
+  // explicit here rather than silently redefining a metric.
   const modeDesc = mode === "renewal"
-    ? `X: Health Score, Y: renewal urgency (sooner = higher), bubble size: ARR. Quadrant lines split at Health ${healthMid} and the median renewal date of the filtered accounts.`
-    : `X: Health Score, Y: ARR, bubble size: Expansion Score (bigger = more upsell potential). Quadrant lines split at Health ${healthMid} and median ARR (${fmtUSD(Math.round(yPlotMedian))}) of the filtered accounts.`;
+    ? `X: Health Score, Y: renewal urgency (sooner = higher), bubble size: ARR. Quadrant lines split at Health ${xMid} and the median renewal date of the accounts renewing within ${renewalWindowLabel}.`
+    : `X: Adoption Rate % as a Value Realization proxy (no dedicated field exists in the demo data), Y: Expansion Score as a Strategic/Revenue Value proxy, bubble size: ARR. Quadrant lines split at 50% adoption and the median Expansion Score of the filtered accounts.`;
+
+  // Renewal Radar KPI row + insight line — only meaningful in renewal mode,
+  // computed directly from displayList (already windowed to renewalWindow
+  // days). "Critical" = high risk AND renewing within the window, matching
+  // the dashed critical-ring dots above — no invented likelihood/GRR/NRR.
+  let renewalKpiRow = "", renewalInsight = "";
+  if (mode === "renewal") {
+    const arrRenewing = displayList.reduce((s, a) => s + a.contract.arrUSD, 0);
+    const criticalAccounts = displayList.filter(a => a.health.riskCategory === "high");
+    const arrAtRisk = criticalAccounts.reduce((s, a) => s + a.contract.arrUSD, 0);
+    renewalKpiRow = `<div class="kpi-strip">${renderKpiTiles([
+      { label: "ARR renewing", value: fmtUSD(arrRenewing), tone: "neutral" },
+      { label: "ARR at risk", value: fmtUSD(arrAtRisk), tone: "high" },
+      { label: "Renewals", value: String(displayList.length), tone: "neutral" },
+      { label: "Critical", value: String(criticalAccounts.length), tone: "high" },
+    ])}</div>`;
+    renewalInsight = `<p class="sub geo-insight">${displayList.length} renewal(s) worth ${fmtUSD(arrRenewing)} fall within ${renewalWindowLabel} — ${criticalAccounts.length} flagged high risk (${fmtUSD(arrAtRisk)}).</p>`;
+  }
 
   // A dedicated content container (not wrap.innerHTML directly) — wrap
   // already holds the view header appended above, which a wrap.innerHTML
@@ -897,11 +1077,19 @@ function renderMatrix() {
   const content = document.createElement("div");
   content.innerHTML = `
     <div class="matrix-toggle">
-      <button class="matrix-toggle-btn ${mode === "value" ? "active" : ""}" data-mode="value">Value (Health × ARR)</button>
+      <button class="matrix-toggle-btn ${mode === "value" ? "active" : ""}" data-mode="value">Value Matrix (Value Realization × Strategic Value)</button>
       <button class="matrix-toggle-btn ${mode === "renewal" ? "active" : ""}" data-mode="renewal">Renewal Radar (Health × Time-to-Renewal)</button>
     </div>
+    ${mode === "renewal" ? `
+      <div class="matrix-toggle matrix-window-toggle">
+        ${[30, 60, 90, 180].map(d => `<button class="matrix-toggle-btn matrix-toggle-btn-sm ${renewalWindow === d ? "active" : ""}" data-window="${d}">${d} days</button>`).join("")}
+        <button class="matrix-toggle-btn matrix-toggle-btn-sm ${renewalWindow === "all" ? "active" : ""}" data-window="all">All</button>
+      </div>
+      ${renewalKpiRow}
+      ${renewalInsight}
+    ` : ""}
     <p class="sub">Each dot is an account. ${modeDesc} ▲/▼ next to a dot = CSAT trend over the last 8 weeks. Click a dot for details.</p>
-    <div class="matrix-wrap">${svg}</div>
+    <div class="matrix-wrap"${mode === "renewal" ? ` style="max-width:${Math.min(700, Math.round(window.innerWidth * 0.44))}px;"` : ""}>${svg}</div>
     ${detailPanel}
     <div class="summary-bar" style="margin-top:14px;">
       <div class="summary-chip risk-high">● High risk</div>
@@ -912,9 +1100,17 @@ function renderMatrix() {
   `;
   wrap.appendChild(content);
 
-  wrap.querySelectorAll(".matrix-toggle-btn").forEach(btn => {
+  wrap.querySelectorAll(".matrix-toggle-btn[data-mode]").forEach(btn => {
     btn.addEventListener("click", () => {
       state.matrixMode = btn.dataset.mode;
+      state.matrixSelected = null;
+      render();
+    });
+  });
+
+  wrap.querySelectorAll(".matrix-toggle-btn[data-window]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      state.renewalWindowDays = btn.dataset.window === "all" ? "all" : Number(btn.dataset.window);
       state.matrixSelected = null;
       render();
     });
@@ -927,11 +1123,11 @@ function renderMatrix() {
     });
   });
 
-  attachDotTooltip(wrap, list, a => `
+  attachDotTooltip(wrap, displayList, a => `
     <div class="tt-name">${escapeHtml(a.accountName)}</div>
     <div class="tt-row"><span class="tt-label">Health Score:</span> <strong>${a.health.score}</strong> (${RISK_LABEL[a.health.riskCategory]} risk)</div>
     <div class="tt-row"><span class="tt-label">ARR:</span> ${fmtUSD(a.contract.arrUSD)}</div>
-    ${mode === "renewal" ? `<div class="tt-row"><span class="tt-label">Renewal in:</span> ${daysFromToday(a.contract.nextRenewalDate)} days</div>` : `<div class="tt-row"><span class="tt-label">Expansion:</span> ${a.expansion.score} (${a.expansion.category})</div>`}
+    ${mode === "renewal" ? `<div class="tt-row"><span class="tt-label">Renewal in:</span> ${daysFromToday(a.contract.nextRenewalDate)} days</div>` : `<div class="tt-row"><span class="tt-label">Adoption:</span> ${a.usage.adoptionRatePct}%</div><div class="tt-row"><span class="tt-label">Expansion:</span> ${a.expansion.score} (${a.expansion.category})</div>`}
     <div class="tt-row"><span class="tt-label">CSAT trend:</span> ${TREND_TEXT[a.trend]}</div>
   `);
 
@@ -955,10 +1151,47 @@ function renderMatrix() {
 const RISK_HEX = { high: "#dc2626", medium: "#d97706", low: "#16a34a" };
 let leafletMapInstance = null;
 
+function renderKpiTiles(kpis) {
+  return kpis.map(k => `
+    <div class="kpi-tile kpi-tile-${k.tone}">
+      <span class="kpi-value">${escapeHtml(k.value)}</span>
+      <span class="kpi-label">${escapeHtml(k.label)}</span>
+    </div>
+  `).join("");
+}
+
+// Sprint 14B — Geo Intelligence: marker size encodes whatever state.mapMode
+// is currently showing (color always stays risk level, for a consistent
+// legend across all three modes). All three modes scale within the
+// currently filtered list's own min/max, same min-max-normalize approach as
+// the Matrix bubbles — "worse"/"bigger deal"/"more urgent" always renders
+// as the bigger dot.
+function mapMarkerRadius(a, mode, list) {
+  if (mode === "arr") {
+    const values = list.map(x => x.contract.arrUSD);
+    const min = Math.min(...values), max = Math.max(...values);
+    if (max === min) return 9;
+    return 6 + ((a.contract.arrUSD - min) / (max - min)) * 10;
+  }
+  if (mode === "renewal") {
+    const values = list.map(x => daysFromToday(x.contract.nextRenewalDate));
+    const min = Math.min(...values), max = Math.max(...values);
+    if (max === min) return 9;
+    // Sooner renewal = more urgent = bigger dot, so invert the normalized value.
+    const days = daysFromToday(a.contract.nextRenewalDate);
+    return 6 + ((max - days) / (max - min)) * 10;
+  }
+  // health mode: lower Health Score = more at-risk = bigger dot.
+  const values = list.map(x => x.health.score);
+  const min = Math.min(...values), max = Math.max(...values);
+  if (max === min) return 9;
+  return 6 + ((max - a.health.score) / (max - min)) * 10;
+}
+
 function renderMap() {
   const wrap = document.createElement("div");
   const list = getFilteredAccounts().filter(a => a.location);
-  wrap.appendChild(renderViewHeader("Map", "Fictional HQ locations, colored by risk level — a geographic read on the same filtered portfolio."));
+  wrap.appendChild(renderViewHeader("Geo Intelligence", "Fictional HQ locations, colored by risk level — a geographic read on the same filtered portfolio."));
 
   if (list.length === 0) {
     const empty = document.createElement("p");
@@ -967,6 +1200,53 @@ function renderMap() {
     wrap.appendChild(empty);
     return wrap;
   }
+
+  const mode = state.mapMode;
+
+  // Region Summary — grouped by the same top-level "region" field the
+  // existing Region filter uses (not the finer-grained "subregion"), built
+  // only from fields already on each account: no new/invented data.
+  const regionGroups = {};
+  list.forEach(a => {
+    if (!regionGroups[a.region]) regionGroups[a.region] = [];
+    regionGroups[a.region].push(a);
+  });
+  const regionStats = Object.entries(regionGroups).map(([region, accs]) => {
+    const atRisk = accs.filter(a => a.health.riskCategory === "high");
+    const arrAtRisk = atRisk.reduce((s, a) => s + a.contract.arrUSD, 0);
+    const upcoming = accs.filter(a => {
+      const d = daysFromToday(a.contract.nextRenewalDate);
+      return d >= 0 && d <= 90;
+    }).length;
+    return {
+      region,
+      count: accs.length,
+      arr: accs.reduce((s, a) => s + a.contract.arrUSD, 0),
+      atRiskCount: atRisk.length,
+      arrAtRisk,
+      upcoming,
+    };
+  }).sort((a, b) => b.arr - a.arr);
+
+  // Geo-Insight — purely computed from the region stats above (no AI call):
+  // which region currently carries the most at-risk ARR. Only shown when
+  // there's actually at-risk ARR somewhere, so it never reads as a false alarm.
+  const topAtRiskRegion = [...regionStats].sort((a, b) => b.arrAtRisk - a.arrAtRisk)[0];
+  const geoInsight = topAtRiskRegion && topAtRiskRegion.arrAtRisk > 0
+    ? `<p class="sub geo-insight"><strong>${escapeHtml(topAtRiskRegion.region)}</strong> currently carries the most ARR at risk: ${fmtUSD(topAtRiskRegion.arrAtRisk)} across ${topAtRiskRegion.atRiskCount} high-risk account(s).</p>`
+    : "";
+
+  const regionCards = regionStats.map(r => `
+    <div class="region-card">
+      <p class="region-card-name">${escapeHtml(r.region)}</p>
+      <div class="region-card-stats">
+        <div><span class="stat-num">${r.count}</span><span class="stat-label">Accounts</span></div>
+        <div><span class="stat-num">${fmtUSD(r.arr)}</span><span class="stat-label">ARR</span></div>
+        <div><span class="stat-num${r.atRiskCount > 0 ? " risk-text-high" : ""}">${r.atRiskCount}</span><span class="stat-label">At Risk</span></div>
+        <div><span class="stat-num">${r.upcoming}</span><span class="stat-label">Renewals ≤90d</span></div>
+      </div>
+    </div>
+  `).join("");
 
   const selected = state.mapSelected ? list.find(a => a.accountId === state.mapSelected) : null;
   const detailPanel = selected ? `
@@ -979,15 +1259,27 @@ function renderMap() {
         <div><span class="stat-num">${fmtUSD(selected.contract.arrUSD)}</span><span class="stat-label">ARR</span></div>
         <div><span class="stat-num">${daysFromToday(selected.contract.nextRenewalDate)}d</span><span class="stat-label">To Renewal</span></div>
       </div>
+      <p class="sub">CSM: ${escapeHtml(csmName(selected.csmId))} · Top risk signal: ${escapeHtml(selected.health.criteria[0].label)} (${escapeHtml(String(selected.health.criteria[0].rawValue))})</p>
       <button class="ai-load-btn matrix-detail-link">View full details in Portfolio →</button>
     </div>
   ` : "";
+
+  const modeCopy = {
+    health: "Dot color = risk level, size = how low the Health Score is (bigger = more at-risk).",
+    arr: "Dot color = risk level, size = ARR (bigger = larger deal).",
+    renewal: "Dot color = risk level, size = renewal urgency (bigger = renewing sooner).",
+  };
 
   // Dedicated content container — see the same note in renderMatrix() for why
   // this can't be a direct wrap.innerHTML assignment (would drop the header).
   const content = document.createElement("div");
   content.innerHTML = `
-    <p class="sub">Plotted on real OpenStreetMap data. Dot color = risk level. Click a marker for details.</p>
+    <div class="matrix-toggle">
+      <button class="matrix-toggle-btn ${mode === "health" ? "active" : ""}" data-mode="health">Health</button>
+      <button class="matrix-toggle-btn ${mode === "arr" ? "active" : ""}" data-mode="arr">ARR</button>
+      <button class="matrix-toggle-btn ${mode === "renewal" ? "active" : ""}" data-mode="renewal">Renewal</button>
+    </div>
+    <p class="sub">Plotted on real OpenStreetMap data. ${modeCopy[mode]} Click a marker for details.</p>
     <div id="leaflet-map" class="leaflet-map"></div>
     ${detailPanel}
     <div class="summary-bar" style="margin-top:14px;">
@@ -995,8 +1287,19 @@ function renderMap() {
       <div class="summary-chip risk-medium">● Medium risk</div>
       <div class="summary-chip risk-low">● Low risk</div>
     </div>
+    <h4 class="region-summary-heading">Region Summary</h4>
+    ${geoInsight}
+    <div class="region-card-grid">${regionCards}</div>
   `;
   wrap.appendChild(content);
+
+  wrap.querySelectorAll(".matrix-toggle-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      state.mapMode = btn.dataset.mode;
+      state.mapSelected = null;
+      render();
+    });
+  });
 
   wrap.querySelector(".matrix-detail-close")?.addEventListener("click", () => {
     state.mapSelected = null;
@@ -1015,12 +1318,12 @@ function renderMap() {
   // The map div isn't attached to the live DOM yet when renderMap() runs —
   // render() appends the returned wrap right after this returns. Defer
   // Leaflet init to the next tick so the container has a real size.
-  setTimeout(() => initLeafletMap(list), 0);
+  setTimeout(() => initLeafletMap(list, mode), 0);
 
   return wrap;
 }
 
-function initLeafletMap(list) {
+function initLeafletMap(list, mode) {
   const el = document.getElementById("leaflet-map");
   if (!el || typeof L === "undefined") return;
 
@@ -1039,7 +1342,7 @@ function initLeafletMap(list) {
 
   list.forEach(a => {
     const marker = L.circleMarker([a.location.lat, a.location.lng], {
-      radius: 8,
+      radius: mapMarkerRadius(a, mode, list),
       color: "#ffffff",
       weight: 1.5,
       fillColor: RISK_HEX[a.health.riskCategory],
@@ -1050,6 +1353,8 @@ function initLeafletMap(list) {
       <div class="tt-name">${escapeHtml(a.accountName)}</div>
       <div class="tt-row">${escapeHtml(a.location.city)}, ${escapeHtml(a.location.country)}</div>
       <div class="tt-row"><span class="tt-label">Health Score:</span> <strong>${a.health.score}</strong> (${RISK_LABEL[a.health.riskCategory]} risk)</div>
+      <div class="tt-row"><span class="tt-label">ARR:</span> ${fmtUSD(a.contract.arrUSD)}</div>
+      <div class="tt-row"><span class="tt-label">Renewal in:</span> ${daysFromToday(a.contract.nextRenewalDate)} days</div>
       <div class="tt-row"><span class="tt-label">CSAT trend:</span> ${TREND_TEXT[a.trend]}</div>
     `, { direction: "top", className: "leaflet-chart-tooltip", sticky: true });
 
@@ -1066,7 +1371,7 @@ const SENTIMENT_RISK = { frustrated: "high", neutral: "medium", patient: "low" }
 function renderFeedback() {
   const wrap = document.createElement("div");
   const list = getFilteredAccounts();
-  wrap.appendChild(renderViewHeader("Feedback", "Which feature requests come up most, and from how much at-risk ARR — for the product team."));
+  wrap.appendChild(renderViewHeader("Feature Request Overview", "Which feature requests come up most, and from how much at-risk ARR — for the product team."));
 
   const groups = {};
   list.forEach(a => {
@@ -1131,11 +1436,12 @@ function renderFeedback() {
   });
 
   const table = document.createElement("table");
-  table.className = "portfolio-table";
+  table.className = "portfolio-table feedback-table";
   const thead = document.createElement("thead");
   const headRow = document.createElement("tr");
   const reqTh = document.createElement("th");
   reqTh.textContent = "Feature Request";
+  reqTh.className = "feedback-col-request";
   headRow.appendChild(reqTh);
   headRow.appendChild(renderFeedbackSortHeader("# Accounts", "count"));
   headRow.appendChild(renderFeedbackSortHeader("Total ARR", "arr"));
@@ -1159,7 +1465,7 @@ function renderFeedback() {
       .map(s => `<span class="status-pill risk-${SENTIMENT_RISK[s]}">${r.sentimentCounts[s]} ${SENTIMENT_LABEL[s]}</span>`)
       .join(" ");
     tr.innerHTML = `
-      <td class="account-cell">${escapeHtml(r.request)}</td>
+      <td class="account-cell feedback-col-request">${escapeHtml(r.request)}</td>
       <td><span class="score-num">${r.count}</span></td>
       <td>${fmtUSD(r.totalArr)}</td>
       <td><span class="score-num risk-text-${healthCat}">${r.avgHealth}</span></td>

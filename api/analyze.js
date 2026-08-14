@@ -6,9 +6,18 @@ import { applyGate } from "./_security.js";
 import { callN8nWebhook, hasWebhookSecret, resolveTimeoutMs, DEFAULT_ANALYZE_TIMEOUT_MS } from "./_n8n.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ACCOUNTS = JSON.parse(
+const ACCOUNTS_DATA = JSON.parse(
   readFileSync(join(__dirname, "..", "data", "accounts.json"), "utf-8")
-).accounts;
+);
+const ACCOUNTS = ACCOUNTS_DATA.accounts;
+// CSM names live only in accounts.json's top-level "csms" list, not on each
+// account (which only stores csmId) — the portfolio-ask AI context needs
+// this to resolve a CSM's name the same way the UI's csmName() does,
+// otherwise it only ever sees opaque IDs like "CSM-5".
+const CSM_NAME_BY_ID = new Map((ACCOUNTS_DATA.csms || []).map(c => [c.csmId, c.name]));
+function csmName(csmId) {
+  return CSM_NAME_BY_ID.get(csmId) ?? csmId;
+}
 
 // Provider abstraction: "anthropic" (default), "openai", or "n8n" (delegates
 // the actual AI call to an n8n workflow via webhook — useful if your AI
@@ -397,7 +406,7 @@ Respond with ONLY this JSON schema:
 function portfolioAccountSummary(account) {
   const health = computeHealthScore(account);
   const expansion = computeExpansionScore(account);
-  return `${account.accountId} | ${account.accountName} | CSM: ${account.csmId} | Champion: ${account.relationship.championName} (${account.relationship.championStatus}) | Exec sponsor engaged: ${account.relationship.execSponsorEngaged ? "yes" : "no"} | Health Score ${health.score} (${health.riskCategory} risk) | Expansion Score ${expansion.score} (${expansion.category} upsell opportunity) | Adoption ${account.usage.adoptionRatePct}% | ARR $${account.contract.arrUSD} | Renewal ${account.contract.nextRenewalDate} | Next QBR ${account.relationship.nextQBRDate} | Last interaction ${account.relationship.lastInteractionDaysAgo}d ago`;
+  return `${account.accountId} | ${account.accountName} | CSM: ${csmName(account.csmId)} (${account.csmId}) | Champion: ${account.relationship.championName} (${account.relationship.championStatus}) | Exec sponsor engaged: ${account.relationship.execSponsorEngaged ? "yes" : "no"} | Health Score ${health.score} (${health.riskCategory} risk) | Expansion Score ${expansion.score} (${expansion.category} upsell opportunity) | Adoption ${account.usage.adoptionRatePct}% | ARR $${account.contract.arrUSD} | Renewal ${account.contract.nextRenewalDate} | Next QBR ${account.relationship.nextQBRDate} | Last interaction ${account.relationship.lastInteractionDaysAgo}d ago`;
 }
 
 async function handlePortfolioAsk(accountIds, question) {
@@ -417,6 +426,8 @@ ${summary}
 The CSM asks: "${safeQuestion}"
 
 Only structured fields are given above (no email addresses or phone numbers exist in this system) — if the question asks for something not present in the data (e.g. contact emails), say so plainly instead of inventing it. If the answer should list multiple accounts, use one line per account.
+
+"CSM" gives each account's assigned CSM by full name and ID (e.g. "Lukas Bergmann (CSM-5)"). Match a CSM mentioned by first name, last name, or full name against these names — do not claim CSM names are unavailable when they are listed above.
 
 "Health Score" and "Expansion Score" above are this app's own 0-100 composite metrics (not the classic SaaS "renewal rate" or "expansion ARR rate" financial formulas, which this system does not track — no historical ARR snapshots exist). If the CSM's question is naturally answered by these given scores, use them directly rather than saying the data is unavailable; only say something is unavailable if it truly cannot be derived from the fields given.
 

@@ -49,7 +49,7 @@ function serveStatic(req, res) {
   }
   readFile(filePath, (err, data) => {
     if (err) { res.writeHead(404); res.end("Not found"); return; }
-    res.writeHead(200, { "content-type": MIME[extname(filePath)] || "application/octet-stream" });
+    res.writeHead(200, { "content-type": MIME[extname(filePath)] || "application/octet-stream", "cache-control": "no-store" });
     res.end(data);
   });
 }

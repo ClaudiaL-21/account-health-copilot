@@ -31,17 +31,17 @@
         <svg class="nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="6.5" cy="13" r="2.1" fill="currentColor"/><circle cx="13.5" cy="7.5" r="2.6" fill="currentColor"/><circle cx="15.5" cy="15" r="1.4" fill="currentColor"/><path d="M3 17V3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M3 17H17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         <span>Matrix</span>
       </button>
-      <button id="tab-map">
-        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2c-3 0-5.4 2.3-5.4 5.4C4.6 11.4 10 18 10 18s5.4-6.6 5.4-10.6C15.4 4.3 13 2 10 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="10" cy="7.5" r="1.9" fill="currentColor"/></svg>
-        <span>Map</span>
-      </button>
       <button id="tab-team">
         <svg class="nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="7" cy="6.5" r="2.6" fill="currentColor"/><circle cx="14.2" cy="7.3" r="2.1" fill="currentColor" opacity="0.7"/><path d="M2.4 17c.5-3 2.2-4.6 4.6-4.6s4.1 1.6 4.6 4.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M12.2 12.8c1.9.2 3.2 1.7 3.6 4.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity="0.7"/></svg>
         <span>Team</span>
       </button>
+      <button id="tab-map">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2c-3 0-5.4 2.3-5.4 5.4C4.6 11.4 10 18 10 18s5.4-6.6 5.4-10.6C15.4 4.3 13 2 10 2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="10" cy="7.5" r="1.9" fill="currentColor"/></svg>
+        <span>Map</span>
+      </button>
       <button id="tab-feedback">
         <svg class="nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 4.5h14a1 1 0 0 1 1 1V13a1 1 0 0 1-1 1H8l-3.5 3V14H3a1 1 0 0 1-1-1V5.5a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-        <span>Feedback</span>
+        <span>Features</span>
       </button>
       <button id="tab-trust">
         <svg class="nav-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.3 16.5 5v5.1c0 4-2.8 6.9-6.5 7.6-3.7-.7-6.5-3.6-6.5-7.6V5L10 2.3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="m7.3 9.8 1.9 1.9 3.5-3.9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -67,6 +67,9 @@
       <label>Risk: <select id="filter-risk"><option value="all">All</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>
       <label>Expansion: <select id="filter-expansion"><option value="all">All</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>
       <label>Trend: <select id="filter-trend"><option value="all">All</option><option value="up">Improving</option><option value="flat">Stable</option><option value="down">Declining</option></select></label>
+      <div class="filter-search">
+        <input type="search" id="filter-search" placeholder="Search accounts…" aria-label="Search accounts by name or ID">
+      </div>
     </div>
 
     <main id="app"></main>

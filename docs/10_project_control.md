@@ -1,6 +1,6 @@
 # Projektsteuerung — Customer Success AI Hub
 
-Stand: 2026-08-13. Dieses Dokument ist die schlanke, verbindliche Übersicht für Product Owner, Co-PO/Projektleitung und Claude Code. Detailkonzepte bleiben in den bestehenden Fachdokumenten; hier stehen nur Entscheidungen, aktueller Sprint und Freigaberegeln.
+Stand: 2026-08-15. Dieses Dokument ist die schlanke, verbindliche Übersicht für Product Owner, Co-PO/Projektleitung und Claude Code. Detailkonzepte bleiben in den bestehenden Fachdokumenten; hier stehen nur Entscheidungen, aktueller Sprint und Freigaberegeln.
 
 ## Ziel bis zur Präsentation
 
@@ -17,6 +17,7 @@ Eine stabile, moderne End-to-End-Demo, die nachvollziehbar beantwortet: Welcher 
 - Aktiver Sprint: Sprint 05 — Product-wide UX/UI Polish & Demo Hardening (PO-Freigabe 2026-08-13)
 - Manuelles n8n-Hardening: Analyse- und Approval-Webhook am 2026-08-13 mit gemeinsamem Header-Secret veröffentlicht; Analyse-End-to-End-Test erfolgreich; Approval-Negativtest ohne Secret mit HTTP 403 und kontrollierter Approval-End-to-End-Test nach Google-Reconnect erfolgreich
 - Arbeitsauftrag: `docs/tasks/2026-08-13_sprint-05_product-ui-demo-hardening.md`
+- Zuletzt abgeschlossen (Stand 2026-08-15): Sprint 14B — Portfolio Intelligence Views (Geo Intelligence/Map erweitert, Value Matrix und Renewal Radar mit neuen Achsen/Zeitfilter ausgebaut); 75/75 Tests grün; noch nicht committet
 - Commit/Push: nur nach ausdrücklicher Freigabe der Product Ownerin
 
 ## Verbindliche Entscheidungen

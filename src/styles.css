@@ -241,8 +241,28 @@ nav.tabs button:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(94, 23
   letter-spacing: normal;
   color: var(--text);
 }
+/* PO polish — compact account search, right-aligned on the same row as the
+   other filters (margin-left: auto pushes it there without a layout
+   change), same input styling as the existing selects above. */
+.filter-search { margin-left: auto; }
+.filter-search input {
+  width: 220px;
+  max-width: 100%;
+  padding: 7px 10px;
+  min-height: 36px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--card);
+  font-size: 13px;
+  color: var(--text);
+}
+.filter-search input:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+@media (max-width: 480px) {
+  .filter-search { margin-left: 0; width: 100%; }
+  .filter-search input { width: 100%; }
+}
 
-main { width: 100%; padding: var(--space-5) var(--shell-padding) 40px; max-width: var(--shell-width); margin: 0 auto; box-sizing: border-box; }
+main { padding: var(--space-5) var(--shell-padding) 40px; box-sizing: border-box; }
 
 /* Sprint 05 — consistent per-view header (title + short description), used
    at the top of Portfolio/Matrix/Map/Team/Feedback so every view opens the
@@ -312,6 +332,29 @@ table.portfolio-table th, table.portfolio-table td {
   font-size: 13px;
   white-space: nowrap;
 }
+/* PO polish — main Portfolio table column alignment: ARR / Adoption / Last
+   Interaction right-aligned, Health Score centered. Scoped to
+   .portfolio-main-table (not the shared table.portfolio-table base rule
+   above) so the Feedback table's own column alignment stays untouched.
+   Column order: 1 Account, 2 Region, 3 CSM, 4 ARR, 5 Renewal, 6 Health
+   Score, 7 Risk, 8 Adoption, 9 Expansion, 10 Last Interaction, 11 Next QBR. */
+.portfolio-main-table th:nth-child(4), .portfolio-main-table td:nth-child(4) { text-align: right; }
+.portfolio-main-table th:nth-child(6), .portfolio-main-table td:nth-child(6) { text-align: center; }
+.portfolio-main-table th:nth-child(8), .portfolio-main-table td:nth-child(8) { text-align: right; }
+.portfolio-main-table th:nth-child(10), .portfolio-main-table td:nth-child(10) { text-align: right; }
+/* PO polish — FR Feedback table: Feature Request column doubled in width,
+   # Accounts / Avg Health Score centered, Total ARR / Oldest Ask
+   right-aligned. Scoped to .feedback-table (not table.portfolio-table's
+   base rule above) so the Portfolio table's own column alignment is
+   untouched. min-width (not width) because this table's auto layout
+   otherwise ignores a plain width hint on one column once the far wider
+   "Requesting Accounts" column dominates the row. */
+.feedback-table .feedback-col-request,
+.feedback-table td.feedback-col-request { min-width: 246px; }
+.feedback-table th:nth-child(2), .feedback-table td:nth-child(2) { text-align: center; }
+.feedback-table th:nth-child(3), .feedback-table td:nth-child(3) { text-align: right; }
+.feedback-table th:nth-child(4), .feedback-table td:nth-child(4) { text-align: center; }
+.feedback-table th:nth-child(5), .feedback-table td:nth-child(5) { text-align: right; }
 /* Not position:sticky — verified it does not actually stick during page
    scroll here: .table-scroll needs overflow-x:auto for the horizontal-only
    scroll containment above, and per the CSS overflow spec that also forces
@@ -385,6 +428,19 @@ table.portfolio-table td.account-cell, table.portfolio-table .detail-row td { wh
   padding: 12px;
 }
 .matrix-svg { width: 100%; height: auto; display: block; }
+
+/* PO polish: on desktop the matrix chart (fixed 820x520 aspect ratio,
+   stretched via .matrix-svg's width:100%) could grow tall enough to need
+   scrolling before it's even visible. Scoped to .matrix-view only — the
+   shared .view-header/.sub/.matrix-toggle rules used by every other view
+   stay untouched. Mobile/narrower viewports are intentionally excluded so
+   they keep scrolling as before. */
+@media (min-width: 901px) {
+  .matrix-view .matrix-wrap { max-width: min(80%, 880px); margin-top: 12px; padding: 10px; }
+  .matrix-view .view-header { margin-bottom: 10px; }
+  .matrix-view .matrix-toggle { margin-bottom: 6px; }
+  .matrix-view .matrix-toggle + p.sub { margin: 2px 0 8px; }
+}
 .quadrant-bg { opacity: 0.5; }
 .quadrant-save { fill: var(--red-bg); }
 .quadrant-protect { fill: var(--green-bg); }
@@ -399,6 +455,7 @@ table.portfolio-table td.account-cell, table.portfolio-table .detail-row td { wh
 .ql-monitor { fill: #475569; }
 .ql-nurture { fill: #1d4ed8; }
 .axis-title { font-size: 17px; font-weight: 700; fill: var(--text); }
+.axis-tick { font-size: 9.5px; font-weight: 400; fill: var(--muted); }
 .matrix-dot { cursor: pointer; stroke: white; stroke-width: 1.5; }
 .matrix-dot:hover { r: 9; }
 .risk-dot-high { fill: var(--red); }
@@ -489,6 +546,27 @@ table.portfolio-table td.account-cell, table.portfolio-table .detail-row td { wh
 .matrix-detail-stats .stat-label { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
 .matrix-detail-link { margin-top: 6px; }
 
+/* Sprint 14B — Portfolio Intelligence Views */
+.matrix-toggle-btn-sm { padding: 5px 12px; min-height: 30px; font-size: 11.5px; }
+.matrix-window-toggle { margin-top: -2px; margin-bottom: 8px; }
+.matrix-dot-critical-ring { fill: none; stroke: var(--red); stroke-width: 1.5; stroke-dasharray: 3 2; opacity: 0.75; }
+.geo-insight { margin: 4px 0 14px; padding: 8px 12px; background: var(--surface-muted); border-left: 3px solid var(--navy); border-radius: var(--radius-sm); }
+/* Compact KPI strip for the Renewal Radar's extra row inside the Matrix
+   view — the default .kpi-strip (used full-size on Portfolio) would push
+   the chart itself below the fold here, since it's stacked on top of the
+   existing mode/window toggles and description text. */
+.matrix-view .kpi-strip { margin-bottom: 8px; gap: 8px; }
+.matrix-view .kpi-tile { padding: 7px 10px; gap: 1px; }
+.matrix-view .kpi-value { font-size: 16px; }
+.matrix-view .kpi-label { font-size: 10px; }
+.matrix-view .geo-insight { margin: 0 0 6px; padding: 6px 10px; }
+.region-summary-heading { margin: 18px 0 4px; font-size: 13px; font-weight: 700; color: var(--text); }
+.region-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.region-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); padding: 12px 14px; }
+.region-card-name { margin: 0 0 8px; font-size: 13px; font-weight: 700; color: var(--navy); }
+.region-card-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.region-card-stats .stat-num { font-size: 16px; }
+
 tr.risk-row-high { border-left: 3px solid var(--red); }
 tr.risk-row-medium { border-left: 3px solid var(--orange); }
 tr.risk-row-low { border-left: 3px solid var(--green); }
@@ -509,10 +587,10 @@ tr.risk-row-low { border-left: 3px solid var(--green); }
    "visible content width" means: docked (desktop/laptop, sidebar takes
    --sidebar-width) vs collapsed to a horizontal bar (mobile, full viewport). */
 @media (min-width: 901px) {
-  .account-detail { max-width: calc(100vw - var(--sidebar-width) - 2 * var(--shell-padding) - 20px); }
+  .account-detail { max-width: min(100%, calc(100vw - var(--sidebar-width) - 2 * var(--shell-padding) - 20px)); }
 }
 @media (max-width: 900px) {
-  .account-detail { max-width: calc(100vw - 2 * var(--shell-padding) - 20px); }
+  .account-detail { max-width: min(100%, calc(100vw - 2 * var(--shell-padding) - 20px)); }
 }
 @media (max-width: 700px) {
   .detail-grid { grid-template-columns: 1fr; }
@@ -643,20 +721,39 @@ table.breakdown-table td { padding: 5px 6px; border-bottom: 1px solid var(--bord
 }
 .milestone-box p { margin: 3px 0; font-size: 13px; }
 .milestone-label { font-size: 11px; font-weight: 700; color: var(--teal); text-transform: uppercase; letter-spacing: 0.03em; }
-/* Sprint 06 — stacked instead of side-by-side: the sparkline now carries a
-   real x-axis and needs its own full row width at each width tier (see
-   renderScoreTrend's `tier` in app.js) rather than sharing a row with the
-   info text and getting squeezed by it. */
-.score-trend { display: flex; flex-direction: column; gap: 6px; margin: 6px 0 12px; }
-.score-sparkline { flex-shrink: 0; max-width: 100%; height: auto; }
-.score-trend-info { display: flex; flex-direction: column; gap: 4px; }
-.score-trend p.sub { margin: 0; }
-.score-trend-pct { font-size: 18px; font-weight: 700; }
-@media (min-width: 901px) {
-  .score-trend { flex-direction: row; align-items: center; gap: 14px; }
-  .score-trend-info { flex: 1; min-width: 150px; }
+/* PO polish — Health Score trend and CSAT trend sit side by side, each in
+   its own light card: a small uppercase title, then a row (sparkline + a
+   large percent-with-trend number), then the one-line explanation
+   underneath. Both charts share the exact same viewBox geometry (see
+   renderScoreTrend/renderCsatTrend in app.js), so ordinary (uniform,
+   non-distorting) aspect-ratio scaling keeps their rendered heights equal —
+   no forced/stretched scaling needed. */
+.trend-row { display: flex; gap: 16px; margin: 10px 0 14px; }
+.trend-row .score-trend {
+  flex: 1;
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
 }
-.score-trend-pct .sub { font-size: 11px; font-weight: 400; }
+@media (max-width: 640px) {
+  .trend-row { flex-direction: column; gap: 12px; }
+}
+
+.score-trend { display: flex; flex-direction: column; gap: 10px; }
+.score-trend-title { margin: 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
+.score-trend-row { display: flex; align-items: center; gap: 16px; }
+.score-sparkline { flex: 1; min-width: 0; width: 100%; height: auto; display: block; }
+.score-trend-pct-block { flex: 0 0 92px; text-align: right; }
+.score-trend-pct { font-size: 17px; font-weight: 600; line-height: 1.1; }
+.score-trend-pct-caption { margin-top: 3px; font-size: 10.5px; font-weight: 500; color: var(--muted); }
+/* Lines up the explanation text's left edge with the chart's plotted axis
+   (not the card's own padding) — the sparkline reserves axisLabelW=24 of
+   its 200-unit viewBox for the Y-axis value labels before the axis
+   line/data actually starts, which renders to roughly this many px at the
+   sparkline's typical width in this card layout. */
+.score-trend p.sub { margin: 0; padding-left: 13px; }
 .ai-load-btn, .team-priority-box .ai-load-btn {
   padding: 8px 16px;
   min-height: 36px;
