@@ -23,6 +23,10 @@ export function fetchTeamPriority(csmId) {
   return callAnalyze({ mode: "team-priority", csmId });
 }
 
+export function askAboutPortfolio(accountIds, question) {
+  return callAnalyze({ mode: "portfolio-ask", accountIds, question });
+}
+
 export async function approveAction(accountId, nba) {
   const res = await fetch("/api/approve-action", {
     method: "POST",

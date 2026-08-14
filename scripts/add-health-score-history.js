@@ -15,11 +15,14 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { computeHealthScore, computeTrend } from "../src/scoring.js";
+import { computeHealthScore, computeTrend, REFERENCE_DATE_ISO } from "../src/scoring.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_PATH = join(__dirname, "..", "data", "accounts.json");
-const TODAY = new Date("2026-08-11");
+// The history's last point must always land on the same fixed reference
+// date scoring.js uses everywhere else — previously hardcoded here as its
+// own literal, which had drifted a day out of sync with REFERENCE_DATE_ISO.
+const TODAY = new Date(REFERENCE_DATE_ISO);
 const WEEKS = 7;
 
 function seededInt(seed, min, max) {

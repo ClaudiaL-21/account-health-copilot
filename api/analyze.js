@@ -1,8 +1,9 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { computeHealthScore, computeExpansionScore } from "../src/scoring.js";
+import { computeHealthScore, computeExpansionScore, computePriorityScore, daysSince } from "../src/scoring.js";
 import { applyGate } from "./_security.js";
+import { callN8nWebhook, hasWebhookSecret, resolveTimeoutMs, DEFAULT_ANALYZE_TIMEOUT_MS } from "./_n8n.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ACCOUNTS = JSON.parse(
@@ -19,16 +20,72 @@ const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
 const ANTHROPIC_VERSION = "2023-06-01";
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 const N8N_ANALYZE_WEBHOOK_URL = process.env.N8N_ANALYZE_WEBHOOK_URL;
+// Sprint 03 — Demo Hardening: an n8n URL alone is not "configured". Without
+// the shared secret we must never call out, so isProviderConfigured() folds
+// that check in — the existing 503 path below already returns a clear,
+// secret-free message and this guarantees no request is attempted.
+const ANALYZE_TIMEOUT_MS = resolveTimeoutMs(process.env.N8N_ANALYZE_TIMEOUT_MS, DEFAULT_ANALYZE_TIMEOUT_MS);
 
 function getApiKey() {
   return PROVIDER === "openai" ? process.env.OPENAI_API_KEY : process.env.ANTHROPIC_API_KEY;
 }
 
 function isProviderConfigured() {
-  return PROVIDER === "n8n" ? Boolean(N8N_ANALYZE_WEBHOOK_URL) : Boolean(getApiKey());
+  if (PROVIDER === "n8n") return Boolean(N8N_ANALYZE_WEBHOOK_URL) && hasWebhookSecret();
+  return Boolean(getApiKey());
 }
 
 const MOCK_MODE = process.env.MOCK_AI === "true";
+
+// Sprint 01 — Trust Guardrails: two server-side rules that no provider (or
+// prompt instruction) can override, because they gate what reaches the client.
+
+// Rule 1 — hard expansion guardrail. A "growth" Next Best Action for a
+// high-risk account is replaced wholesale (not just relabeled) with a
+// deterministic risk-mitigation action built only from already-computed
+// facts (top risk driver, champion name if on record) — no new facts invented.
+function fallbackRiskMitigationAction(account, health) {
+  const topDriver = health.criteria[0];
+  const champion = account.relationship?.championName;
+  const contact = champion ? champion : "the account's primary contact";
+  return {
+    category: "risk_mitigation",
+    action: `Reach out to ${contact} to directly address ${topDriver.label.toLowerCase()} (${topDriver.rawValue}) before discussing anything else.`,
+    rationale: `This account is high risk; ${topDriver.label} is the top-weighted risk driver (risk weight ${topDriver.points.toFixed(1)}/100), so mitigating it takes priority over any growth action.`,
+  };
+}
+
+export function applyExpansionGuardrail(account, health, nextBestAction) {
+  if (health.riskCategory === "high" && nextBestAction?.category === "growth") {
+    return fallbackRiskMitigationAction(account, health);
+  }
+  return nextBestAction;
+}
+
+// Rule 2 — evidence confidence. Replaces the LLM's free self-assessment with
+// a deterministic 5-point rule over the account's freeTextArtifacts, judged
+// against the fixed demo reference date (2026-08-10, see src/scoring.js).
+// This measures strength of available evidence, not whether the AI is right.
+export function computeEvidenceConfidence(account) {
+  const artifacts = account.freeTextArtifacts || [];
+  const count = artifacts.length;
+  const countPoints = count >= 4 ? 2 : count >= 2 ? 1 : 0;
+
+  const ages = artifacts.map(a => daysSince(a.date));
+  const mostRecentAge = ages.length ? Math.min(...ages) : null;
+  const recencyPoints = mostRecentAge === null ? 0 : mostRecentAge <= 30 ? 2 : mostRecentAge <= 60 ? 1 : 0;
+
+  const distinctTypes = new Set(artifacts.map(a => a.type)).size;
+  const diversityPoints = distinctTypes >= 2 ? 1 : 0;
+
+  const points = countPoints + recencyPoints + diversityPoints;
+  const level = points >= 4 ? "high" : points >= 2 ? "medium" : "low";
+
+  const recencyPhrase = mostRecentAge === null ? "no artifacts on record" : `most recent artifact ${mostRecentAge} day(s) old`;
+  const reason = `${count} artifact(s) on record, ${recencyPhrase}, ${distinctTypes} distinct source type(s).`;
+
+  return { level, reason };
+}
 
 function mockInsight(account) {
   const health = computeHealthScore(account);
@@ -39,10 +96,6 @@ function mockInsight(account) {
       rationale: `[MOCK] Based on ${account.freeTextArtifacts.length} text snippet(s), e.g. "${account.freeTextArtifacts[0]?.text.slice(0, 60)}..."`,
     },
     narrative: `[MOCK response, not real AI] ${account.accountName} has a Health Score of ${health.score} (${health.riskCategory} risk). Top driver: ${health.criteria[0].label}.`,
-    confidence: {
-      level: account.freeTextArtifacts.length >= 3 ? "high" : "medium",
-      reason: account.freeTextArtifacts.length >= 3 ? "" : "[MOCK] Only a few interaction snippets available for this account.",
-    },
     nextBestAction: isGrowth
       ? { category: "growth", action: "[MOCK] Propose a pilot of an unused licensed module to the champion.", rationale: "[MOCK] Account is trending positively — good moment to explore expansion." }
       : { category: "risk_mitigation", action: "[MOCK] Call the customer and clarify the main open issue.", rationale: "[MOCK] This is the top-weighted risk driver for this account right now." },
@@ -54,27 +107,26 @@ function mockAsk(account, question) {
 }
 
 function mockTeamPriority(csmId) {
-  // Not a real AI ranking — approximates it deterministically so the mock
-  // exercises the same "risk + ARR + renewal proximity" idea as the real
-  // prompt, instead of just taking the first N accounts in file order
-  // (which happened to be a single CSM's accounts and looked like a bug).
   const scored = ACCOUNTS
     .filter(a => !csmId || a.csmId === csmId)
-    .map(a => {
-      const health = computeHealthScore(a);
-      const daysToRenewal = Math.max(1, Math.round((new Date(a.contract.nextRenewalDate) - new Date()) / 86400000));
-      const urgency = (100 - health.score) * (a.contract.arrUSD / 100000) / Math.sqrt(daysToRenewal);
-      return { a, health, urgency };
-    })
-    .sort((x, y) => y.urgency - x.urgency)
+    .map(a => ({ account: a, priority: computePriorityScore(a) }))
+    .sort((x, y) => y.priority.score - x.priority.score)
     .slice(0, 5);
 
   return {
-    priorities: scored.map(({ a, health }) => ({
-      accountId: a.accountId,
-      accountName: a.accountName,
-      reason: `[MOCK] Health ${health.score} (${health.riskCategory} risk), $${a.contract.arrUSD.toLocaleString("en-US")} ARR, top driver: ${health.criteria[0].label}.`,
+    priorities: scored.map(({ account, priority }) => ({
+      accountId: account.accountId,
+      accountName: account.accountName,
+      priorityScore: priority.score,
+      riskCategory: priority.health.riskCategory,
+      synthesis: `[MOCK] Top driver: ${priority.health.criteria[0].label}. ${priority.daysToRenewal}d to renewal.`,
+      nextBestAction: applyExpansionGuardrail(account, priority.health, {
+        category: priority.health.riskCategory === "low" ? "growth" : "risk_mitigation",
+        action: "[MOCK] Call the customer and clarify the main open issue.",
+        rationale: "[MOCK] This is the top-weighted risk driver for this account right now.",
+      }),
     })),
+    patternAlert: "",
   };
 }
 
@@ -145,19 +197,22 @@ async function callOpenAI(apiKey, system, user, maxTokens) {
 // trigger -> your AI node of choice -> "Respond to Webhook"). We just POST
 // the same system/user prompt and expect { "text": "<raw AI text>" } back,
 // then parse it exactly like a direct Anthropic/OpenAI response.
+//
+// Sprint 03 — Demo Hardening: authenticated via the shared secret header
+// (see api/_n8n.js), bounded by a timeout, and the response contract is
+// checked here — a missing/empty "text" field is rejected before it can
+// reach parseJsonLoose() and produce a confusing downstream error.
 async function callN8n(system, user, maxTokens) {
   if (!N8N_ANALYZE_WEBHOOK_URL) throw new Error("N8N_ANALYZE_WEBHOOK_URL not configured");
-  const res = await fetch(N8N_ANALYZE_WEBHOOK_URL, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ system, user, maxTokens }),
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`n8n webhook ${res.status}: ${text.slice(0, 300)}`);
+  // callN8nWebhook already guarantees a 2xx response or throws a safe, generic
+  // error (see api/_n8n.js) — a non-2xx body from the workflow is never read here.
+  const res = await callN8nWebhook(N8N_ANALYZE_WEBHOOK_URL, { system, user, maxTokens }, ANALYZE_TIMEOUT_MS);
+  const data = await res.json().catch(() => null);
+  const text = data?.text;
+  if (typeof text !== "string" || !text.trim()) {
+    throw new Error('n8n webhook response contract violated: expected a non-empty "text" field');
   }
-  const data = await res.json();
-  return data.text ?? "";
+  return text;
 }
 
 async function callAI(system, user, maxTokens) {
@@ -171,6 +226,78 @@ async function callAI(system, user, maxTokens) {
 function parseJsonLoose(text) {
   const cleaned = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
   return JSON.parse(cleaned);
+}
+
+// Co-PO review, round 1 — Point 1: syntactically valid JSON is not enough. A
+// misbehaving provider (any of them, not just n8n) could return well-formed
+// JSON that doesn't actually match what this mode promises the client. These
+// checks run on the raw AI output BEFORE the Sprint 01 guardrail/confidence
+// logic touches it, so a malformed response is rejected outright rather than
+// guardrail-"repaired" into something that looks valid but isn't.
+const NBA_CATEGORIES = ["risk_mitigation", "growth"];
+const SENTIMENT_LABELS = ["positive", "neutral", "negative"];
+
+function isNonEmptyString(v) {
+  return typeof v === "string" && v.trim().length > 0;
+}
+
+function validateNextBestAction(nba, context) {
+  if (!nba || typeof nba !== "object") throw new Error(`${context}: missing or invalid nextBestAction`);
+  if (!NBA_CATEGORIES.includes(nba.category)) throw new Error(`${context}: invalid nextBestAction.category`);
+  if (!isNonEmptyString(nba.action) || nba.action.length > 500) throw new Error(`${context}: invalid nextBestAction.action`);
+  if (!isNonEmptyString(nba.rationale) || nba.rationale.length > 500) throw new Error(`${context}: invalid nextBestAction.rationale`);
+}
+
+function validateAccountInsightShape(parsed) {
+  if (!parsed || typeof parsed !== "object") throw new Error("account-insight: response is not an object");
+  if (!SENTIMENT_LABELS.includes(parsed.sentiment?.label) || !isNonEmptyString(parsed.sentiment?.rationale)) {
+    throw new Error("account-insight: invalid sentiment");
+  }
+  if (!isNonEmptyString(parsed.narrative)) throw new Error("account-insight: invalid narrative");
+  validateNextBestAction(parsed.nextBestAction, "account-insight");
+}
+
+function validateAskShape(parsed) {
+  if (!parsed || typeof parsed !== "object" || !isNonEmptyString(parsed.answer)) {
+    throw new Error("ask: invalid or missing answer");
+  }
+}
+
+function validatePortfolioAskShape(parsed) {
+  if (!parsed || typeof parsed !== "object" || !isNonEmptyString(parsed.answer)) {
+    throw new Error("portfolio-ask: invalid or missing answer");
+  }
+}
+
+// The ranking (accounts, order, accountId per position) is deterministic and
+// given to the model as fixed context — the model must echo it back exactly.
+// A mismatch here (wrong count, wrong order, or a swapped accountId) would
+// silently attach one customer's synthesis/action to a different customer,
+// so it is rejected outright rather than best-effort matched.
+function validateTeamPriorityShape(parsed, expectedAccountIds) {
+  if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.accounts)) {
+    throw new Error("team-priority: response missing accounts array");
+  }
+  if (parsed.accounts.length !== expectedAccountIds.length) {
+    throw new Error("team-priority: accounts array length does not match the expected accounts");
+  }
+  // Co-PO review, round 2 — Point 1: the product promise is exactly one
+  // synthesis and exactly one Next Best Action per priornitized account —
+  // neither is optional here, unlike account-insight/team-priority's earlier
+  // tolerance for a merely-missing suggestion. A null/undefined nextBestAction
+  // or an empty synthesis is rejected, not silently passed through.
+  parsed.accounts.forEach((entry, i) => {
+    if (!entry || typeof entry !== "object" || entry.accountId !== expectedAccountIds[i]) {
+      throw new Error(`team-priority: accountId mismatch at position ${i}`);
+    }
+    if (!isNonEmptyString(entry.synthesis)) {
+      throw new Error(`team-priority: invalid or empty synthesis at position ${i}`);
+    }
+    validateNextBestAction(entry.nextBestAction, `team-priority[${i}]`);
+  });
+  if (parsed.patternAlert !== undefined && typeof parsed.patternAlert !== "string") {
+    throw new Error("team-priority: patternAlert must be a string");
+  }
 }
 
 const SYSTEM_PROMPT = `You are a Customer Success insight assistant for a fictional B2B SaaS demo tool.
@@ -195,10 +322,6 @@ positive (stable or improving health, engaged champion, growing adoption), prefe
 ask for an introduction to a new stakeholder) over inventing a problem to fix. If a
 recent value milestone is given, a growth action may build directly on it (e.g.
 turn it into a reference story, a case study ask, or a natural upsell moment).
-Always include an honest confidence level for your own read of the account. Use
-"medium" or "low" when the available quotes are sparse, old, or ambiguous — do not
-default to "high" out of habit. A well-flagged "low confidence, here's why" is more
-useful to a CSM than false certainty.
 Always respond with ONLY valid JSON matching the schema you are given, no markdown
 fences, no commentary outside the JSON.`;
 
@@ -224,9 +347,14 @@ ${quotes}`;
 }
 
 async function handleAccountInsight(account) {
+  const health = computeHealthScore(account);
+
   if (MOCK_MODE) {
     await new Promise(r => setTimeout(r, 500));
-    return mockInsight(account);
+    const insight = mockInsight(account);
+    insight.confidence = computeEvidenceConfidence(account);
+    insight.nextBestAction = applyExpansionGuardrail(account, health, insight.nextBestAction);
+    return insight;
   }
   const user = `${accountContext(account)}
 
@@ -234,7 +362,6 @@ Respond with ONLY this JSON schema:
 {
   "sentiment": { "label": "positive|neutral|negative", "rationale": "one sentence, may quote a snippet" },
   "narrative": "2-3 sentence plain-English read on this account's health, referencing both the score drivers and the quotes",
-  "confidence": { "level": "high|medium|low", "reason": "one short sentence if not high, otherwise an empty string" },
   "nextBestAction": {
     "category": "risk_mitigation|growth",
     "action": "the single most important next action for the CSM, concrete and specific",
@@ -242,7 +369,11 @@ Respond with ONLY this JSON schema:
   }
 }`;
   const raw = await callAI(SYSTEM_PROMPT, user, 600);
-  return parseJsonLoose(raw);
+  const parsed = parseJsonLoose(raw);
+  validateAccountInsightShape(parsed);
+  parsed.confidence = computeEvidenceConfidence(account);
+  parsed.nextBestAction = applyExpansionGuardrail(account, health, parsed.nextBestAction);
+  return parsed;
 }
 
 async function handleAsk(account, question) {
@@ -258,7 +389,43 @@ The CSM asks: "${safeQuestion}"
 Respond with ONLY this JSON schema:
 { "answer": "concise, specific answer grounded only in the account data above" }`;
   const raw = await callAI(SYSTEM_PROMPT, user, 400);
-  return parseJsonLoose(raw);
+  const parsed = parseJsonLoose(raw);
+  validateAskShape(parsed);
+  return parsed;
+}
+
+function portfolioAccountSummary(account) {
+  const health = computeHealthScore(account);
+  const expansion = computeExpansionScore(account);
+  return `${account.accountId} | ${account.accountName} | CSM: ${account.csmId} | Champion: ${account.relationship.championName} (${account.relationship.championStatus}) | Exec sponsor engaged: ${account.relationship.execSponsorEngaged ? "yes" : "no"} | Health Score ${health.score} (${health.riskCategory} risk) | Expansion Score ${expansion.score} (${expansion.category} upsell opportunity) | Adoption ${account.usage.adoptionRatePct}% | ARR $${account.contract.arrUSD} | Renewal ${account.contract.nextRenewalDate} | Next QBR ${account.relationship.nextQBRDate} | Last interaction ${account.relationship.lastInteractionDaysAgo}d ago`;
+}
+
+async function handlePortfolioAsk(accountIds, question) {
+  const accounts = ACCOUNTS.filter(a => accountIds.includes(a.accountId));
+  const safeQuestion = String(question || "").slice(0, 500);
+  if (MOCK_MODE) {
+    await new Promise(r => setTimeout(r, 500));
+    return { answer: `[MOCK response, not real AI] Regarding "${safeQuestion}" across ${accounts.length} account(s): this is a simulated answer for local testing.` };
+  }
+  if (accounts.length === 0) return { answer: "No accounts match the current filters, so there's nothing to answer from." };
+
+  const summary = accounts.map(portfolioAccountSummary).join("\n");
+  const user = `You are given a summary of ${accounts.length} accounts (already filtered to what the CSM is currently looking at — do not consider any other accounts).
+
+${summary}
+
+The CSM asks: "${safeQuestion}"
+
+Only structured fields are given above (no email addresses or phone numbers exist in this system) — if the question asks for something not present in the data (e.g. contact emails), say so plainly instead of inventing it. If the answer should list multiple accounts, use one line per account.
+
+"Health Score" and "Expansion Score" above are this app's own 0-100 composite metrics (not the classic SaaS "renewal rate" or "expansion ARR rate" financial formulas, which this system does not track — no historical ARR snapshots exist). If the CSM's question is naturally answered by these given scores, use them directly rather than saying the data is unavailable; only say something is unavailable if it truly cannot be derived from the fields given.
+
+Respond with ONLY this JSON schema:
+{ "answer": "concise, specific answer grounded only in the data above, plain text (newlines allowed for lists)" }`;
+  const raw = await callAI(SYSTEM_PROMPT, user, 800);
+  const parsed = parseJsonLoose(raw);
+  validatePortfolioAskShape(parsed);
+  return parsed;
 }
 
 async function handleTeamPriority(csmId) {
@@ -266,24 +433,64 @@ async function handleTeamPriority(csmId) {
     await new Promise(r => setTimeout(r, 500));
     return mockTeamPriority(csmId);
   }
-  const accounts = ACCOUNTS.filter(a => !csmId || a.csmId === csmId).map(a => {
-    const health = computeHealthScore(a);
-    return { a, health };
+
+  // The ranking itself is deterministic (risk + ARR + renewal proximity +
+  // engagement, see computePriorityScore) — the AI never picks or reorders
+  // accounts. It only adds what a formula can't: connecting score drivers to
+  // the actual customer quotes, and one concrete Next Best Action per account.
+  const scored = ACCOUNTS
+    .filter(a => !csmId || a.csmId === csmId)
+    .map(a => ({ account: a, priority: computePriorityScore(a) }))
+    .sort((x, y) => y.priority.score - x.priority.score)
+    .slice(0, 5);
+
+  if (scored.length === 0) return { priorities: [], patternAlert: "" };
+
+  const contextBlocks = scored.map(({ account, priority }, i) =>
+    `--- Account ${i + 1}: ${account.accountName} (accountId ${account.accountId}, priority score ${priority.score}/100 — rank is FIXED, do not reorder) ---
+${accountContext(account)}
+Days to renewal: ${priority.daysToRenewal}`
+  ).join("\n\n");
+
+  const user = `You are given the top 5 accounts for ${csmId ? "this CSM's portfolio" : "the whole team"}, already ranked by a deterministic urgency formula combining risk, ARR at stake, renewal proximity, and engagement recency. This ranking and the priority scores are FIXED — do not reorder the accounts, do not invent your own ranking or score.
+
+For each account below, in the exact order given, provide a one-sentence synthesis connecting its top score driver(s) to the customer quotes (if any are relevant), and exactly one Next Best Action.
+
+${contextBlocks}
+
+Respond with ONLY this JSON schema, "accounts" in the exact same order as given above:
+{
+  "accounts": [
+    {
+      "accountId": "...",
+      "synthesis": "one sentence connecting the top risk driver(s) and, if relevant, a quote",
+      "nextBestAction": {
+        "category": "risk_mitigation|growth",
+        "action": "the single most important next action for the CSM, concrete and specific",
+        "rationale": "one sentence: why this beats other possible actions right now"
+      }
+    }
+  ],
+  "patternAlert": "one sentence if 2 or more of these accounts share a common underlying issue (e.g. same support topic, same product gap) worth flagging as a portfolio-level pattern, otherwise an empty string"
+}`;
+
+  const raw = await callAI(SYSTEM_PROMPT, user, 1200);
+  const parsed = parseJsonLoose(raw);
+  validateTeamPriorityShape(parsed, scored.map(({ account }) => account.accountId));
+
+  const priorities = scored.map(({ account, priority }, i) => {
+    const enrichment = parsed.accounts[i];
+    return {
+      accountId: account.accountId,
+      accountName: account.accountName,
+      priorityScore: priority.score,
+      riskCategory: priority.health.riskCategory,
+      synthesis: enrichment.synthesis ?? "",
+      nextBestAction: applyExpansionGuardrail(account, priority.health, enrichment.nextBestAction ?? null),
+    };
   });
-  const summary = accounts.map(({ a, health }) =>
-    `${a.accountId} | ${a.accountName} | score ${health.score} (${health.riskCategory}) | top driver: ${health.criteria[0].label} | ARR $${a.contract.arrUSD} | renewal ${a.contract.nextRenewalDate}`
-  ).join("\n");
 
-  const user = `Team account summary:
-${summary}
-
-Pick the 5 accounts that most warrant CSM attention this week. Consider risk
-severity, ARR at stake, and renewal proximity together — not just raw score.
-
-Respond with ONLY this JSON schema:
-{ "priorities": [ { "accountId": "...", "accountName": "...", "reason": "one line" } ] }`;
-  const raw = await callAI(SYSTEM_PROMPT, user, 600);
-  return parseJsonLoose(raw);
+  return { priorities, patternAlert: parsed.patternAlert || "" };
 }
 
 export default async function handler(req, res) {
@@ -293,11 +500,15 @@ export default async function handler(req, res) {
     return res.status(503).json({ error: `AI layer not configured for provider "${PROVIDER}".` });
   }
 
-  const { mode, accountId, question, csmId } = req.body || {};
+  const { mode, accountId, question, csmId, accountIds } = req.body || {};
 
   try {
     if (mode === "team-priority") {
       const result = await handleTeamPriority(csmId);
+      return res.status(200).json(result);
+    }
+    if (mode === "portfolio-ask") {
+      const result = await handlePortfolioAsk(Array.isArray(accountIds) ? accountIds : [], question);
       return res.status(200).json(result);
     }
 

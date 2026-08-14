@@ -1,4 +1,10 @@
-const TODAY = new Date("2026-08-10");
+// Single source of truth for the fixed demo reference date — used both for
+// the calculations below and for display (see src/app.js's Trust view). A
+// string primitive, not a Date object: Date instances are mutable even when
+// frozen (Object.freeze doesn't protect a Date's internal time value), so an
+// ISO string is what's actually immutable here.
+export const REFERENCE_DATE_ISO = "2026-08-10";
+const TODAY = new Date(REFERENCE_DATE_ISO);
 
 function daysBetween(fromISO, toDate) {
   const from = new Date(fromISO);
@@ -157,6 +163,43 @@ export function computeExpansionScore(account) {
   const whitespaceModules = ALL_MODULES.filter(m => !licensedNames.includes(m));
   const category = score >= 70 ? "high" : score >= 30 ? "medium" : "low";
   return { score, whitespaceModules, category };
+}
+
+// Deterministic priority/urgency ranking — separate from the Health Score.
+// Health Score answers "how healthy is this account"; this answers "which
+// account needs attention first". Combines risk, value at stake, renewal
+// timing, and engagement, per common CS prioritization practice (risk alone
+// or ARR alone are each known to be poor single-factor rankers).
+const ARR_REFERENCE_CEILING = 550000; // just above this dataset's max ARR ($525k)
+
+function renewalUrgencyScore(daysToRenewal) {
+  // Non-linear on purpose: urgency should spike as renewal approaches, not
+  // climb steadily from day one. A renewal 400 days out shouldn't compete
+  // with one 60 days out just because both are "far" vs "near".
+  if (daysToRenewal <= 0) return 100;
+  if (daysToRenewal <= 30) return 90;
+  if (daysToRenewal <= 60) return 70;
+  if (daysToRenewal <= 90) return 50;
+  return clamp(30 - (daysToRenewal - 90) / 20, 0, 30);
+}
+
+export function computePriorityScore(account) {
+  const health = computeHealthScore(account);
+  const daysToRenewal = daysFromToday(account.contract.nextRenewalDate);
+
+  const riskComponent = 100 - health.score;
+  const arrComponent = clamp(account.contract.arrUSD / ARR_REFERENCE_CEILING * 100, 0, 100);
+  const renewalComponent = renewalUrgencyScore(daysToRenewal);
+  const engagementComponent = health.criteria.find(c => c.key === "interactionRecency")?.riskPct ?? 0;
+
+  const score = Math.round(
+    riskComponent * 0.40 +
+    arrComponent * 0.25 +
+    renewalComponent * 0.20 +
+    engagementComponent * 0.15
+  );
+
+  return { score, daysToRenewal, health };
 }
 
 export function daysSince(dateISO) {

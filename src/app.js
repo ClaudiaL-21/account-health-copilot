@@ -1,11 +1,19 @@
-import { computeHealthScore, computeExpansionScore, daysSince, daysFromToday, computeTrend } from "./scoring.js";
-import { fetchAccountInsight, askAboutAccount, fetchTeamPriority, approveAction } from "./ai.js";
+import { computeHealthScore, computeExpansionScore, computePriorityScore, daysSince, daysFromToday, computeTrend, REFERENCE_DATE_ISO } from "./scoring.js";
+import { fetchAccountInsight, askAboutAccount, fetchTeamPriority, approveAction, askAboutPortfolio } from "./ai.js";
 
 const RISK_LABEL = { high: "High", medium: "Medium", low: "Low" };
 const fmtUSD = n => "$" + n.toLocaleString("en-US");
 const fmtDate = iso => new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "2-digit" });
+// Sprint 06 — compact calendar-date form for x-axis tick labels (space is
+// tight there); the full fmtDate() form is still used for the axis's
+// accessible name/title, so no precision is lost, only the on-axis label.
+const fmtAxisDate = iso => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 const adoptionCategory = pct => pct >= 70 ? "good" : pct >= 40 ? "warn" : "poor";
 const CHAMPION_LABEL = { active: "active", unknown: "unclear", recently_departed: "recently departed" };
+// Sprint 05B — Team: an initials placeholder derived from the CSM's own name
+// field (already in data/accounts.json's csms list) — explicitly not a real
+// photo, matching the sprint's "no real profile pictures" instruction.
+const initialsOf = name => (name || "").trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? "").join("") || "?";
 
 let state = {
   accounts: [], csms: [], view: "portfolio",
@@ -19,6 +27,7 @@ let state = {
   aiAsk: {},      // accountId -> { question, status, answer, error }
   approvals: {},  // accountId -> { status: 'idle'|'pending'|'done'|'error', result, error }
   teamPriority: { status: "idle", data: null, error: null, csmId: null }, // csmId: null = whole-team scope
+  portfolioAsk: { status: "idle", question: "", answer: "", error: "" }, // scoped to whatever getFilteredAccounts() returns at ask time
 };
 
 async function init() {
@@ -31,6 +40,11 @@ async function init() {
     const trend = computeTrend(acc);
     return { ...acc, health, expansion, trend };
   });
+  // Sprint 05B — the same fixed reference date the scoring math itself uses
+  // (src/scoring.js), just made visible in the topbar so the "snapshot, not
+  // live" framing is unavoidable rather than buried in the Trust view alone.
+  const snapshotEl = document.getElementById("topbar-snapshot");
+  if (snapshotEl) snapshotEl.textContent = `Snapshot as of ${fmtDate(REFERENCE_DATE_ISO)}`;
   bindControls();
   render();
 }
@@ -41,6 +55,7 @@ function bindControls() {
   document.getElementById("tab-map").addEventListener("click", () => { state.view = "map"; render(); });
   document.getElementById("tab-team").addEventListener("click", () => { state.view = "team"; render(); });
   document.getElementById("tab-feedback").addEventListener("click", () => { state.view = "feedback"; render(); });
+  document.getElementById("tab-trust").addEventListener("click", () => { state.view = "trust"; render(); });
 
   const csmSelect = document.getElementById("filter-csm");
   state.csms.forEach(c => {
@@ -73,6 +88,8 @@ function getFilteredAccounts() {
   );
 }
 
+const RISK_SORT_RANK = { low: 1, medium: 2, high: 3 };
+
 function getSorted(list) {
   const { key, dir } = state.sort;
   const sorted = [...list].sort((a, b) => {
@@ -82,6 +99,11 @@ function getSorted(list) {
     else if (key === "adoption") { va = a.usage.adoptionRatePct; vb = b.usage.adoptionRatePct; }
     else if (key === "renewal") { va = new Date(a.contract.nextRenewalDate); vb = new Date(b.contract.nextRenewalDate); }
     else if (key === "arr") { va = a.contract.arrUSD; vb = b.contract.arrUSD; }
+    else if (key === "region") { va = a.region; vb = b.region; }
+    else if (key === "csm") { va = csmName(a.csmId); vb = csmName(b.csmId); }
+    else if (key === "risk") { va = RISK_SORT_RANK[a.health.riskCategory]; vb = RISK_SORT_RANK[b.health.riskCategory]; }
+    else if (key === "lastInteraction") { va = a.relationship.lastInteractionDaysAgo; vb = b.relationship.lastInteractionDaysAgo; }
+    else if (key === "qbr") { va = new Date(a.relationship.nextQBRDate); vb = new Date(b.relationship.nextQBRDate); }
     else { va = a.accountName; vb = b.accountName; }
     if (va < vb) return dir === "asc" ? -1 : 1;
     if (va > vb) return dir === "asc" ? 1 : -1;
@@ -94,13 +116,44 @@ function csmName(csmId) {
   return state.csms.find(c => c.csmId === csmId)?.name ?? csmId;
 }
 
+// Sprint 05 — Part A.1/A.2: every view opens with the same title+description
+// pattern instead of jumping straight into content, so the six views read as
+// one product. Purely presentational — no state or behavior here. Trust
+// keeps its own Sprint 04 hero instead of this (it already does more).
+function renderViewHeader(title, description) {
+  const header = document.createElement("div");
+  header.className = "view-header";
+  header.innerHTML = `<h2>${escapeHtml(title)}</h2><p>${escapeHtml(description)}</p>`;
+  return header;
+}
+
+// Sprint 05B — Part 3: both AI-generated panels (Portfolio Ask, Team/Portfolio
+// Prioritization) get the same clearly-labeled "AI Copilot" identity — an
+// icon + eyebrow label + the existing trust disclaimer — instead of looking
+// like a plain form box. Purely presentational; the underlying AI call and
+// disclaimer text are unchanged.
+const AI_SPARKLE_ICON = `<svg class="ai-copilot-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.3 11.7 7.9 17.3 9.6l-5.6 1.7L10 17l-1.7-5.7-5.6-1.7 5.6-1.7L10 2.3Z" fill="currentColor"/></svg>`;
+
+function aiCopilotHeader(title) {
+  return `
+    <div class="ai-copilot-header">
+      ${AI_SPARKLE_ICON}
+      <div>
+        <p class="ai-copilot-eyebrow">AI Copilot</p>
+        <h4>${escapeHtml(title)} <span class="ai-disclaimer">— AI-generated, may be inaccurate, verify before acting</span></h4>
+      </div>
+    </div>
+  `;
+}
+
 function render() {
   document.getElementById("tab-portfolio").classList.toggle("active", state.view === "portfolio");
   document.getElementById("tab-matrix").classList.toggle("active", state.view === "matrix");
   document.getElementById("tab-map").classList.toggle("active", state.view === "map");
   document.getElementById("tab-team").classList.toggle("active", state.view === "team");
   document.getElementById("tab-feedback").classList.toggle("active", state.view === "feedback");
-  document.getElementById("filters").style.display = state.view === "team" ? "none" : "flex";
+  document.getElementById("tab-trust").classList.toggle("active", state.view === "trust");
+  document.getElementById("filters").style.display = (state.view === "team" || state.view === "trust") ? "none" : "flex";
 
   const root = document.getElementById("app");
   root.innerHTML = "";
@@ -108,28 +161,77 @@ function render() {
   else if (state.view === "matrix") root.appendChild(renderMatrix());
   else if (state.view === "map") root.appendChild(renderMap());
   else if (state.view === "feedback") root.appendChild(renderFeedback());
+  else if (state.view === "trust") root.appendChild(renderTrust());
   else root.appendChild(renderTeam());
 }
 
 function renderSortHeader(label, key) {
   const th = document.createElement("th");
   th.className = "sortable";
+  th.tabIndex = 0;
   th.textContent = label + (state.sort.key === key ? (state.sort.dir === "asc" ? " ▲" : " ▼") : "");
-  th.addEventListener("click", () => {
+  th.setAttribute("aria-sort", state.sort.key === key ? (state.sort.dir === "asc" ? "ascending" : "descending") : "none");
+  const doSort = () => {
     if (state.sort.key === key) state.sort.dir = state.sort.dir === "asc" ? "desc" : "asc";
     else { state.sort.key = key; state.sort.dir = "desc"; }
     render();
-  });
+  };
+  th.addEventListener("click", doSort);
+  th.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doSort(); } });
   return th;
+}
+
+// Sprint 05B — KPI strip: four numbers that already exist elsewhere in this
+// file (health.riskCategory, contract.arrUSD, and the same "renewal within
+// 90 days" pattern renderTeam() already uses per CSM), just surfaced above
+// the table for the currently filtered list. No new formulas, no new data.
+function renderPortfolioKpis(list) {
+  const wrap = document.createElement("div");
+  wrap.className = "kpi-strip";
+
+  const highRisk = list.filter(a => a.health.riskCategory === "high");
+  const arrAtRisk = highRisk.reduce((s, a) => s + a.contract.arrUSD, 0);
+  const upcomingRenewals = list.filter(a => {
+    const d = daysFromToday(a.contract.nextRenewalDate);
+    return d <= 90 && d >= 0;
+  }).length;
+
+  const kpis = [
+    { label: "Accounts in view", value: String(list.length), tone: "neutral" },
+    { label: "High risk", value: String(highRisk.length), tone: "high" },
+    { label: "ARR at risk", value: fmtUSD(arrAtRisk), tone: "high" },
+    { label: "Renewals ≤ 90 days", value: String(upcomingRenewals), tone: "medium" },
+  ];
+
+  wrap.innerHTML = kpis.map(k => `
+    <div class="kpi-tile kpi-tile-${k.tone}">
+      <span class="kpi-value">${escapeHtml(k.value)}</span>
+      <span class="kpi-label">${escapeHtml(k.label)}</span>
+    </div>
+  `).join("");
+
+  return wrap;
 }
 
 function renderPortfolio() {
   const wrap = document.createElement("div");
   const list = getSorted(getFilteredAccounts());
 
+  wrap.appendChild(renderViewHeader("Portfolio", "Prioritized view of every account — click a row to see the full score breakdown, evidence, and AI insight."));
+  wrap.appendChild(renderPortfolioKpis(list));
+
   if (state.filters.csm !== "all") {
     wrap.appendChild(renderPriorityBox(state.filters.csm, `AI Priorities for ${csmName(state.filters.csm)}`));
   }
+
+  // PO review, round 2: the AI Copilot uses the full workspace width at
+  // every breakpoint; the deterministic Attention Queue stays below it as
+  // a compact area — see the .portfolio-ai-row rule.
+  const aiRow = document.createElement("div");
+  aiRow.className = "portfolio-ai-row";
+  aiRow.appendChild(renderPortfolioAsk(list));
+  aiRow.appendChild(renderAttentionQueue(list));
+  wrap.appendChild(aiRow);
 
   const summary = document.createElement("div");
   summary.className = "summary-bar";
@@ -153,22 +255,23 @@ function renderPortfolio() {
   const thead = document.createElement("thead");
   const headRow = document.createElement("tr");
   headRow.appendChild(renderSortHeader("Account", "name"));
-  const staticHeaders = ["Region", "CSM", ];
-  staticHeaders.forEach(h => { const th = document.createElement("th"); th.textContent = h; headRow.appendChild(th); });
+  headRow.appendChild(renderSortHeader("Region", "region"));
+  headRow.appendChild(renderSortHeader("CSM", "csm"));
   headRow.appendChild(renderSortHeader("ARR", "arr"));
   headRow.appendChild(renderSortHeader("Renewal", "renewal"));
   headRow.appendChild(renderSortHeader("Health Score", "score"));
-  const th2 = document.createElement("th"); th2.textContent = "Risk"; headRow.appendChild(th2);
+  headRow.appendChild(renderSortHeader("Risk", "risk"));
   headRow.appendChild(renderSortHeader("Adoption", "adoption"));
   headRow.appendChild(renderSortHeader("Expansion", "expansion"));
-  ["Last Interaction", "Next QBR"].forEach(h => { const th = document.createElement("th"); th.textContent = h; headRow.appendChild(th); });
+  headRow.appendChild(renderSortHeader("Last Interaction", "lastInteraction"));
+  headRow.appendChild(renderSortHeader("Next QBR", "qbr"));
   thead.appendChild(headRow);
   table.appendChild(thead);
 
   const tbody = document.createElement("tbody");
   list.forEach(acc => {
     const row = document.createElement("tr");
-    row.className = `risk-row-${acc.health.riskCategory}`;
+    row.className = `risk-row-${acc.health.riskCategory}${state.expanded === acc.accountId ? " row-expanded" : ""}`;
     row.innerHTML = `
       <td class="account-cell">${escapeHtml(acc.accountName)}<div class="sub">${escapeHtml(acc.industry)}</div></td>
       <td>${acc.region}<div class="sub">${escapeHtml(acc.subregion)}</div></td>
@@ -201,8 +304,29 @@ function renderPortfolio() {
     }
   });
   table.appendChild(tbody);
-  wrap.appendChild(table);
+  const scrollWrap = document.createElement("div");
+  scrollWrap.className = "table-scroll";
+  scrollWrap.appendChild(table);
+  wrap.appendChild(scrollWrap);
+  const hint = document.createElement("p");
+  hint.className = "table-scroll-hint";
+  hint.textContent = "← Scroll horizontally to see all columns →";
+  wrap.appendChild(hint);
   return wrap;
+}
+
+// Sprint 06 — x-axis tick selection: always the first/last history index,
+// plus up to `midCount` additional interior indices spaced as evenly as
+// possible across the array. Used to keep intermediate marks legible —
+// they're only added where renderScoreTrend's width tier has room for them.
+function pickTickIndices(n, midCount) {
+  if (midCount <= 0 || n <= 2) return [0, n - 1];
+  const indices = new Set([0, n - 1]);
+  for (let k = 1; k <= midCount; k++) {
+    const idx = Math.round((k / (midCount + 1)) * (n - 1));
+    if (idx > 0 && idx < n - 1) indices.add(idx);
+  }
+  return [...indices].sort((a, b) => a - b);
 }
 
 function renderScoreTrend(history) {
@@ -211,25 +335,82 @@ function renderScoreTrend(history) {
   const diff = last - first;
   const weeks = history.length - 1;
   const color = diff <= -8 ? "var(--red)" : diff >= 8 ? "var(--green)" : "var(--muted)";
+  const arrow = diff <= -8 ? "▼" : diff >= 8 ? "▲" : "";
+  const pct = first > 0 ? Math.round((diff / first) * 100) : 0;
+  const pctLabel = `${diff > 0 ? "+" : ""}${pct}%`;
   const summary = diff <= -8
     ? `Health Score fell from ${first} to ${last} over the last ${weeks} weeks.`
     : diff >= 8
       ? `Health Score rose from ${first} to ${last} over the last ${weeks} weeks.`
       : `Health Score stayed roughly steady around ${last} over the last ${weeks} weeks.`;
 
-  const w = 180, h = 36, pad = 3;
-  const points = history.map((p, i) => {
-    const x = pad + (i / (history.length - 1)) * (w - pad * 2);
-    const y = pad + (1 - p.score / 100) * (h - pad * 2);
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(" ");
+  // Sprint 06 — real x-axis under the trend line, with a calendar-date range
+  // and (width permitting) intermediate ticks. The pre-existing plot geometry
+  // below (padTop/plotH/gridlines/polyline/start-end dots+labels, all on a
+  // fixed 0-100 y-scale) is untouched — plotH stays 48 regardless of tier, so
+  // the line's own shape never changes; the axis is purely additive height
+  // beneath it. Tick density is picked from window width, since the card this
+  // renders into shares its available width with a sibling column only above
+  // the existing 700px detail-grid breakpoint (see .detail-grid in styles.css) —
+  // narrower than that, it's the sole, full-width column.
+  // Sprint 09 — from 901px up, .score-trend lays the graph and the
+  // percent/summary text out side by side (see styles.css), so the graph
+  // needs a narrower intrinsic width to leave the text room to breathe;
+  // below that it's still full-width and stacked, so it can stay wider.
+  const tier = window.innerWidth >= 1200 ? { w: 170, midCount: 1 }
+    : window.innerWidth >= 901 ? { w: 150, midCount: 0 }
+    : window.innerWidth >= 700 ? { w: 260, midCount: 1 }
+    : { w: 200, midCount: 0 };
+  const w = tier.w;
+  const padTop = 6, padBottom = 6, padRight = 8, plotH = 48, xAxisH = 18;
+  const h = padTop + plotH + padBottom + xAxisH;
+  const axisLabelW = 24;
+  const plotX0 = axisLabelW, plotW = w - axisLabelW - padRight;
+  const yFor = score => padTop + (1 - score / 100) * plotH;
+  const xFor = i => plotX0 + (i / (history.length - 1)) * plotW;
+  const points = history.map((p, i) => `${xFor(i).toFixed(1)},${yFor(p.score).toFixed(1)}`).join(" ");
+  const firstX = plotX0;
+  const lastX = plotX0 + plotW;
+
+  const gridlines = [0, 50, 100].map(v => `
+    <line x1="${plotX0}" y1="${yFor(v).toFixed(1)}" x2="${w - padRight}" y2="${yFor(v).toFixed(1)}" stroke="var(--border)" stroke-width="1" stroke-dasharray="2,2" />
+    <text x="${plotX0 - 4}" y="${(yFor(v) + 3).toFixed(1)}" text-anchor="end" font-size="8" fill="var(--muted)">${v}</text>
+  `).join("");
+
+  const axisLineY = padTop + plotH + padBottom;
+  const xAxisLine = `<line x1="${plotX0}" y1="${axisLineY}" x2="${(plotX0 + plotW).toFixed(1)}" y2="${axisLineY}" stroke="var(--border)" stroke-width="1" />`;
+  const tickIndices = pickTickIndices(history.length, tier.midCount);
+  const xAxisTicks = tickIndices.map(i => {
+    const x = xFor(i).toFixed(1);
+    const anchor = i === 0 ? "start" : i === history.length - 1 ? "end" : "middle";
+    return `
+      <line x1="${x}" y1="${axisLineY}" x2="${x}" y2="${axisLineY + 4}" stroke="var(--border)" stroke-width="1" />
+      <text x="${x}" y="${axisLineY + 13}" text-anchor="${anchor}" font-size="9" fill="var(--muted)">${escapeHtml(fmtAxisDate(history[i].date))}</text>
+    `;
+  }).join("");
+
+  // Accessible name for the whole graphic (calendar dates and score values,
+  // not the abbreviated axis labels), since a screen reader encountering the
+  // <svg> itself needs its own name — it can't rely on the sibling <p> text.
+  const axisTitle = `Health Score trend, ${fmtDate(history[0].date)} to ${fmtDate(history[history.length - 1].date)}: started at ${first}, ended at ${last}.`;
 
   return `
     <div class="score-trend">
-      <svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" class="score-sparkline">
+      <svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" class="score-sparkline" role="img">
+        <title>${escapeHtml(axisTitle)}</title>
+        ${gridlines}
         <polyline points="${points}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+        <circle cx="${firstX}" cy="${yFor(first).toFixed(1)}" r="2.5" fill="var(--muted)" />
+        <text x="${firstX}" y="${(yFor(first) - 6).toFixed(1)}" text-anchor="start" font-size="9" fill="var(--muted)">${first}</text>
+        <circle cx="${lastX}" cy="${yFor(last).toFixed(1)}" r="2.5" fill="${color}" />
+        <text x="${lastX}" y="${(yFor(last) - 6).toFixed(1)}" text-anchor="end" font-size="9" font-weight="700" fill="${color}">${last}</text>
+        ${xAxisLine}
+        ${xAxisTicks}
       </svg>
-      <p class="sub">${escapeHtml(summary)}</p>
+      <div class="score-trend-info">
+        <div class="score-trend-pct" style="color:${color};">${arrow} ${pctLabel}<span class="sub"> over ${weeks} weeks</span></div>
+        <p class="sub">${escapeHtml(summary)}</p>
+      </div>
     </div>
   `;
 }
@@ -320,11 +501,16 @@ function renderAiSection(container, acc) {
     body.innerHTML = `<p class="sub">Loading…</p>`;
   } else if (insight.status === "error") {
     body.innerHTML = `<p class="ai-unavailable">AI insights unavailable (${escapeHtml(insight.error)}). Calculated score remains valid.</p>`;
+    const retryBtn = document.createElement("button");
+    retryBtn.className = "ai-load-btn";
+    retryBtn.textContent = "Try Again";
+    retryBtn.addEventListener("click", () => loadInsight(acc.accountId));
+    body.appendChild(retryBtn);
   } else if (insight.status === "done") {
     const d = insight.data;
     const conf = d.confidence || { level: "high", reason: "" };
     const confRisk = conf.level === "low" ? "high" : conf.level === "medium" ? "medium" : "low";
-    const confLabel = conf.level === "low" ? "Low confidence" : conf.level === "medium" ? "Medium confidence" : "High confidence";
+    const confLabel = conf.level === "low" ? "Low evidence confidence" : conf.level === "medium" ? "Medium evidence confidence" : "High evidence confidence";
     const nba = d.nextBestAction;
     const nbaLabel = nba?.category === "growth" ? "Next Best Action — Growth" : "Next Best Action — Risk Mitigation";
     const nbaClass = nba?.category === "growth" ? "low" : "high";
@@ -343,6 +529,12 @@ function renderAiSection(container, acc) {
     `;
 
     if (nba) renderApprovalControl(container.querySelector(".nba-approval"), acc.accountId, nba);
+
+    const reloadBtn = document.createElement("button");
+    reloadBtn.className = "reload-link";
+    reloadBtn.textContent = "↻ Reload Insight";
+    reloadBtn.addEventListener("click", () => loadInsight(acc.accountId));
+    body.appendChild(reloadBtn);
   }
 
   const askInput = container.querySelector(".ai-ask-input");
@@ -356,34 +548,156 @@ function renderAiSection(container, acc) {
   else if (ask.status === "done") answerBox.innerHTML = `<p class="ai-answer">${escapeHtml(ask.answer)}</p>`;
 }
 
+// Sprint 02 — Human Review: the AI's nextBestAction is only ever a suggestion.
+// A CSM must open this box, see/edit category+action+rationale, and explicitly
+// confirm before anything reaches /api/approve-action. Draft edits live in
+// state.approvals[accountId].draft (not local DOM state) so they survive any
+// re-render (e.g. after a validation error) without reverting to the AI original.
 function renderApprovalControl(container, accountId, nba) {
   const approval = state.approvals[accountId] || { status: "idle" };
 
-  if (approval.status === "idle") {
-    const btn = document.createElement("button");
-    btn.className = "ai-load-btn approve-btn";
-    btn.textContent = "Approve & Send to Workflow";
-    btn.addEventListener("click", () => submitApproval(accountId, nba));
-    container.appendChild(btn);
-  } else if (approval.status === "pending") {
-    container.innerHTML = `<p class="sub">Sending…</p>`;
-  } else if (approval.status === "error") {
-    container.innerHTML = `<p class="ai-unavailable">Could not send (${escapeHtml(approval.error)}).</p>`;
-  } else if (approval.status === "done") {
+  if (approval.status === "reviewing" || approval.status === "pending" || approval.status === "error") {
+    renderReviewForm(container, accountId, nba, approval);
+    return;
+  }
+
+  if (approval.status === "done") {
     container.innerHTML = approval.result.workflowConnected
-      ? `<p class="approval-confirm">✓ Approved and sent to your n8n workflow.</p>`
-      : `<p class="approval-confirm">✓ Approved (logged — no n8n workflow connected yet).</p>`;
+      ? `<p class="approval-confirm">✓ Reviewed by CSM and sent to your n8n workflow.</p>`
+      : `<p class="approval-confirm">✓ Reviewed by CSM and logged (no n8n workflow connected yet).</p>`;
+    return;
+  }
+
+  // idle (default)
+  container.innerHTML = `<p class="review-required">Human review required</p>`;
+  const btn = document.createElement("button");
+  btn.className = "ai-load-btn approve-btn";
+  btn.textContent = "Review action";
+  btn.addEventListener("click", () => {
+    state.approvals[accountId] = {
+      status: "reviewing",
+      draft: { category: nba.category, action: nba.action, rationale: nba.rationale },
+    };
+    render();
+  });
+  container.appendChild(btn);
+}
+
+// Sprint 07 — Part A: category badge color is purely a status indicator
+// (Risk Mitigation = red, Growth = teal/green, reusing the same status-pill
+// risk-high/risk-low colors used everywhere else in the app) — it tracks the
+// CSM's current draft.category, not just the AI's original suggestion, and
+// updates live if they change the Category dropdown below.
+function reviewCategoryMeta(category) {
+  return category === "growth"
+    ? { label: "Growth", riskClass: "risk-low" }
+    : { label: "Risk Mitigation", riskClass: "risk-high" };
+}
+
+function renderReviewForm(container, accountId, nba, approval) {
+  const draft = approval.draft;
+  const disabled = approval.status === "pending";
+  const badgeMeta = reviewCategoryMeta(draft.category);
+
+  container.innerHTML = `
+    <div class="review-form">
+      <div class="review-head">
+        <p class="ai-copilot-eyebrow">HUMAN REVIEW</p>
+        <div class="review-head-row">
+          <h4 class="review-title">Review &amp; approve action</h4>
+          <span class="status-pill review-category-badge ${badgeMeta.riskClass}">${badgeMeta.label}</span>
+        </div>
+      </div>
+
+      <p class="review-section-label">AI suggestion</p>
+      <div class="review-origin">
+        <p class="sub review-original">${escapeHtml(nba.action)}</p>
+      </div>
+
+      <p class="review-section-label">Final action to send <span class="review-hint-inline">— this is the version that will be sent</span></p>
+      <label class="review-field">Category
+        <select class="review-category" ${disabled ? "disabled" : ""}>
+          <option value="risk_mitigation" ${draft.category === "risk_mitigation" ? "selected" : ""}>Risk mitigation</option>
+          <option value="growth" ${draft.category === "growth" ? "selected" : ""}>Growth</option>
+        </select>
+      </label>
+      <label class="review-field">Recommended action
+        <textarea class="review-action" rows="3" maxlength="500" ${disabled ? "disabled" : ""}>${escapeHtml(draft.action)}</textarea>
+        <span class="review-charcount">${draft.action.length}/500</span>
+      </label>
+      <label class="review-field">Rationale
+        <textarea class="review-rationale" rows="2" maxlength="500" ${disabled ? "disabled" : ""}>${escapeHtml(draft.rationale)}</textarea>
+        <span class="review-charcount">${draft.rationale.length}/500</span>
+      </label>
+      ${approval.validationError ? `<p class="review-error">${escapeHtml(approval.validationError)}</p>` : ""}
+      ${approval.status === "error" ? `<p class="ai-unavailable">Could not send (${escapeHtml(approval.error)}). Your edits are kept — you can try again.</p>` : ""}
+      ${approval.status === "pending" ? `<p class="sub">Sending…</p>` : ""}
+      <div class="review-actions">
+        <button class="review-cancel-btn" ${disabled ? "disabled" : ""}>Cancel</button>
+        <button class="review-confirm-btn approve-btn" ${disabled ? "disabled" : ""}>Confirm & Send to Workflow</button>
+      </div>
+    </div>
+  `;
+
+  const categorySel = container.querySelector(".review-category");
+  const actionTa = container.querySelector(".review-action");
+  const rationaleTa = container.querySelector(".review-rationale");
+  const [actionCount, rationaleCount] = container.querySelectorAll(".review-charcount");
+  const badgeEl = container.querySelector(".review-category-badge");
+
+  categorySel.addEventListener("change", () => {
+    draft.category = categorySel.value;
+    const meta = reviewCategoryMeta(draft.category);
+    badgeEl.textContent = meta.label;
+    badgeEl.classList.remove("risk-high", "risk-low");
+    badgeEl.classList.add(meta.riskClass);
+  });
+  actionTa.addEventListener("input", () => {
+    draft.action = actionTa.value;
+    actionCount.textContent = `${draft.action.length}/500`;
+    if (draft.action.trim() && draft.action.length <= 500) container.querySelector(".review-error")?.remove();
+  });
+  rationaleTa.addEventListener("input", () => {
+    draft.rationale = rationaleTa.value;
+    rationaleCount.textContent = `${draft.rationale.length}/500`;
+    if (draft.rationale.length <= 500) container.querySelector(".review-error")?.remove();
+  });
+
+  if (!disabled) {
+    container.querySelector(".review-cancel-btn").addEventListener("click", () => {
+      state.approvals[accountId] = { status: "idle" };
+      render();
+    });
+    container.querySelector(".review-confirm-btn").addEventListener("click", () => {
+      const validationError = reviewValidationError(draft);
+      if (validationError) {
+        state.approvals[accountId] = { status: "reviewing", draft, validationError };
+        render();
+        return;
+      }
+      submitApproval(accountId, draft);
+    });
   }
 }
 
-async function submitApproval(accountId, nba) {
-  state.approvals[accountId] = { status: "pending" };
+// Mirrors the server-side checks in api/approve-action.js (empty action,
+// 500-char limits) so invalid input never leaves the client — the server
+// re-validates independently and remains the source of truth.
+function reviewValidationError(draft) {
+  if (!draft.action.trim()) return "Action cannot be empty.";
+  if (draft.action.length > 500) return "Action must be 500 characters or fewer.";
+  if (draft.rationale.length > 500) return "Rationale must be 500 characters or fewer.";
+  return null;
+}
+
+async function submitApproval(accountId, draft) {
+  state.approvals[accountId] = { status: "pending", draft };
   render();
   try {
-    const result = await approveAction(accountId, nba);
+    const result = await approveAction(accountId, draft);
     state.approvals[accountId] = { status: "done", result };
   } catch (e) {
-    state.approvals[accountId] = { status: "error", error: e.message };
+    state.approvals[accountId] = { status: "error", draft, error: e.message };
   }
   render();
 }
@@ -451,9 +765,13 @@ function attachDotTooltip(wrap, list, contentFn) {
 function renderMatrix() {
   const wrap = document.createElement("div");
   const list = getFilteredAccounts();
+  wrap.appendChild(renderViewHeader("Matrix", "Health Score against value or renewal urgency — spot which accounts need attention first."));
 
   if (list.length === 0) {
-    wrap.innerHTML = `<p class="sub">No accounts match the current filters.</p>`;
+    const empty = document.createElement("p");
+    empty.className = "sub";
+    empty.textContent = "No accounts match the current filters.";
+    wrap.appendChild(empty);
     return wrap;
   }
 
@@ -573,7 +891,11 @@ function renderMatrix() {
     ? `X: Health Score, Y: renewal urgency (sooner = higher), bubble size: ARR. Quadrant lines split at Health ${healthMid} and the median renewal date of the filtered accounts.`
     : `X: Health Score, Y: ARR, bubble size: Expansion Score (bigger = more upsell potential). Quadrant lines split at Health ${healthMid} and median ARR (${fmtUSD(Math.round(yPlotMedian))}) of the filtered accounts.`;
 
-  wrap.innerHTML = `
+  // A dedicated content container (not wrap.innerHTML directly) — wrap
+  // already holds the view header appended above, which a wrap.innerHTML
+  // assignment would silently discard.
+  const content = document.createElement("div");
+  content.innerHTML = `
     <div class="matrix-toggle">
       <button class="matrix-toggle-btn ${mode === "value" ? "active" : ""}" data-mode="value">Value (Health × ARR)</button>
       <button class="matrix-toggle-btn ${mode === "renewal" ? "active" : ""}" data-mode="renewal">Renewal Radar (Health × Time-to-Renewal)</button>
@@ -588,6 +910,7 @@ function renderMatrix() {
       <div class="summary-chip neutral">▲ improving / ▼ declining CSAT</div>
     </div>
   `;
+  wrap.appendChild(content);
 
   wrap.querySelectorAll(".matrix-toggle-btn").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -635,9 +958,13 @@ let leafletMapInstance = null;
 function renderMap() {
   const wrap = document.createElement("div");
   const list = getFilteredAccounts().filter(a => a.location);
+  wrap.appendChild(renderViewHeader("Map", "Fictional HQ locations, colored by risk level — a geographic read on the same filtered portfolio."));
 
   if (list.length === 0) {
-    wrap.innerHTML = `<p class="sub">No accounts with location data match the current filters.</p>`;
+    const empty = document.createElement("p");
+    empty.className = "sub";
+    empty.textContent = "No accounts with location data match the current filters.";
+    wrap.appendChild(empty);
     return wrap;
   }
 
@@ -656,8 +983,11 @@ function renderMap() {
     </div>
   ` : "";
 
-  wrap.innerHTML = `
-    <p class="sub">Fictional HQ location per account, plotted on real OpenStreetMap data. Dot color = risk level. Click a marker for details.</p>
+  // Dedicated content container — see the same note in renderMatrix() for why
+  // this can't be a direct wrap.innerHTML assignment (would drop the header).
+  const content = document.createElement("div");
+  content.innerHTML = `
+    <p class="sub">Plotted on real OpenStreetMap data. Dot color = risk level. Click a marker for details.</p>
     <div id="leaflet-map" class="leaflet-map"></div>
     ${detailPanel}
     <div class="summary-bar" style="margin-top:14px;">
@@ -666,6 +996,7 @@ function renderMap() {
       <div class="summary-chip risk-low">● Low risk</div>
     </div>
   `;
+  wrap.appendChild(content);
 
   wrap.querySelector(".matrix-detail-close")?.addEventListener("click", () => {
     state.mapSelected = null;
@@ -735,6 +1066,7 @@ const SENTIMENT_RISK = { frustrated: "high", neutral: "medium", patient: "low" }
 function renderFeedback() {
   const wrap = document.createElement("div");
   const list = getFilteredAccounts();
+  wrap.appendChild(renderViewHeader("Feedback", "Which feature requests come up most, and from how much at-risk ARR — for the product team."));
 
   const groups = {};
   list.forEach(a => {
@@ -765,7 +1097,10 @@ function renderFeedback() {
   });
 
   if (rows.length === 0) {
-    wrap.innerHTML = `<p class="sub">No feature requests recorded for the currently filtered accounts.</p>`;
+    const empty = document.createElement("p");
+    empty.className = "sub";
+    empty.textContent = "No feature requests recorded for the currently filtered accounts.";
+    wrap.appendChild(empty);
     return wrap;
   }
 
@@ -835,7 +1170,14 @@ function renderFeedback() {
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
-  wrap.appendChild(table);
+  const scrollWrap = document.createElement("div");
+  scrollWrap.className = "table-scroll";
+  scrollWrap.appendChild(table);
+  wrap.appendChild(scrollWrap);
+  const hint = document.createElement("p");
+  hint.className = "table-scroll-hint";
+  hint.textContent = "← Scroll horizontally to see all columns →";
+  wrap.appendChild(hint);
 
   return wrap;
 }
@@ -843,19 +1185,127 @@ function renderFeedback() {
 function renderFeedbackSortHeader(label, key) {
   const th = document.createElement("th");
   th.className = "sortable";
+  th.tabIndex = 0;
   th.textContent = label + (state.feedbackSort.key === key ? (state.feedbackSort.dir === "asc" ? " ▲" : " ▼") : "");
-  th.addEventListener("click", () => {
+  th.setAttribute("aria-sort", state.feedbackSort.key === key ? (state.feedbackSort.dir === "asc" ? "ascending" : "descending") : "none");
+  const doSort = () => {
     if (state.feedbackSort.key === key) state.feedbackSort.dir = state.feedbackSort.dir === "asc" ? "desc" : "asc";
     else { state.feedbackSort.key = key; state.feedbackSort.dir = "desc"; }
     render();
-  });
+  };
+  th.addEventListener("click", doSort);
+  th.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); doSort(); } });
   return th;
+}
+
+// Co-PO review, round 1 — Point 3: a deterministic Attention Queue — the
+// three most urgent accounts in the current filter, ranked purely by the
+// existing computePriorityScore() (risk + ARR + renewal proximity +
+// engagement recency, see src/scoring.js). No new formula, no AI, nothing
+// beyond fields computePriorityScore already returns. Clicking an item opens
+// the same Portfolio detail row the table rows / Matrix / Team links do.
+function renderAttentionQueue(list) {
+  const box = document.createElement("div");
+  box.className = "attention-queue";
+
+  const top = list
+    .map(account => ({ account, priority: computePriorityScore(account) }))
+    .sort((a, b) => b.priority.score - a.priority.score)
+    .slice(0, 3);
+
+  const items = top.map(({ account, priority }) => {
+    const renewalText = priority.daysToRenewal <= 0
+      ? "Renewal overdue"
+      : `Renewal in ${priority.daysToRenewal}d`;
+    return `
+      <li class="attention-item" data-account-id="${account.accountId}" tabindex="0" role="button" aria-label="Open details for ${escapeHtml(account.accountName)}">
+        <span class="status-pill risk-${priority.health.riskCategory}">${RISK_LABEL[priority.health.riskCategory]}</span>
+        <span class="attention-item-body">
+          <span class="attention-name">${escapeHtml(account.accountName)}</span>
+          <span class="attention-meta">${escapeHtml(renewalText)} · Priority ${priority.score}/100</span>
+        </span>
+      </li>
+    `;
+  }).join("");
+
+  box.innerHTML = `
+    <h4>Attention Queue</h4>
+    <p class="sub">Top ${top.length} by priority score — risk, ARR, renewal timing, and engagement, already combined.</p>
+    ${top.length ? `<ol class="attention-list">${items}</ol>` : `<p class="sub">No accounts match the current filters.</p>`}
+  `;
+
+  box.querySelectorAll(".attention-item").forEach(item => {
+    const openDetail = () => {
+      const id = item.dataset.accountId;
+      state.expanded = id;
+      render();
+      document.getElementById(`detail-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    };
+    item.addEventListener("click", openDetail);
+    item.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDetail(); } });
+  });
+
+  return box;
+}
+
+function renderPortfolioAsk(list) {
+  const box = document.createElement("div");
+  box.className = "team-priority-box ai-copilot-panel portfolio-ask-box";
+  const pa = state.portfolioAsk;
+  const scopeLabel = state.filters.csm !== "all" || state.filters.region !== "all" || state.filters.risk !== "all" || state.filters.expansion !== "all" || state.filters.trend !== "all"
+    ? `across the ${list.length} account(s) matching your current filters`
+    : `across all ${list.length} accounts`;
+  box.innerHTML = `
+    ${aiCopilotHeader("Ask about this Portfolio")}
+    <p class="sub">Answers are scoped to what's currently on screen — ${escapeHtml(scopeLabel)}. Change the filters above to change the scope.</p>
+    <div class="ai-ask">
+      <input type="text" class="portfolio-ask-input" placeholder="e.g. list all champion contacts, or which accounts have a QBR this month…" value="${escapeHtml(pa.question)}" />
+      <button class="ai-ask-btn portfolio-ask-btn">Ask</button>
+    </div>
+    <div class="portfolio-ask-answer"></div>
+  `;
+
+  const input = box.querySelector(".portfolio-ask-input");
+  const btn = box.querySelector(".portfolio-ask-btn");
+  const submit = () => submitPortfolioAsk(input.value, list.map(a => a.accountId));
+  btn.addEventListener("click", submit);
+  input.addEventListener("keydown", e => { if (e.key === "Enter") submit(); });
+
+  const answerBox = box.querySelector(".portfolio-ask-answer");
+  if (pa.status === "loading") {
+    answerBox.innerHTML = `<p class="sub">Loading…</p>`;
+  } else if (pa.status === "error") {
+    answerBox.innerHTML = `<p class="ai-unavailable">Answer unavailable (${escapeHtml(pa.error)}).</p>`;
+    const retryBtn = document.createElement("button");
+    retryBtn.className = "ai-load-btn";
+    retryBtn.textContent = "Try Again";
+    retryBtn.addEventListener("click", submit);
+    answerBox.appendChild(retryBtn);
+  } else if (pa.status === "done") {
+    answerBox.innerHTML = `<p class="ai-answer">${escapeHtml(pa.answer)}</p>`;
+  }
+
+  return box;
+}
+
+async function submitPortfolioAsk(question, accountIds) {
+  const q = String(question || "").trim();
+  if (!q) return;
+  state.portfolioAsk = { status: "loading", question: q, answer: "", error: "" };
+  render();
+  try {
+    const data = await askAboutPortfolio(accountIds, q);
+    state.portfolioAsk = { status: "done", question: q, answer: data.answer, error: "" };
+  } catch (e) {
+    state.portfolioAsk = { status: "error", question: q, answer: "", error: e.message };
+  }
+  render();
 }
 
 function renderPriorityBox(scopeCsmId, title) {
   const box = document.createElement("div");
-  box.className = "team-priority-box";
-  box.innerHTML = `<h4>${escapeHtml(title)} <span class="ai-disclaimer">— AI-generated, may be inaccurate, verify before acting</span></h4><div class="team-priority-body"></div>`;
+  box.className = "team-priority-box ai-copilot-panel";
+  box.innerHTML = `${aiCopilotHeader(title)}<div class="team-priority-body"></div>`;
   const body = box.querySelector(".team-priority-body");
   const tp = state.teamPriority;
   const inScope = tp.csmId === (scopeCsmId || null);
@@ -870,11 +1320,63 @@ function renderPriorityBox(scopeCsmId, title) {
     body.innerHTML = `<p class="sub">Loading…</p>`;
   } else if (tp.status === "error") {
     body.innerHTML = `<p class="ai-unavailable">Unavailable (${escapeHtml(tp.error)}).</p>`;
+    const retryBtn = document.createElement("button");
+    retryBtn.className = "ai-load-btn";
+    retryBtn.textContent = scopeCsmId ? "Try Again" : "Try Again";
+    retryBtn.addEventListener("click", () => loadTeamPriority(scopeCsmId));
+    body.appendChild(retryBtn);
   } else if (tp.status === "done") {
-    const items = (tp.data.priorities || []).map(p => `
-      <li><strong>${escapeHtml(p.accountName)}</strong> — <span class="sub">${escapeHtml(p.reason)}</span></li>
-    `).join("");
-    body.innerHTML = `<ol class="priority-list">${items}</ol>`;
+    const priorities = tp.data.priorities || [];
+    const patternAlert = tp.data.patternAlert
+      ? `<p class="pattern-alert"><strong>Pattern across these accounts:</strong> ${escapeHtml(tp.data.patternAlert)}</p>`
+      : "";
+    body.innerHTML = `
+      ${patternAlert}
+      <ol class="priority-list">
+        ${priorities.map(p => `
+          <li class="priority-item">
+            <div class="priority-item-head">
+              <span class="status-pill risk-${p.riskCategory}">${RISK_LABEL[p.riskCategory] ?? p.riskCategory}</span>
+              <button class="priority-account-link" data-account-id="${p.accountId}">${escapeHtml(p.accountName)}</button>
+              <span class="sub">priority ${p.priorityScore}/100</span>
+            </div>
+            ${p.synthesis ? `<p class="sub">${escapeHtml(p.synthesis)}</p>` : ""}
+            ${p.nextBestAction ? `
+              <div class="nba-box">
+                <p class="nba-label risk-text-${p.nextBestAction.category === "growth" ? "low" : "high"}">${p.nextBestAction.category === "growth" ? "Next Best Action — Growth" : "Next Best Action — Risk Mitigation"}</p>
+                <p><strong>${escapeHtml(p.nextBestAction.action)}</strong></p>
+                <p class="sub">${escapeHtml(p.nextBestAction.rationale)}</p>
+                <div class="nba-approval" data-account-id="${p.accountId}"></div>
+              </div>
+            ` : ""}
+          </li>
+        `).join("")}
+      </ol>
+    `;
+
+    body.querySelectorAll(".priority-account-link").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.accountId;
+        const acc = state.accounts.find(a => a.accountId === id);
+        if (acc) { state.filters.csm = acc.csmId; document.getElementById("filter-csm").value = acc.csmId; }
+        state.view = "portfolio";
+        state.expanded = id;
+        render();
+        document.getElementById(`detail-${id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    });
+
+    priorities.forEach(p => {
+      if (!p.nextBestAction) return;
+      const el = body.querySelector(`.nba-approval[data-account-id="${p.accountId}"]`);
+      if (el) renderApprovalControl(el, p.accountId, p.nextBestAction);
+    });
+
+    const reloadBtn = document.createElement("button");
+    reloadBtn.className = "reload-link";
+    reloadBtn.textContent = "↻ Reload Prioritization";
+    reloadBtn.addEventListener("click", () => loadTeamPriority(scopeCsmId));
+    body.appendChild(reloadBtn);
   }
   return box;
 }
@@ -888,6 +1390,7 @@ function goToCsmPortfolio(csmId) {
 
 function renderTeam() {
   const wrap = document.createElement("div");
+  wrap.appendChild(renderViewHeader("Team", "Weekly priorities across the whole team, and per-CSM portfolio health at a glance."));
   wrap.appendChild(renderPriorityBox(null, "AI Weekly Priorities"));
 
   const grid = document.createElement("div");
@@ -904,9 +1407,17 @@ function renderTeam() {
 
     const card = document.createElement("div");
     card.className = "csm-card";
+    card.tabIndex = 0;
+    card.setAttribute("role", "button");
+    card.setAttribute("aria-label", `View portfolio for ${csm.name}`);
     card.innerHTML = `
-      <h3>${escapeHtml(csm.name)}</h3>
-      <p class="sub">${escapeHtml(csm.regionCoverage)} · ${accs.length} Accounts</p>
+      <div class="csm-card-head">
+        <span class="csm-avatar" aria-hidden="true">${escapeHtml(initialsOf(csm.name))}</span>
+        <div>
+          <h3>${escapeHtml(csm.name)}</h3>
+          <p class="sub">${escapeHtml(csm.regionCoverage)} · ${accs.length} Accounts</p>
+        </div>
+      </div>
       <div class="summary-bar">
         <div class="summary-chip risk-high">${counts.high} High</div>
         <div class="summary-chip risk-medium">${counts.medium} Medium</div>
@@ -920,8 +1431,158 @@ function renderTeam() {
       <p class="sub csm-card-link">View portfolio & AI-analyze →</p>
     `;
     card.addEventListener("click", () => goToCsmPortfolio(csm.csmId));
+    card.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); goToCsmPortfolio(csm.csmId); }
+    });
     grid.appendChild(card);
   });
+  return wrap;
+}
+
+// Sprint 04 — Trust & Governance UI: a purely local, static view (no new AI
+// call, no new API endpoint). All text here is fixed copy, not account data,
+// so it's written directly rather than through escapeHtml(). The reference
+// date is read from src/scoring.js's REFERENCE_DATE_ISO — the same constant
+// the scoring calculations themselves use — so this can never drift from it.
+function renderTrust() {
+  const wrap = document.createElement("div");
+  wrap.className = "trust-view";
+  wrap.innerHTML = `
+    <section class="trust-hero">
+      <p class="trust-eyebrow">Trust &amp; Governance</p>
+      <h2>Human-led AI, explainable by design</h2>
+      <p class="sub trust-hero-sub">How fragmented customer signals become transparent priorities and controlled actions in this demo.</p>
+      <p class="trust-refdate">Reference date for this demo: <strong>${fmtDate(REFERENCE_DATE_ISO)}</strong> — a fixed snapshot, not a live feed or a production forecast.</p>
+    </section>
+
+    <section class="trust-section">
+      <h3>How it works</h3>
+      <ol class="trust-flow">
+        <li class="trust-flow-step"><span class="trust-flow-num">1</span><span class="trust-flow-label">Customer signals</span></li>
+        <li class="trust-flow-arrow" aria-hidden="true">→</li>
+        <li class="trust-flow-step"><span class="trust-flow-num">2</span><span class="trust-flow-label">Rule-based scores</span></li>
+        <li class="trust-flow-arrow" aria-hidden="true">→</li>
+        <li class="trust-flow-step"><span class="trust-flow-num">3</span><span class="trust-flow-label">AI explanation</span></li>
+        <li class="trust-flow-arrow" aria-hidden="true">→</li>
+        <li class="trust-flow-step"><span class="trust-flow-num">4</span><span class="trust-flow-label">Human review</span></li>
+        <li class="trust-flow-arrow" aria-hidden="true">→</li>
+        <li class="trust-flow-step"><span class="trust-flow-num">5</span><span class="trust-flow-label">Logged action</span></li>
+      </ol>
+    </section>
+
+    <section class="trust-section">
+      <h3>Who does what</h3>
+      <div class="trust-cards">
+        <div class="trust-card trust-card-rules">
+          <p class="trust-card-eyebrow">Calculated by rules</p>
+          <ul>
+            <li>Health Score — 8 weighted criteria</li>
+            <li>Priority ranking</li>
+            <li>Expansion Score</li>
+            <li>Risk category (High / Medium / Low)</li>
+          </ul>
+        </div>
+        <div class="trust-card trust-card-ai">
+          <p class="trust-card-eyebrow">AI-assisted</p>
+          <ul>
+            <li>Plain-English narrative</li>
+            <li>Next Best Action suggestion</li>
+            <li>Answers to free-text questions</li>
+            <li>Portfolio pattern alerts</li>
+          </ul>
+        </div>
+        <div class="trust-card trust-card-human">
+          <p class="trust-card-eyebrow">Human-controlled</p>
+          <ul>
+            <li>Review &amp; edit before sending</li>
+            <li>Approve or cancel any action</li>
+            <li>Nothing reaches a customer unreviewed</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="trust-section">
+      <h3>Guardrails &amp; limits</h3>
+      <div class="trust-guardrail-grid">
+        <div class="trust-guardrail-item">
+          <span class="status-pill risk-high">Hard rule</span>
+          <p>High-risk accounts never receive a server-side Growth action — enforced after every AI call, not just prompted for.</p>
+        </div>
+        <div class="trust-guardrail-item">
+          <span class="status-pill risk-medium">Evidence, not probability</span>
+          <p><strong>Evidence Confidence</strong> reflects the coverage, recency, and diversity of the supporting evidence — not the probability that the AI is right.</p>
+        </div>
+        <div class="trust-guardrail-item">
+          <span class="status-pill risk-low">Human in the loop</span>
+          <p>Every customer-facing action is reviewed and can be edited by a CSM before it is sent — an AI draft is never sent unreviewed.</p>
+        </div>
+        <div class="trust-guardrail-item">
+          <span class="status-pill neutral">Logged, not silent</span>
+          <p>Approved actions are sent through an authenticated workflow and logged. A failed send is never retried automatically.</p>
+        </div>
+      </div>
+      <p class="sub trust-footnote">All accounts and customer data shown anywhere in this demo are entirely fictional. This is a snapshot at a fixed reference date, not a live or predictive system.</p>
+    </section>
+
+    <section class="trust-section">
+      <h3>EU AI Act readiness</h3>
+      <p class="sub trust-readiness-intro">Vorläufige, interne Readiness-Einschätzung für einen möglichen Pilotbetrieb — keine Rechtsberatung, keine Compliance-Zertifizierung. Details: <a href="docs/12_eu_ai_act_readiness.md">docs/12_eu_ai_act_readiness.md</a>.</p>
+      <div class="trust-readiness-grid">
+        <div class="trust-readiness-item">
+          <span class="status-pill risk-low">Umgesetzt</span>
+          <p><strong>AI-Inhalte gekennzeichnet</strong> — KI-generierte Inhalte sind in der Oberfläche durchgängig als „AI-assisted" markiert, getrennt von regelbasierten Werten.</p>
+        </div>
+        <div class="trust-readiness-item">
+          <span class="status-pill risk-low">Umgesetzt</span>
+          <p><strong>Human Review vor Aktionen</strong> — jede kundengerichtete Aktion durchläuft ein Review-Formular; nichts wird ungeprüft versendet.</p>
+        </div>
+        <div class="trust-readiness-item">
+          <span class="status-pill risk-low">Umgesetzt</span>
+          <p><strong>Nachvollziehbare regelbasierte Scores</strong> — Health-, Priority- und Expansion-Score folgen festen Kriterien, nicht der KI.</p>
+        </div>
+        <div class="trust-readiness-item">
+          <span class="status-pill risk-low">Umgesetzt</span>
+          <p><strong>Guardrails und Validierung</strong> — High-Risk-Accounts erhalten serverseitig nie eine Growth-Aktion; Eingaben werden vor dem Absenden validiert.</p>
+        </div>
+        <div class="trust-readiness-item">
+          <span class="status-pill risk-low">Umgesetzt</span>
+          <p><strong>Fiktive Demo-Daten</strong> — alle Accounts und Vorgänge in dieser Demo sind frei erfunden.</p>
+        </div>
+        <div class="trust-readiness-item">
+          <span class="status-pill risk-medium">Teilweise</span>
+          <p><strong>Action Logging</strong> — freigegebene Aktionen werden protokolliert; ein durchsuchbares Audit-Log fehlt noch.</p>
+        </div>
+        <div class="trust-readiness-item">
+          <span class="status-pill neutral">Pilot-Gate</span>
+          <p><strong>AI-Literacy / Betreiberrollen</strong> — vor einem Pilotbetrieb zu dokumentieren.</p>
+        </div>
+        <div class="trust-readiness-item">
+          <span class="status-pill neutral">Pilot-Gate</span>
+          <p><strong>Monitoring, Incident- und Abschaltprozess</strong> — vor einem Pilotbetrieb zu ergänzen.</p>
+        </div>
+        <div class="trust-readiness-item">
+          <span class="status-pill neutral">Pilot-Gate</span>
+          <p><strong>DSGVO-/DPIA-Prüfung</strong> — bei Einsatz mit echten Kundendaten erforderlich.</p>
+        </div>
+      </div>
+      <p class="sub trust-footnote">Vorläufige Einordnung: wahrscheinlich nicht-hochriskanter interner B2B-Entscheidungsassistent, vorbehaltlich einer Prüfung des Einsatzkontexts. Offizielle Quelle: <a href="https://eur-lex.europa.eu/eli/reg/2024/1689/oj">EU AI Act, Verordnung (EU) 2024/1689</a> (Art. 4, 26, 50).</p>
+    </section>
+
+    <section class="trust-section">
+      <h3>Roadmap</h3>
+      <div class="trust-roadmap-grid">
+        <div class="trust-roadmap-item">
+          <span class="trust-roadmap-badge trust-roadmap-next">Next — not yet active</span>
+          <p>EBR / QBR Prep</p>
+        </div>
+        <div class="trust-roadmap-item">
+          <span class="trust-roadmap-badge trust-roadmap-later">Later — not yet active</span>
+          <p>Additional data integrations &amp; read-only connectors</p>
+        </div>
+      </div>
+    </section>
+  `;
   return wrap;
 }
 

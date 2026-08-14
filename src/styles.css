@@ -23,64 +23,256 @@
      need touching one-by-one; still teal under the hood. */
   --blue: var(--teal);
   --blue-bg: var(--teal-bg);
+
+  /* Sprint 05 — shared design tokens. A small, consolidated system (spacing,
+     radius, shadow, focus, surfaces) instead of one-off values per component,
+     so the six views read as one product rather than separately-built pages. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.07);
+  --shadow-md: 0 6px 18px rgba(15, 23, 42, 0.10);
+  --focus-ring: 0 0 0 3px rgba(20, 184, 166, 0.38);
+  --surface-muted: #f8fafc;
+  --shell-width: 1300px;
+  --shell-padding: 28px;
+
+  /* Sprint 05B — Executive redesign: a dark navy sidebar scale (deeper than
+     --navy, which stays the brand accent used on light surfaces) and a warm,
+     slightly-tinted canvas instead of flat gray, so the light workspace has
+     some depth without turning into more flat white cards. */
+  --sidebar-width: 240px;
+  --ink-950: #0b1f33;
+  --ink-900: #102a44;
+  --ink-800: #16385a;
+  --ink-border: rgba(255, 255, 255, 0.10);
+  --ink-text: #e7eef5;
+  --ink-text-muted: #9db1c7;
+  --canvas: #f6f4ef;
+  --canvas-alt: #eef1ee;
 }
 * { box-sizing: border-box; }
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-  background: var(--bg);
+  background: var(--canvas);
   color: var(--text);
   font-size: 14px;
 }
-header { padding: 20px 28px 8px; }
-header h1 { margin: 0 0 4px; font-size: 20px; color: var(--navy); }
-header p { margin: 0; color: var(--muted); font-size: 13px; max-width: 60ch; }
-.brand { display: flex; align-items: center; gap: 14px; }
-.brand-icon { width: 48px; height: 48px; flex-shrink: 0; }
+.app-shell { display: flex; min-height: 100vh; align-items: stretch; }
 
-.disclaimer {
-  margin: 12px 28px 0;
-  padding: 8px 14px;
-  background: #fef9e7;
-  border: 1px solid #fde68a;
-  border-radius: 6px;
-  color: #92400e;
-  font-size: 12px;
+/* Sprint 05 — one visible, consistent focus treatment for every interactive
+   element, instead of the browser default (or the mismatched one-off ring
+   already present on .review-field). Mouse/touch clicks don't show it —
+   :focus-visible already limits that to keyboard/programmatic focus. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
 }
 
-nav.tabs {
+/* Sprint 05 — no decorative animation is used anywhere in this app (the only
+   transitions are functional hover/focus cues), but this is the standard,
+   safe way to guarantee prefers-reduced-motion is respected regardless of
+   what's added later. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+/* Sprint 05B — Executive product shell: a fixed dark-navy sidebar (brand +
+   navigation + demo status) beside a warm light workspace (topbar + filter
+   toolbar + content). Replaces the Sprint 05 top-header/top-nav layout. */
+.sidebar {
+  flex: 0 0 var(--sidebar-width);
+  width: var(--sidebar-width);
   display: flex;
-  gap: 4px;
-  margin: 16px 28px 0;
-  border-bottom: 1px solid var(--border);
+  flex-direction: column;
+  background: linear-gradient(180deg, var(--ink-900) 0%, var(--ink-950) 100%);
+  color: var(--ink-text);
+  padding: var(--space-5) var(--space-3);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
 }
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-2) var(--space-4);
+}
+/* Sprint 06B — the square assets/logo-icon.png shown in full (object-fit:
+   contain, not the old cover-cropped logo-full.jpg) on a deliberately white/
+   near-white tile, since the source PNG's own light backing is what keeps
+   the mark's dark-navy strokes legible against the navy sidebar — no alpha
+   editing of the asset itself, just CSS padding/background around it. */
+.sidebar-logo {
+  width: 56px;
+  height: 56px;
+  padding: 6px;
+  box-sizing: border-box;
+  object-fit: contain;
+  background: #fbfdfd;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(94, 234, 212, 0.4);
+  box-shadow: 0 0 0 1px rgba(20, 184, 166, 0.1), 0 2px 6px rgba(11, 31, 51, 0.35);
+  flex-shrink: 0;
+}
+.sidebar-product-name {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #ffffff;
+  letter-spacing: 0.01em;
+}
+
+nav.tabs { display: flex; flex-direction: column; gap: 2px; flex: 1; }
 nav.tabs button {
-  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px var(--space-3);
+  min-height: 40px;
   border: none;
+  border-radius: var(--radius-sm);
   background: none;
   cursor: pointer;
-  font-size: 14px;
-  color: var(--muted);
-  border-bottom: 2px solid transparent;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-text-muted);
+  text-align: left;
 }
-nav.tabs button.active { color: var(--blue); border-bottom-color: var(--blue); font-weight: 600; }
+nav.tabs button .nav-icon { width: 18px; height: 18px; flex-shrink: 0; color: currentColor; }
+nav.tabs button:hover { background: rgba(255, 255, 255, 0.06); color: var(--ink-text); }
+nav.tabs button.active {
+  background: rgba(20, 184, 166, 0.16);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--teal);
+}
+nav.tabs button:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(94, 234, 212, 0.5); }
+
+.sidebar-footer {
+  border-top: 1px solid var(--ink-border);
+  padding: var(--space-4) var(--space-2) 0;
+  margin-top: var(--space-4);
+}
+.sidebar-tagline { margin: 0 0 10px; font-size: 11.5px; line-height: 1.5; color: var(--ink-text-muted); }
+.sidebar-disclaimer {
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--ink-text-muted);
+  padding-top: 10px;
+  border-top: 1px solid var(--ink-border);
+}
+
+.main-column { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+/* Compact status strip — replaces the old wide warning-styled disclaimer.
+   Informational tone only, not an alert. */
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: center;
+  padding: 10px var(--shell-padding);
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+}
+.topbar-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--navy);
+  background: var(--navy-bg);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+.topbar-status::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--teal);
+  flex-shrink: 0;
+}
+.topbar-status-muted { color: var(--muted); background: var(--surface-muted); font-weight: 500; }
+.topbar-status-muted::before { background: var(--muted); }
 
 #filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 16px;
-  margin: 14px 28px 0;
+  gap: 10px var(--space-4);
+  padding: var(--space-3) var(--shell-padding);
+  margin: 0;
   align-items: center;
   font-size: 13px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
 }
+#filters label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.02em; }
 #filters select {
-  padding: 5px 8px;
-  border-radius: 6px;
+  padding: 7px 8px;
+  min-height: 36px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--card);
+  font-size: 13px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text);
 }
 
-main { padding: 16px 28px 40px; max-width: 1300px; margin: 0 auto; }
+main { width: 100%; padding: var(--space-5) var(--shell-padding) 40px; max-width: var(--shell-width); margin: 0 auto; box-sizing: border-box; }
+
+/* Sprint 05 — consistent per-view header (title + short description), used
+   at the top of Portfolio/Matrix/Map/Team/Feedback so every view opens the
+   same way. Trust keeps its own Sprint 04 hero instead (already serves the
+   same purpose plus more, so this isn't duplicated there). */
+.view-header { margin-bottom: var(--space-4); }
+.view-header h2 { margin: 0 0 4px; font-size: 21px; font-weight: 700; letter-spacing: -0.01em; color: var(--navy); }
+.view-header p { margin: 0; color: var(--muted); font-size: 13px; max-width: 72ch; }
+
+/* Sprint 05B — Executive KPI strip: four deterministic numbers (see
+   renderPortfolioKpis in src/app.js) so risk and business value are visible
+   before any AI content. Distinct tones (not full red/orange/green fills —
+   that's reserved for row-level risk signals) via a left accent bar only. */
+.kpi-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-3); margin-bottom: var(--space-5); }
+.kpi-tile {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 14px 16px;
+  border-left: 3px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.kpi-tile-high { border-left-color: var(--red); }
+.kpi-tile-medium { border-left-color: var(--orange); }
+.kpi-tile-neutral { border-left-color: var(--navy); }
+.kpi-value { font-size: 24px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; line-height: 1.1; }
+.kpi-label { font-size: 11.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
 
 .summary-bar { display: flex; gap: 8px; margin-bottom: 14px; }
 .summary-chip {
@@ -94,28 +286,69 @@ main { padding: 16px 28px 40px; max-width: 1300px; margin: 0 auto; }
 .summary-chip.risk-low { background: var(--green-bg); color: var(--green); }
 .summary-chip.neutral { background: #f1f5f9; color: var(--muted); }
 
+/* Sprint 05 — Part A.3/A.5: the table itself keeps its natural (wide) width
+   and scrolls INSIDE this wrapper on narrow screens, instead of forcing the
+   whole document to scroll horizontally. The inset shadow on both edges is a
+   static (not scroll-position-dependent, so it can't render incorrectly)
+   visual cue that the region is scrollable and more columns exist; the text
+   hint below the table (shown under 1024px, where the table's min-width
+   reliably exceeds the viewport) says so explicitly for anyone who'd miss it. */
+.table-scroll {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm), inset 8px 0 8px -8px rgba(15,23,42,0.15), inset -8px 0 8px -8px rgba(15,23,42,0.15);
+}
 table.portfolio-table {
   width: 100%;
+  min-width: 880px;
   border-collapse: collapse;
   background: var(--card);
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  border-radius: var(--radius-md);
 }
 table.portfolio-table th, table.portfolio-table td {
   text-align: left;
-  padding: 9px 12px;
+  padding: 11px 12px;
   border-bottom: 1px solid var(--border);
   font-size: 13px;
+  white-space: nowrap;
 }
-table.portfolio-table th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; }
+/* Not position:sticky — verified it does not actually stick during page
+   scroll here: .table-scroll needs overflow-x:auto for the horizontal-only
+   scroll containment above, and per the CSS overflow spec that also forces
+   overflow-y to compute as "auto", which makes .table-scroll (not the page)
+   the sticky containing block. Since .table-scroll itself never scrolls
+   vertically (it just flows with the page), the header would never visually
+   stick. Shipping that as "sticky" would be misleading, so this is a clearly
+   distinct, strongly-weighted static header row instead. */
+table.portfolio-table thead th {
+  background: var(--card);
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 0 var(--border);
+}
 table.portfolio-table th.sortable { cursor: pointer; user-select: none; }
 table.portfolio-table th.sortable:hover { color: var(--text); }
+table.portfolio-table th.sortable:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: var(--radius-sm); }
 table.portfolio-table tbody tr:not(.detail-row) { cursor: pointer; }
-table.portfolio-table tbody tr:not(.detail-row):hover { background: #fafafa; }
-.account-cell { font-weight: 600; }
+table.portfolio-table tbody tr:not(.detail-row):hover { background: var(--teal-bg); }
+table.portfolio-table tbody tr.row-expanded:not(.detail-row) { background: var(--teal-bg); }
+table.portfolio-table td.account-cell, table.portfolio-table .detail-row td { white-space: normal; }
+.account-cell { font-weight: 600; color: var(--navy); }
 .sub { color: var(--muted); font-size: 11px; margin-top: 2px; }
 .score-num { font-weight: 700; }
+.table-scroll-hint {
+  display: none;
+  font-size: 11px;
+  color: var(--muted);
+  margin: 6px 2px 14px;
+}
+@media (max-width: 1024px) {
+  .table-scroll-hint { display: block; }
+}
 
 .status-pill {
   font-size: 10px;
@@ -128,6 +361,7 @@ table.portfolio-table tbody tr:not(.detail-row):hover { background: #fafafa; }
 .status-pill.risk-high { background: var(--red-bg); color: var(--red); }
 .status-pill.risk-medium { background: var(--orange-bg); color: var(--orange); }
 .status-pill.risk-low { background: var(--green-bg); color: var(--green); }
+.status-pill.neutral { background: #f1f5f9; color: var(--muted); }
 
 .risk-text-high { color: var(--red); }
 .risk-text-medium { color: var(--orange); }
@@ -146,7 +380,8 @@ table.portfolio-table tbody tr:not(.detail-row):hover { background: #fafafa; }
 .matrix-wrap {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
   padding: 12px;
 }
 .matrix-svg { width: 100%; height: auto; display: block; }
@@ -178,10 +413,10 @@ table.portfolio-table tbody tr:not(.detail-row):hover { background: #fafafa; }
   pointer-events: none;
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 9px 12px;
   font-size: 12px;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.18);
+  box-shadow: var(--shadow-md);
   z-index: 100;
   max-width: 240px;
   display: none;
@@ -193,18 +428,19 @@ table.portfolio-table tbody tr:not(.detail-row):hover { background: #fafafa; }
 .leaflet-map {
   height: 480px;
   width: 100%;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: var(--card);
+  box-shadow: var(--shadow-sm);
 }
 /* Leaflet's own tooltip chrome, restyled to match .chart-tooltip */
 .leaflet-chart-tooltip {
   background: var(--card) !important;
   border: 1px solid var(--border) !important;
-  border-radius: 6px !important;
+  border-radius: var(--radius-sm) !important;
   padding: 9px 12px !important;
   font-size: 12px !important;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.18) !important;
+  box-shadow: var(--shadow-md) !important;
   color: var(--text);
 }
 .leaflet-chart-tooltip .tt-name { font-weight: 700; font-size: 13px; margin-bottom: 5px; }
@@ -214,14 +450,17 @@ table.portfolio-table tbody tr:not(.detail-row):hover { background: #fafafa; }
 
 .matrix-toggle { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
 .matrix-toggle-btn {
-  padding: 7px 14px;
-  border-radius: 6px;
+  padding: 8px 16px;
+  min-height: 36px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   background: var(--card);
   color: var(--muted);
-  font-size: 12px;
+  font-size: 12.5px;
+  font-weight: 600;
   cursor: pointer;
 }
+.matrix-toggle-btn:hover { color: var(--text); }
 .matrix-toggle-btn.active { border-color: var(--blue); background: var(--blue-bg); color: var(--blue); font-weight: 600; }
 
 .trend-up { color: var(--green); font-weight: 600; }
@@ -232,15 +471,19 @@ table.portfolio-table tbody tr:not(.detail-row):hover { background: #fafafa; }
   margin-top: 14px;
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
   padding: 16px 18px;
 }
 .matrix-detail h4 { margin: 0 0 4px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
 .matrix-detail-close {
-  position: absolute; top: 12px; right: 14px;
-  border: none; background: none; font-size: 20px; line-height: 1;
+  position: absolute; top: 6px; right: 8px;
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: var(--radius-sm); background: none; font-size: 20px; line-height: 1;
   color: var(--muted); cursor: pointer;
 }
+.matrix-detail-close:hover { background: var(--surface-muted); color: var(--text); }
 .matrix-detail-stats { display: flex; gap: 24px; margin: 12px 0; flex-wrap: wrap; }
 .matrix-detail-stats .stat-num { display: block; font-size: 20px; font-weight: 700; }
 .matrix-detail-stats .stat-label { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
@@ -250,34 +493,66 @@ tr.risk-row-high { border-left: 3px solid var(--red); }
 tr.risk-row-medium { border-left: 3px solid var(--orange); }
 tr.risk-row-low { border-left: 3px solid var(--green); }
 
-.detail-row td { padding: 0; background: #fbfbfc; }
+/* Sprint 05 — Part A.3: Score Breakdown and Contract/Relationship/Notes each
+   become their own card on the section background, instead of two plain
+   columns — a clearer, more scannable grouping of the same information. */
+.detail-row td { padding: 0; background: var(--surface-muted); }
 .account-detail { padding: 18px 20px; }
-.detail-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 24px; }
+.detail-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: var(--space-5); }
+/* The expanded detail row lives inside the same wide, horizontally-scrolling
+   table as the portfolio rows (table.portfolio-table has a min-width so the
+   TABLE can scroll internally rather than widen the page) — its <td colspan>
+   inherits that width regardless of viewport. Constrain the detail panel
+   itself to the actually-visible content width so it reads at the table's
+   natural (left) scroll position instead of requiring horizontal scrolling
+   just to read it. Two variants because the Sprint 05B sidebar changes what
+   "visible content width" means: docked (desktop/laptop, sidebar takes
+   --sidebar-width) vs collapsed to a horizontal bar (mobile, full viewport). */
+@media (min-width: 901px) {
+  .account-detail { max-width: calc(100vw - var(--sidebar-width) - 2 * var(--shell-padding) - 20px); }
+}
+@media (max-width: 900px) {
+  .account-detail { max-width: calc(100vw - 2 * var(--shell-padding) - 20px); }
+}
+@media (max-width: 700px) {
+  .detail-grid { grid-template-columns: 1fr; }
+}
+.detail-grid > div {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
 .detail-grid h4 { margin: 14px 0 6px; font-size: 12px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.03em; }
 .detail-grid h4:first-child { margin-top: 0; }
 .detail-grid ul { margin: 4px 0; padding-left: 18px; }
 
 table.breakdown-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 table.breakdown-table td { padding: 5px 6px; border-bottom: 1px solid var(--border); }
-.bar-wrap { width: 100%; background: #f0f0f0; border-radius: 4px; height: 7px; overflow: hidden; }
+.bar-wrap { width: 100%; background: var(--surface-muted); border-radius: 4px; height: 7px; overflow: hidden; }
 .bar-fill { height: 100%; background: var(--red); }
 
-.artifact { padding: 8px 10px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px; }
+.artifact { padding: 8px 10px; background: var(--surface-muted); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 8px; }
 .artifact-type { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--blue); }
 .artifact p { margin: 4px 0 0; font-size: 13px; font-style: italic; }
 
+/* AI Insights gets the same card treatment as its own distinct block — it's
+   a different kind of content (AI-assisted, see the Trust view) from the
+   deterministic score/contract cards above it. */
 .ai-section {
-  margin-top: 18px;
-  padding-top: 14px;
-  border-top: 1px dashed var(--border);
+  margin-top: var(--space-5);
+  padding: var(--space-4);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
 }
 .ai-disclaimer { font-size: 10px; font-weight: 400; color: var(--muted); text-transform: none; letter-spacing: 0; }
-.ai-insight-body { font-size: 13px; margin: 8px 0; }
+.ai-insight-body { font-size: 13px; line-height: 1.55; margin: 8px 0; }
 .ai-insight-body ul { margin: 6px 0; padding-left: 18px; }
 .nba-box {
   margin-top: 10px;
   padding: 10px 12px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--card);
   border: 1px solid var(--border);
 }
@@ -285,70 +560,265 @@ table.breakdown-table td { padding: 5px 6px; border-bottom: 1px solid var(--bord
 .nba-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 4px; }
 .nba-approval { margin-top: 8px; }
 .approve-btn { border-color: var(--teal); background: var(--teal-bg); color: var(--teal); }
+.approve-btn:hover { opacity: 0.85; }
 .approval-confirm { font-size: 12px; color: var(--teal); font-weight: 600; margin: 0; }
+.review-required { margin: 0 0 6px; color: var(--muted); font-size: 12px; }
+.review-form { margin-top: 12px; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--card); }
+/* Sprint 07 — Part A: clear head (eyebrow + title + live category badge),
+   then a visually distinct read-only "AI suggestion" block, then the
+   editable "Final action to send" section with its own labeled fields —
+   the three-level hierarchy the reviewed review UI is built on. */
+.review-head { margin-bottom: 14px; }
+.review-head-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.review-title { margin: 2px 0 0; font-size: 15px; font-weight: 700; color: var(--text); }
+.review-category-badge { font-size: 11px; padding: 4px 12px; flex-shrink: 0; }
+.review-section-label { margin: 20px 0 8px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
+.review-section-label:first-of-type { margin-top: 0; }
+.review-hint-inline { font-weight: 400; text-transform: none; letter-spacing: normal; color: var(--muted); font-size: 11.5px; }
+.review-origin { padding: 10px 12px; border-radius: var(--radius-sm); background: var(--surface-muted); line-height: 1.5; }
+.review-original { margin: 0; }
+.review-field {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+.review-field:last-of-type { margin-bottom: 0; }
+.review-field select, .review-field textarea {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin-top: 4px;
+  padding: 8px 9px;
+  min-height: 36px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  font-family: inherit;
+  resize: vertical;
+  box-sizing: border-box;
+}
+.review-charcount { display: block; text-align: right; margin-top: 2px; font-size: 10px; font-weight: 400; text-transform: none; letter-spacing: normal; color: var(--muted); }
+.review-error { color: var(--red); font-size: 12px; margin: 4px 0; }
+.review-actions { display: flex; gap: 10px; margin-top: 18px; }
+.review-cancel-btn {
+  padding: 8px 16px;
+  min-height: 36px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.review-cancel-btn:hover { color: var(--text); }
+.review-confirm-btn {
+  padding: 8px 16px;
+  min-height: 36px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--teal);
+  background: var(--teal-bg);
+  color: var(--teal);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.review-confirm-btn:hover { opacity: 0.85; }
+.review-cancel-btn:disabled, .review-confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .milestone-box {
   margin: 8px 0 12px;
   padding: 8px 12px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--teal-bg);
   border: 1px solid var(--teal);
 }
 .milestone-box p { margin: 3px 0; font-size: 13px; }
 .milestone-label { font-size: 11px; font-weight: 700; color: var(--teal); text-transform: uppercase; letter-spacing: 0.03em; }
-.score-trend { display: flex; align-items: center; gap: 10px; margin: 6px 0 12px; }
-.score-sparkline { flex-shrink: 0; }
+/* Sprint 06 — stacked instead of side-by-side: the sparkline now carries a
+   real x-axis and needs its own full row width at each width tier (see
+   renderScoreTrend's `tier` in app.js) rather than sharing a row with the
+   info text and getting squeezed by it. */
+.score-trend { display: flex; flex-direction: column; gap: 6px; margin: 6px 0 12px; }
+.score-sparkline { flex-shrink: 0; max-width: 100%; height: auto; }
+.score-trend-info { display: flex; flex-direction: column; gap: 4px; }
 .score-trend p.sub { margin: 0; }
+.score-trend-pct { font-size: 18px; font-weight: 700; }
+@media (min-width: 901px) {
+  .score-trend { flex-direction: row; align-items: center; gap: 14px; }
+  .score-trend-info { flex: 1; min-width: 150px; }
+}
+.score-trend-pct .sub { font-size: 11px; font-weight: 400; }
 .ai-load-btn, .team-priority-box .ai-load-btn {
-  padding: 7px 14px;
-  border-radius: 6px;
+  padding: 8px 16px;
+  min-height: 36px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--blue);
   background: var(--blue-bg);
   color: var(--blue);
-  font-size: 12px;
+  font-size: 12.5px;
+  font-weight: 600;
   cursor: pointer;
 }
 .ai-load-btn:hover { opacity: 0.85; }
+/* Text action: lowest visual weight, used for optional/secondary follow-ups
+   like "reload" next to a result that already loaded successfully. */
+.reload-link {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 2px 0;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.reload-link:hover { color: var(--blue); }
 .ai-unavailable { color: var(--muted); font-size: 12px; font-style: italic; }
 .ai-ask { display: flex; gap: 8px; margin-top: 10px; }
-.ai-ask-input {
+.ai-ask-input, .portfolio-ask-input {
   flex: 1;
-  padding: 6px 10px;
-  border-radius: 6px;
+  min-width: 0;
+  padding: 8px 10px;
+  min-height: 36px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border);
   font-size: 13px;
 }
 .ai-ask-btn {
-  padding: 6px 14px;
-  border-radius: 6px;
+  flex-shrink: 0;
+  padding: 8px 16px;
+  min-height: 36px;
+  border-radius: var(--radius-sm);
   border: none;
   background: var(--blue);
   color: white;
-  font-size: 12px;
+  font-size: 12.5px;
+  font-weight: 600;
   cursor: pointer;
 }
-.ai-answer { margin-top: 8px; font-size: 13px; background: var(--blue-bg); padding: 8px 10px; border-radius: 6px; }
+.ai-ask-btn:hover { opacity: 0.85; }
+.ai-answer { margin-top: 8px; font-size: 13.5px; line-height: 1.65; background: var(--blue-bg); padding: 14px 16px; border-radius: var(--radius-sm); }
 
 .team-priority-box {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
   padding: 16px 18px;
   margin-bottom: 16px;
 }
-.team-priority-box h4 { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.03em; }
-.priority-list { margin: 0; padding-left: 20px; font-size: 13px; }
-.priority-list li { margin-bottom: 6px; }
+.team-priority-box h4 { margin: 0; font-size: 13px; text-transform: none; color: var(--text); letter-spacing: normal; font-weight: 700; }
+
+/* Sprint 05B — Part 3: AI Copilot identity. A restrained tint + left accent
+   (not a loud gradient) so these panels read as a distinct kind of surface —
+   "AI proposes here" — without looking playful or like a plain form box. */
+.ai-copilot-panel {
+  background: linear-gradient(180deg, var(--teal-bg) 0%, var(--card) 140px);
+  border: 1px solid #bfeee7;
+  border-left: 3px solid var(--teal);
+}
+.ai-copilot-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+.ai-copilot-icon { width: 20px; height: 20px; flex-shrink: 0; color: var(--teal); margin-top: 2px; }
+.ai-copilot-eyebrow {
+  margin: 0 0 2px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--teal);
+}
+
+/* PO review, round 2: the AI Copilot now uses the full available width of
+   the workspace at every breakpoint — it no longer shares a row with the
+   Attention Queue (round 1's 2fr/1fr layout). The Attention Queue stays,
+   as a compact area directly below the full-width Copilot panel. */
+.portfolio-ai-row { display: flex; flex-direction: column; gap: var(--space-4); }
+.attention-queue {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--navy);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 16px 18px;
+  margin-bottom: 16px;
+}
+.attention-queue h4 { margin: 0 0 2px; font-size: 13px; font-weight: 700; color: var(--text); }
+.attention-list { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.attention-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.attention-item:hover { background: var(--surface-muted); }
+.attention-item-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.attention-name { font-size: 13px; font-weight: 600; color: var(--navy); }
+.attention-meta { font-size: 11px; color: var(--muted); }
+.priority-list { margin: 0; padding: 0; list-style: none; font-size: 13px; }
+.priority-item {
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+.priority-item:first-child { border-top: none; padding-top: 0; }
+.priority-item-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.priority-account-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--blue);
+  cursor: pointer;
+  text-decoration: underline;
+}
+.priority-account-link:hover { opacity: 0.8; }
+.pattern-alert {
+  font-size: 12px;
+  background: var(--orange-bg);
+  color: var(--orange);
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  margin: 0 0 12px;
+}
 
 .team-view { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
 .csm-card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
   padding: 16px 18px;
   cursor: pointer;
   transition: box-shadow .15s, border-color .15s;
 }
-.csm-card:hover { border-color: var(--teal); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.csm-card:hover, .csm-card:focus-visible { border-color: var(--teal); box-shadow: var(--shadow-md); }
+.csm-card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+.csm-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--navy-bg);
+  color: var(--navy);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
 .csm-card h3 { margin: 0 0 2px; font-size: 15px; }
 .csm-stats { display: flex; gap: 16px; margin-top: 12px; }
 .csm-stats > div { flex: 1; }
@@ -356,4 +826,205 @@ table.breakdown-table td { padding: 5px 6px; border-bottom: 1px solid var(--bord
 .stat-label { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
 .csm-card-link { color: var(--teal); font-weight: 600; margin: 10px 0 0; }
 
+/* ---- Sprint 04 — Trust & Governance view ---- */
+.trust-view { display: flex; flex-direction: column; gap: 28px; }
+.trust-section h3 {
+  margin: 0 0 14px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+}
+
+.trust-hero {
+  background: var(--navy-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px 28px;
+}
+.trust-eyebrow {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--teal);
+}
+.trust-hero h2 { margin: 0 0 8px; font-size: 22px; color: var(--navy); }
+.trust-hero-sub { font-size: 13px; max-width: 62ch; margin: 0 0 12px; }
+.trust-refdate { font-size: 12px; color: var(--text); margin: 0; }
+.trust-refdate strong { color: var(--navy); }
+
+.trust-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.trust-flow-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 14px;
+}
+.trust-flow-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--teal);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.trust-flow-label { font-size: 13px; font-weight: 600; color: var(--text); }
+.trust-flow-arrow { color: var(--muted); font-size: 15px; }
+
+.trust-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.trust-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 16px 18px;
+}
+.trust-card-rules { border-top-color: var(--navy); }
+.trust-card-ai { border-top-color: var(--teal); }
+.trust-card-human { border-top-color: var(--green); }
+.trust-card-eyebrow {
+  margin: 0 0 10px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+}
+.trust-card ul { margin: 0; padding-left: 18px; font-size: 13px; }
+.trust-card li { margin: 5px 0; }
+
+.trust-guardrail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.trust-guardrail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 14px 16px;
+}
+.trust-guardrail-item .status-pill { align-self: flex-start; }
+.trust-guardrail-item p { margin: 0; font-size: 13px; }
+.trust-footnote { margin: 14px 2px 0; }
+
+.trust-roadmap-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.trust-roadmap-item {
+  background: var(--card);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+.trust-roadmap-item p { margin: 8px 0 0; font-size: 13px; font-weight: 600; color: var(--text); }
+.trust-roadmap-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+.trust-roadmap-next { background: var(--orange-bg); color: var(--orange); }
+.trust-roadmap-later { background: #f1f5f9; color: var(--muted); }
+
+.trust-readiness-intro { margin: 0 0 14px; font-size: 13px; }
+.trust-readiness-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.trust-readiness-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 14px 16px;
+}
+.trust-readiness-item .status-pill { align-self: flex-start; }
+.trust-readiness-item p { margin: 0; font-size: 13px; }
+
+@media (max-width: 640px) {
+  .trust-cards { grid-template-columns: 1fr; }
+  .trust-guardrail-grid { grid-template-columns: 1fr; }
+  .trust-roadmap-grid { grid-template-columns: 1fr; }
+  .trust-readiness-grid { grid-template-columns: 1fr; }
+  .trust-flow { flex-direction: column; align-items: stretch; }
+  .trust-flow-arrow { display: none; }
+}
+
 footer { text-align: center; color: var(--muted); font-size: 11px; padding: 20px; }
+
+/* Sprint 05B — Executive shell, mobile: the fixed dark sidebar becomes a
+   compact horizontal navy bar (brand row + wrapping nav row) instead of
+   consuming vertical space as a full-height rail. The demo/snapshot status
+   already shown in the topbar below covers the same trust messaging, so the
+   sidebar's own tagline/disclaimer is dropped here rather than duplicated. */
+@media (max-width: 900px) {
+  .app-shell { flex-direction: column; min-height: 0; }
+  .sidebar {
+    /* Co-PO review, round 1 — Point 1: .app-shell is now column-direction,
+       so the desktop rule's flex-basis (var(--sidebar-width), i.e. 240px)
+       applies to the sidebar's HEIGHT here, not its width — pinning it to a
+       fixed 240px-tall bar regardless of actual content and leaving a large
+       empty navy area under the wrapped nav. Resetting flex-basis to auto is
+       what actually lets height:auto (below) take effect. */
+    flex: none;
+    position: static;
+    width: 100%;
+    height: auto;
+    flex-direction: column;
+    padding: var(--space-2) var(--space-3);
+  }
+  .sidebar-brand { padding: 4px var(--space-1) var(--space-2); }
+  /* Sprint 06B — mobile keeps the same white-tile treatment, just smaller
+     (34-40px per the sprint's mobile sizing), so the nav stays compact and
+     the round-1 mobile height fix (no empty navy area) doesn't regress. */
+  .sidebar-logo { width: 36px; height: 36px; padding: 4px; border-radius: var(--radius-sm); }
+  .sidebar-product-name { font-size: 12.5px; }
+  nav.tabs { flex-direction: row; flex-wrap: wrap; gap: 4px; flex: 0 0 auto; }
+  nav.tabs button { padding: 9px 12px; min-height: 40px; font-size: 12px; }
+  .sidebar-footer { display: none; }
+
+  .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 480px) {
+  /* Co-PO review, round 1 — Point 2: stay a 2x2 grid down to 390px (the
+     verified breakpoint) instead of collapsing to a single tall column —
+     shrink the value text instead so long values like "$1,764,000" still
+     read comfortably without being cut off. */
+  .kpi-value { font-size: 18.5px; overflow-wrap: break-word; }
+  .topbar { padding: 10px var(--space-4); }
+  #filters { padding: var(--space-3) var(--space-4); }
+  main { padding: var(--space-4) var(--space-4) 32px; }
+
+  /* PO review, round 2: the Ask input and button stack vertically at mobile
+     width instead of squeezing into one row, so both keep a full-width,
+     comfortable touch target. */
+  .ai-ask { flex-direction: column; align-items: stretch; }
+  .ai-ask-btn { width: 100%; }
+
+  /* Sprint 07 — Part A: Cancel/Confirm stack full-width at mobile instead of
+     squeezing into one row, matching the Ask-row pattern above. */
+  .review-actions { flex-direction: column; }
+  .review-cancel-btn, .review-confirm-btn { width: 100%; }
+}

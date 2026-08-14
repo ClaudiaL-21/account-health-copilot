@@ -8,6 +8,7 @@
     "dev:static": "npx --yes serve . -l 5173",
     "dev:local": "node dev-server.js",
     "dev": "npx --yes vercel dev",
-    "enrich-data": "node scripts/enrich-history.js"
+    "enrich-data": "node scripts/enrich-history.js",
+    "test": "node --test"
   }
 }

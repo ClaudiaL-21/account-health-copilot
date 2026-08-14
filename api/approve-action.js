@@ -11,6 +11,8 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { applyGate } from "./_security.js";
+import { computeHealthScore } from "../src/scoring.js";
+import { callN8nWebhook, hasWebhookSecret, resolveTimeoutMs, DEFAULT_APPROVAL_TIMEOUT_MS } from "./_n8n.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA = JSON.parse(readFileSync(join(__dirname, "..", "data", "accounts.json"), "utf-8"));
@@ -18,26 +20,58 @@ const ACCOUNTS = DATA.accounts;
 const CSMS = DATA.csms;
 
 const N8N_APPROVAL_WEBHOOK_URL = process.env.N8N_APPROVAL_WEBHOOK_URL;
+const VALID_CATEGORIES = ["risk_mitigation", "growth"];
+// Sprint 03 — Demo Hardening: short on purpose. This endpoint has a real
+// side effect (Sheet row + internal email) and is never auto-retried, so a
+// hung request should fail fast rather than leave the CSM staring at "Sending…".
+const APPROVAL_TIMEOUT_MS = resolveTimeoutMs(process.env.N8N_APPROVAL_TIMEOUT_MS, DEFAULT_APPROVAL_TIMEOUT_MS);
 
+// Sprint 02 — Human Review: this endpoint is the final handoff after a CSM
+// has reviewed/edited the AI suggestion in the UI. It must not trust the
+// client for anything decision-relevant — re-validates shape/length and
+// re-derives the Health Score itself to re-apply the Sprint 01 expansion
+// guardrail (a client could otherwise force "growth" through by editing the
+// category field directly, bypassing the UI's own guardrailed suggestion).
 export default async function handler(req, res) {
   if (!applyGate(req, res)) return;
 
   const { accountId, action, category, rationale } = req.body || {};
-  if (!accountId || !action) {
-    return res.status(400).json({ error: "Missing accountId or action" });
-  }
 
   const account = ACCOUNTS.find(a => a.accountId === accountId);
   if (!account) return res.status(404).json({ error: "Unknown accountId" });
+
+  const trimmedAction = String(action ?? "").trim();
+  if (!trimmedAction) {
+    return res.status(400).json({ error: "Action cannot be empty" });
+  }
+  if (trimmedAction.length > 500) {
+    return res.status(400).json({ error: "Action must be 500 characters or fewer" });
+  }
+
+  const trimmedRationale = String(rationale ?? "").trim();
+  if (trimmedRationale.length > 500) {
+    return res.status(400).json({ error: "Rationale must be 500 characters or fewer" });
+  }
+
+  if (!VALID_CATEGORIES.includes(category)) {
+    return res.status(400).json({ error: `Category must be one of: ${VALID_CATEGORIES.join(", ")}` });
+  }
+
+  const health = computeHealthScore(account);
+  if (health.riskCategory === "high" && category === "growth") {
+    return res.status(400).json({ error: "This account is high risk; a growth action cannot be sent for it." });
+  }
+
   const csm = CSMS.find(c => c.csmId === account.csmId);
 
   const payload = {
     accountId: account.accountId,
     accountName: account.accountName,
     csmName: csm?.name ?? "Unknown",
-    action: String(action).slice(0, 500),
-    category: category === "growth" ? "growth" : "risk_mitigation",
-    rationale: String(rationale || "").slice(0, 500),
+    action: trimmedAction,
+    category,
+    rationale: trimmedRationale,
+    reviewedByHuman: true,
     approvedAt: new Date().toISOString(),
   };
 
@@ -46,19 +80,42 @@ export default async function handler(req, res) {
     return res.status(200).json({ status: "logged", workflowConnected: false });
   }
 
+  // A configured URL without the shared secret is a misconfiguration, not the
+  // "no workflow wired up" demo fallback above — refuse rather than silently
+  // logging, and never attempt the external call.
+  if (!hasWebhookSecret()) {
+    console.error("approve-action.js: N8N_APPROVAL_WEBHOOK_URL is set but N8N_WEBHOOK_SECRET is missing — refusing to call the workflow.");
+    return res.status(503).json({ error: "Approval workflow is misconfigured (missing webhook secret). Contact the workflow owner." });
+  }
+
+  // No automatic retry: a second silent attempt could append a second Sheet
+  // row and send a second internal email for the same approval. If this
+  // fails, the CSM sees the error and can deliberately try again from the UI.
   try {
-    const wres = await fetch(N8N_APPROVAL_WEBHOOK_URL, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (!wres.ok) {
-      const text = await wres.text().catch(() => "");
-      throw new Error(`n8n webhook ${wres.status}: ${text.slice(0, 300)}`);
+    // callN8nWebhook already guarantees a 2xx response or throws a safe,
+    // generic error (see api/_n8n.js) — a non-2xx body is never read here.
+    const wres = await callN8nWebhook(N8N_APPROVAL_WEBHOOK_URL, payload, APPROVAL_TIMEOUT_MS);
+
+    // Sprint 05 — Part B: a 2xx status alone is not success. A real approval
+    // test found that n8n can return HTTP 200 even when an internal step
+    // failed (e.g. an expired Google Sheets credential) — the workflow itself
+    // knows it failed, but the HTTP layer didn't reflect that. Success now
+    // requires the body to explicitly confirm both fields; anything else
+    // (empty body, invalid JSON, missing/wrong fields, a different 2xx body)
+    // is a controlled failure. The body content itself is never forwarded to
+    // the browser or written to a log, success or failure.
+    const body = await wres.json().catch(() => null);
+    const isConfirmedSuccess = Boolean(body) && typeof body === "object"
+      && body.status === "sent" && body.workflowConnected === true;
+
+    if (!isConfirmedSuccess) {
+      console.error("approve-action.js: n8n webhook returned a 2xx status but did not confirm success (invalid or unexpected response contract).");
+      return res.status(502).json({ error: "The approval workflow did not confirm success. Nothing was retried automatically." });
     }
+
     return res.status(200).json({ status: "sent", workflowConnected: true });
   } catch (err) {
     console.error("approve-action.js n8n webhook error:", err.message);
-    return res.status(502).json({ error: "Could not reach the approval workflow" });
+    return res.status(502).json({ error: "Could not reach the approval workflow. Nothing was retried automatically." });
   }
 }
