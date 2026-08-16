@@ -23,8 +23,8 @@ export function fetchTeamPriority(csmId) {
   return callAnalyze({ mode: "team-priority", csmId });
 }
 
-export function askAboutPortfolio(accountIds, question) {
-  return callAnalyze({ mode: "portfolio-ask", accountIds, question });
+export function askAboutPortfolio(accountIds, question, viewLabel) {
+  return callAnalyze({ mode: "portfolio-ask", accountIds, question, viewLabel });
 }
 
 export async function approveAction(accountId, nba) {

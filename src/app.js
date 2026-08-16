@@ -30,6 +30,7 @@ let state = {
   approvals: {},  // accountId -> { status: 'idle'|'pending'|'done'|'error', result, error }
   teamPriority: { status: "idle", data: null, error: null, csmId: null }, // csmId: null = whole-team scope
   portfolioAsk: { status: "idle", question: "", answer: "", error: "" }, // scoped to whatever getFilteredAccounts() returns at ask time
+  portfolioAskExpanded: false, // collapsed-by-default state for the Ask box on Map/Matrix/Features (Portfolio's own is never collapsible)
 };
 
 async function init() {
@@ -630,7 +631,7 @@ function renderAiSection(container, acc) {
   const answerBox = container.querySelector(".ai-ask-answer");
   if (ask.status === "loading") answerBox.innerHTML = `<p class="sub">Loading…</p>`;
   else if (ask.status === "error") answerBox.innerHTML = `<p class="ai-unavailable">Answer unavailable (${escapeHtml(ask.error)}).</p>`;
-  else if (ask.status === "done") answerBox.innerHTML = `<p class="ai-answer">${escapeHtml(ask.answer)}</p>`;
+  else if (ask.status === "done") answerBox.innerHTML = formatAiAnswer(ask.answer);
 }
 
 // Sprint 02 — Human Review: the AI's nextBestAction is only ever a suggestion.
@@ -1071,6 +1072,19 @@ function renderMatrix() {
     renewalInsight = `<p class="sub geo-insight">${displayList.length} renewal(s) worth ${fmtUSD(arrRenewing)} fall within ${renewalWindowLabel} — ${criticalAccounts.length} flagged high risk (${fmtUSD(arrAtRisk)}).</p>`;
   }
 
+  // Sprint 16 — the reused Ask box (see below) adds height above the chart
+  // in both modes now, on top of renewal mode's own window-toggle/KPI row.
+  // Chart width (and so, via the fixed aspect ratio, its height) shrinks a
+  // bit further when the Ask box is expanded, so the chart itself stays
+  // above the fold rather than pushing the page into a scroll. Tuned
+  // empirically against 1440x900 — see the browser checks in this sprint's
+  // report, not derived from a formula.
+  const askExpanded = state.portfolioAskExpanded;
+  const chartWidthFactor = mode === "renewal"
+    ? (askExpanded ? 0.36 : 0.42)
+    : (askExpanded ? 0.42 : 0.51);
+  const chartMaxWidth = Math.min(700, Math.round(window.innerWidth * chartWidthFactor));
+
   // A dedicated content container (not wrap.innerHTML directly) — wrap
   // already holds the view header appended above, which a wrap.innerHTML
   // assignment would silently discard.
@@ -1088,8 +1102,9 @@ function renderMatrix() {
       ${renewalKpiRow}
       ${renewalInsight}
     ` : ""}
+    <div class="portfolio-ask-slot"></div>
     <p class="sub">Each dot is an account. ${modeDesc} ▲/▼ next to a dot = CSAT trend over the last 8 weeks. Click a dot for details.</p>
-    <div class="matrix-wrap"${mode === "renewal" ? ` style="max-width:${Math.min(700, Math.round(window.innerWidth * 0.44))}px;"` : ""}>${svg}</div>
+    <div class="matrix-wrap" style="max-width:${chartMaxWidth}px;">${svg}</div>
     ${detailPanel}
     <div class="summary-bar" style="margin-top:14px;">
       <div class="summary-chip risk-high">● High risk</div>
@@ -1098,6 +1113,14 @@ function renderMatrix() {
       <div class="summary-chip neutral">▲ improving / ▼ declining CSAT</div>
     </div>
   `;
+  content.querySelector(".portfolio-ask-slot").replaceWith(
+    renderPortfolioAsk(displayList, {
+      title: "Ask AI about this view",
+      scopeIntro: "AI answers based on the currently visible accounts",
+      viewLabel: mode === "renewal" ? "Renewal Radar" : "Value Matrix",
+      collapsible: true,
+    })
+  );
   wrap.appendChild(content);
 
   wrap.querySelectorAll(".matrix-toggle-btn[data-mode]").forEach(btn => {
@@ -1279,6 +1302,7 @@ function renderMap() {
       <button class="matrix-toggle-btn ${mode === "arr" ? "active" : ""}" data-mode="arr">ARR</button>
       <button class="matrix-toggle-btn ${mode === "renewal" ? "active" : ""}" data-mode="renewal">Renewal</button>
     </div>
+    <div class="portfolio-ask-slot"></div>
     <p class="sub">Plotted on real OpenStreetMap data. ${modeCopy[mode]} Click a marker for details.</p>
     <div id="leaflet-map" class="leaflet-map"></div>
     ${detailPanel}
@@ -1291,9 +1315,12 @@ function renderMap() {
     ${geoInsight}
     <div class="region-card-grid">${regionCards}</div>
   `;
+  content.querySelector(".portfolio-ask-slot").replaceWith(
+    renderPortfolioAsk(list, { title: "Ask AI about this view", scopeIntro: "AI answers based on the currently visible accounts", viewLabel: "Map", collapsible: true })
+  );
   wrap.appendChild(content);
 
-  wrap.querySelectorAll(".matrix-toggle-btn").forEach(btn => {
+  wrap.querySelectorAll(".matrix-toggle-btn[data-mode]").forEach(btn => {
     btn.addEventListener("click", () => {
       state.mapMode = btn.dataset.mode;
       state.mapSelected = null;
@@ -1425,6 +1452,13 @@ function renderFeedback() {
   intro.textContent = "Aggregated across the currently filtered accounts — not AI-generated, just counting. \"Oldest Ask\" and \"Sentiment\" are estimated from each account's risk trajectory (a proxy, not a live satisfaction survey) — click a column to sort.";
   wrap.appendChild(intro);
 
+  wrap.appendChild(renderPortfolioAsk(list, {
+    title: "Ask AI about this view",
+    scopeIntro: "AI answers based on the currently visible accounts",
+    viewLabel: "Features",
+    collapsible: true,
+  }));
+
   const sorted = [...rows].sort((a, b) => {
     const { key, dir } = state.feedbackSort;
     let va, vb;
@@ -1554,53 +1588,87 @@ function renderAttentionQueue(list) {
   return box;
 }
 
-function renderPortfolioAsk(list) {
+// Sprint 16 — reused as-is (same state.portfolioAsk, same askAboutPortfolio
+// call, same getFilteredAccounts()-derived scope) on Map, Matrix and
+// Features, not just Portfolio — no new AI endpoint or data mechanism, just
+// this one component mounted in more places. `collapsible` starts the box
+// collapsed (a single toggle line) on those newer placements, so the
+// visualization stays the focal point; Portfolio's own call site below
+// passes no options, so it keeps its exact original title/wording/always-
+// expanded behavior. `viewLabel` (Portfolio/Map/Value Matrix/Renewal
+// Radar/Features) is only ever one of a fixed set of app-defined strings —
+// see the render*() call sites — never user input, and is re-validated
+// server-side in api/analyze.js before it reaches the prompt.
+function renderPortfolioAsk(list, opts = {}) {
+  const {
+    title = "Ask about this Portfolio",
+    scopeIntro = "Answers are scoped to what's currently on screen",
+    viewLabel = "Portfolio",
+    collapsible = false,
+  } = opts;
   const box = document.createElement("div");
   box.className = "team-priority-box ai-copilot-panel portfolio-ask-box";
   const pa = state.portfolioAsk;
-  const scopeLabel = state.filters.csm !== "all" || state.filters.region !== "all" || state.filters.risk !== "all" || state.filters.expansion !== "all" || state.filters.trend !== "all"
+  const expanded = !collapsible || state.portfolioAskExpanded;
+  const hasActiveFilter = state.filters.csm !== "all" || state.filters.region !== "all" || state.filters.risk !== "all" || state.filters.expansion !== "all" || state.filters.trend !== "all" || state.filters.search.trim() !== "";
+  const scopeLabel = hasActiveFilter
     ? `across the ${list.length} account(s) matching your current filters`
     : `across all ${list.length} accounts`;
+
   box.innerHTML = `
-    ${aiCopilotHeader("Ask about this Portfolio")}
-    <p class="sub">Answers are scoped to what's currently on screen — ${escapeHtml(scopeLabel)}. Change the filters above to change the scope.</p>
-    <div class="ai-ask">
-      <input type="text" class="portfolio-ask-input" placeholder="e.g. list all champion contacts, or which accounts have a QBR this month…" value="${escapeHtml(pa.question)}" />
-      <button class="ai-ask-btn portfolio-ask-btn">Ask</button>
+    <div class="portfolio-ask-head">
+      ${aiCopilotHeader(title)}
+      ${collapsible ? `<button class="portfolio-ask-toggle-btn">${expanded ? "Hide" : "Ask AI"}</button>` : ""}
     </div>
-    <div class="portfolio-ask-answer"></div>
+    ${expanded ? `
+      <p class="sub">${escapeHtml(scopeIntro)} — ${escapeHtml(scopeLabel)}. Change the filters above to change the scope.</p>
+      <div class="ai-ask">
+        <input type="text" class="portfolio-ask-input" placeholder="e.g. list all champion contacts, or which accounts have a QBR this month…" value="${escapeHtml(pa.question)}" />
+        <button class="ai-ask-btn portfolio-ask-btn">Ask</button>
+      </div>
+      <div class="portfolio-ask-answer"></div>
+    ` : ""}
   `;
 
-  const input = box.querySelector(".portfolio-ask-input");
-  const btn = box.querySelector(".portfolio-ask-btn");
-  const submit = () => submitPortfolioAsk(input.value, list.map(a => a.accountId));
-  btn.addEventListener("click", submit);
-  input.addEventListener("keydown", e => { if (e.key === "Enter") submit(); });
+  if (collapsible) {
+    box.querySelector(".portfolio-ask-toggle-btn").addEventListener("click", () => {
+      state.portfolioAskExpanded = !state.portfolioAskExpanded;
+      render();
+    });
+  }
 
-  const answerBox = box.querySelector(".portfolio-ask-answer");
-  if (pa.status === "loading") {
-    answerBox.innerHTML = `<p class="sub">Loading…</p>`;
-  } else if (pa.status === "error") {
-    answerBox.innerHTML = `<p class="ai-unavailable">Answer unavailable (${escapeHtml(pa.error)}).</p>`;
-    const retryBtn = document.createElement("button");
-    retryBtn.className = "ai-load-btn";
-    retryBtn.textContent = "Try Again";
-    retryBtn.addEventListener("click", submit);
-    answerBox.appendChild(retryBtn);
-  } else if (pa.status === "done") {
-    answerBox.innerHTML = `<p class="ai-answer">${escapeHtml(pa.answer)}</p>`;
+  if (expanded) {
+    const input = box.querySelector(".portfolio-ask-input");
+    const btn = box.querySelector(".portfolio-ask-btn");
+    const submit = () => submitPortfolioAsk(input.value, list.map(a => a.accountId), viewLabel);
+    btn.addEventListener("click", submit);
+    input.addEventListener("keydown", e => { if (e.key === "Enter") submit(); });
+
+    const answerBox = box.querySelector(".portfolio-ask-answer");
+    if (pa.status === "loading") {
+      answerBox.innerHTML = `<p class="sub">Loading…</p>`;
+    } else if (pa.status === "error") {
+      answerBox.innerHTML = `<p class="ai-unavailable">Answer unavailable (${escapeHtml(pa.error)}).</p>`;
+      const retryBtn = document.createElement("button");
+      retryBtn.className = "ai-load-btn";
+      retryBtn.textContent = "Try Again";
+      retryBtn.addEventListener("click", submit);
+      answerBox.appendChild(retryBtn);
+    } else if (pa.status === "done") {
+      answerBox.innerHTML = formatAiAnswer(pa.answer);
+    }
   }
 
   return box;
 }
 
-async function submitPortfolioAsk(question, accountIds) {
+async function submitPortfolioAsk(question, accountIds, viewLabel) {
   const q = String(question || "").trim();
   if (!q) return;
   state.portfolioAsk = { status: "loading", question: q, answer: "", error: "" };
   render();
   try {
-    const data = await askAboutPortfolio(accountIds, q);
+    const data = await askAboutPortfolio(accountIds, q, viewLabel);
     state.portfolioAsk = { status: "done", question: q, answer: data.answer, error: "" };
   } catch (e) {
     state.portfolioAsk = { status: "error", question: q, answer: "", error: e.message };
@@ -1908,6 +1976,28 @@ function escapeHtml(str) {
   const div = document.createElement("div");
   div.textContent = str;
   return div.innerHTML;
+}
+
+// PO polish — AI answers were rendered as a single <p>, so any line breaks
+// the model actually produced collapsed into one wall-of-text paragraph
+// (normal HTML whitespace handling). This renders each line as its own
+// paragraph inside one shared callout box instead of one box per line, and
+// — when an answer is mostly "|"-delimited lines (the same separator style
+// the account-data prompts use, so the model sometimes echoes it back for
+// account-by-account answers) — renders it as a compact table instead,
+// which is far more scannable than piped text.
+function formatAiAnswer(raw) {
+  const lines = String(raw || "").split("\n").map(l => l.trim()).filter(Boolean);
+  if (lines.length === 0) return "";
+  const pipeLines = lines.filter(l => l.includes("|"));
+  let inner;
+  if (lines.length >= 2 && pipeLines.length === lines.length) {
+    const rows = lines.map(l => l.split("|").map(c => c.trim()).filter(c => c !== ""));
+    inner = `<table class="ai-answer-table"><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${escapeHtml(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+  } else {
+    inner = lines.map(l => `<p>${escapeHtml(l)}</p>`).join("");
+  }
+  return `<div class="ai-answer">${inner}</div>`;
 }
 
 init();

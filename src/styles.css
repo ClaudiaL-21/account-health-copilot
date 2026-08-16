@@ -560,6 +560,13 @@ table.portfolio-table td.account-cell, table.portfolio-table .detail-row td { wh
 .matrix-view .kpi-value { font-size: 16px; }
 .matrix-view .kpi-label { font-size: 10px; }
 .matrix-view .geo-insight { margin: 0 0 6px; padding: 6px 10px; }
+/* Same reasoning as .matrix-view .kpi-strip above — the reused Ask box is
+   collapsed by default here, but stays usable (just more compact) if the
+   CSM expands it while on Renewal Radar's already-tight layout. */
+.matrix-view .portfolio-ask-box { padding: 10px 14px; margin-bottom: 10px; }
+.matrix-view .portfolio-ask-box .ai-copilot-header { margin-bottom: 6px; }
+.matrix-view .portfolio-ask-box .ai-ask { margin-top: 6px; }
+.matrix-view .portfolio-ask-box p.sub { margin: 2px 0 0; }
 .region-summary-heading { margin: 18px 0 4px; font-size: 13px; font-weight: 700; color: var(--text); }
 .region-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
 .region-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); padding: 12px 14px; }
@@ -805,6 +812,11 @@ table.breakdown-table td { padding: 5px 6px; border-bottom: 1px solid var(--bord
 }
 .ai-ask-btn:hover { opacity: 0.85; }
 .ai-answer { margin-top: 8px; font-size: 13.5px; line-height: 1.65; background: var(--blue-bg); padding: 14px 16px; border-radius: var(--radius-sm); }
+.ai-answer p { margin: 0 0 8px; }
+.ai-answer p:last-child { margin-bottom: 0; }
+.ai-answer-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ai-answer-table td { padding: 5px 8px; border-bottom: 1px solid rgba(20, 184, 166, 0.2); vertical-align: top; }
+.ai-answer-table tr:last-child td { border-bottom: none; }
 
 .team-priority-box {
   background: var(--card);
@@ -825,6 +837,23 @@ table.breakdown-table td { padding: 5px 6px; border-bottom: 1px solid var(--bord
   border-left: 3px solid var(--teal);
 }
 .ai-copilot-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+/* Sprint 16 — the reused, collapsible Ask box on Map/Matrix/Features: header
+   and its collapse toggle share a row so the collapsed state is a single
+   compact line, keeping the visualization above it as the focal point. */
+.portfolio-ask-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.portfolio-ask-toggle-btn {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  min-height: 30px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--teal);
+  background: var(--card);
+  color: var(--teal);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.portfolio-ask-toggle-btn:hover { background: var(--teal-bg); }
 .ai-copilot-icon { width: 20px; height: 20px; flex-shrink: 0; color: var(--teal); margin-top: 2px; }
 .ai-copilot-eyebrow {
   margin: 0 0 2px;
