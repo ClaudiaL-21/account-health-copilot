@@ -719,6 +719,36 @@ table.breakdown-table td { padding: 5px 6px; border-bottom: 1px solid var(--bord
 }
 .review-confirm-btn:hover { opacity: 0.85; }
 .review-cancel-btn:disabled, .review-confirm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Sprint 15 — QBR Copilot. Reuses the review-* visual language above
+   (eyebrow/title, review-section-label, review-origin, review-cancel-btn/
+   review-confirm-btn) rather than introducing a new component style. */
+.qbr-head { margin-bottom: 14px; }
+.qbr-head h4 { margin: 2px 0 0; }
+.qbr-sections { display: flex; flex-direction: column; gap: 18px; }
+.qbr-item { padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--card); }
+.qbr-item-sensitive { border-color: var(--red); }
+.qbr-item-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.qbr-item-head h5 { margin: 0; font-size: 13.5px; font-weight: 700; color: var(--text); }
+.qbr-internal-text { font-size: 13px; margin-bottom: 4px; }
+.qbr-include-toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: none; letter-spacing: normal; margin: 6px 0; cursor: pointer; }
+.qbr-include-toggle input { margin: 0; }
+.qbr-safe-text {
+  display: block; width: 100%; max-width: 100%; box-sizing: border-box;
+  padding: 8px 9px; min-height: 64px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--card); color: var(--text);
+  font-size: 13px; font-family: inherit; resize: vertical;
+}
+.qbr-actions { display: flex; gap: 10px; margin-top: 18px; }
+.qbr-preview-body { display: flex; flex-direction: column; gap: 14px; }
+.qbr-preview-item { padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--card); }
+.qbr-preview-item h5 { margin: 0 0 4px; font-size: 13px; font-weight: 700; color: var(--text); }
+.qbr-preview-item p { margin: 0; font-size: 13px; line-height: 1.55; white-space: pre-wrap; }
+@media (max-width: 640px) {
+  .qbr-actions { flex-direction: column; }
+  .qbr-actions button { width: 100%; }
+}
+
 .milestone-box {
   margin: 8px 0 12px;
   padding: 8px 12px;

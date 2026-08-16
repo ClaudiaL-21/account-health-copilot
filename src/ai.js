@@ -27,6 +27,10 @@ export function askAboutPortfolio(accountIds, question, viewLabel) {
   return callAnalyze({ mode: "portfolio-ask", accountIds, question, viewLabel });
 }
 
+export function fetchQbrDraft(accountId) {
+  return callAnalyze({ mode: "qbr-draft", accountId });
+}
+
 export async function approveAction(accountId, nba) {
   const res = await fetch("/api/approve-action", {
     method: "POST",

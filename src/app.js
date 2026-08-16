@@ -1,5 +1,5 @@
 import { computeHealthScore, computeExpansionScore, computePriorityScore, daysSince, daysFromToday, computeTrend, REFERENCE_DATE_ISO } from "./scoring.js";
-import { fetchAccountInsight, askAboutAccount, fetchTeamPriority, approveAction, askAboutPortfolio } from "./ai.js";
+import { fetchAccountInsight, askAboutAccount, fetchTeamPriority, approveAction, askAboutPortfolio, fetchQbrDraft } from "./ai.js";
 
 const RISK_LABEL = { high: "High", medium: "Medium", low: "Low" };
 const fmtUSD = n => "$" + n.toLocaleString("en-US");
@@ -28,6 +28,12 @@ let state = {
   aiInsights: {}, // accountId -> { status: 'idle'|'loading'|'done'|'error', data, error }
   aiAsk: {},      // accountId -> { question, status, answer, error }
   approvals: {},  // accountId -> { status: 'idle'|'pending'|'done'|'error', result, error }
+  // Sprint 15 — QBR Copilot. accountId -> { status: 'idle'|'loading'|'error'|'ready',
+  // error, data (raw server draft), mode: 'review'|'preview',
+  // review: { [sectionKey]: { included: bool, safeText: string } } — the ONLY
+  // source the Customer QBR Preview renders from (never data.sections[].internal
+  // or .customerSafeDefault directly, see renderQbrPreview).
+  qbr: {},
   teamPriority: { status: "idle", data: null, error: null, csmId: null }, // csmId: null = whole-team scope
   portfolioAsk: { status: "idle", question: "", answer: "", error: "" }, // scoped to whatever getFilteredAccounts() returns at ask time
   portfolioAskExpanded: false, // collapsed-by-default state for the Ask box on Map/Matrix/Features (Portfolio's own is never collapsible)
@@ -556,9 +562,11 @@ function renderAccountDetail(acc) {
       </div>
     </div>
     <div class="ai-section" id="ai-section-${acc.accountId}"></div>
+    <div class="ai-section qbr-section" id="qbr-section-${acc.accountId}"></div>
   `;
 
   renderAiSection(div.querySelector(`#ai-section-${acc.accountId}`), acc);
+  renderQbrSection(div.querySelector(`#qbr-section-${acc.accountId}`), acc);
   return div;
 }
 
@@ -809,6 +817,160 @@ async function submitAsk(accountId, questionText) {
     state.aiAsk[accountId] = { status: "done", question: questionText, answer: data.answer };
   } catch (e) {
     state.aiAsk[accountId] = { status: "error", question: questionText, error: e.message };
+  }
+  render();
+}
+
+// Sprint 15 — AI QBR Copilot. Section titles come from the server response
+// itself (see api/analyze.js withTitles()) so this file never needs its own
+// copy of the section list to keep in sync.
+//
+// UI-only label, NOT the security boundary — mirrors SENSITIVE_QBR_SECTIONS
+// in api/analyze.js just to flag these three sections with a visible
+// "Manual review required" badge. The actual internal/customer-safe split is
+// enforced twice already before this ever runs: server-side (these three
+// keys' customerSafeDefault is forced null unconditionally) and structurally
+// here (the Customer QBR Preview only ever reads state.qbr[id].review[key]
+// .safeText — CSM-typed text — never .internal or .customerSafeDefault).
+const QBR_SENSITIVE_KEYS = ["healthTrends", "risks", "previousInterventions"];
+
+function renderQbrSection(container, acc) {
+  const accountId = acc.accountId;
+  const qbr = state.qbr[accountId] || { status: "idle" };
+
+  if (qbr.status === "idle") {
+    container.innerHTML = `<h4>QBR Copilot <span class="ai-disclaimer">— AI-drafted, requires CSM review before customer use</span></h4>`;
+    const btn = document.createElement("button");
+    btn.className = "ai-load-btn";
+    btn.textContent = "Prepare QBR";
+    btn.addEventListener("click", () => loadQbrDraft(accountId));
+    container.appendChild(btn);
+    return;
+  }
+
+  if (qbr.status === "loading") {
+    container.innerHTML = `<h4>QBR Copilot</h4><p class="sub">Preparing QBR…</p>`;
+    return;
+  }
+
+  if (qbr.status === "error") {
+    container.innerHTML = `<h4>QBR Copilot</h4><p class="ai-unavailable">QBR draft unavailable (${escapeHtml(qbr.error)}).</p>`;
+    const retryBtn = document.createElement("button");
+    retryBtn.className = "ai-load-btn";
+    retryBtn.textContent = "Try Again";
+    retryBtn.addEventListener("click", () => loadQbrDraft(accountId));
+    container.appendChild(retryBtn);
+    return;
+  }
+
+  // status === "ready"
+  if (qbr.mode === "preview") renderQbrPreview(container, accountId, qbr);
+  else renderQbrReview(container, accountId, qbr);
+}
+
+function renderQbrReview(container, accountId, qbr) {
+  const { data, review } = qbr;
+
+  const sectionsHtml = data.sections.map(s => {
+    const sensitive = QBR_SENSITIVE_KEYS.includes(s.key);
+    const state_ = review[s.key];
+    const placeholder = s.customerSafeDefault === null
+      ? "Not included — write a customer-safe version if appropriate."
+      : "Customer-safe draft — edit before it counts as reviewed.";
+    return `
+      <div class="qbr-item${sensitive ? " qbr-item-sensitive" : ""}">
+        <div class="qbr-item-head">
+          <h5>${escapeHtml(s.title)}</h5>
+          ${sensitive ? `<span class="status-pill risk-high">Manual review required</span>` : ""}
+        </div>
+        <p class="review-section-label">Internal — CS team only <span class="review-hint-inline">AI working draft</span></p>
+        <div class="review-origin qbr-internal-text">${escapeHtml(s.internal)}</div>
+        <p class="review-section-label">Customer version</p>
+        <label class="qbr-include-toggle">
+          <input type="checkbox" class="qbr-include" data-key="${s.key}" ${state_.included ? "checked" : ""}/>
+          Include in customer version
+        </label>
+        <textarea class="qbr-safe-text" data-key="${s.key}" rows="3" maxlength="1500" placeholder="${escapeHtml(placeholder)}">${escapeHtml(state_.safeText)}</textarea>
+      </div>
+    `;
+  }).join("");
+
+  container.innerHTML = `
+    <div class="qbr-head">
+      <p class="ai-copilot-eyebrow">QBR COPILOT</p>
+      <h4>QBR Review <span class="ai-disclaimer">— AI-drafted, CSM review required before customer use</span></h4>
+    </div>
+    <div class="qbr-sections">${sectionsHtml}</div>
+    <div class="qbr-actions">
+      <button class="review-cancel-btn qbr-reload-btn">↻ Regenerate Draft</button>
+      <button class="review-confirm-btn qbr-preview-btn">Preview Customer QBR</button>
+    </div>
+  `;
+
+  container.querySelectorAll(".qbr-include").forEach(cb => {
+    cb.addEventListener("change", () => { review[cb.dataset.key].included = cb.checked; });
+  });
+  container.querySelectorAll(".qbr-safe-text").forEach(ta => {
+    ta.addEventListener("input", () => { review[ta.dataset.key].safeText = ta.value; });
+  });
+  container.querySelector(".qbr-reload-btn").addEventListener("click", () => loadQbrDraft(accountId));
+  container.querySelector(".qbr-preview-btn").addEventListener("click", () => {
+    state.qbr[accountId].mode = "preview";
+    render();
+  });
+}
+
+// Renders ONLY from qbr.review[key] — the CSM-edited safeText and included
+// flag — never from data.sections[].internal or .customerSafeDefault. This
+// is the actual internal/customer-safe boundary (see the module comment
+// above QBR_SENSITIVE_KEYS): nothing reaches this view without a human
+// having opened the review panel and explicitly kept/edited/included it.
+function renderQbrPreview(container, accountId, qbr) {
+  const acc = state.accounts.find(a => a.accountId === accountId);
+  const included = qbr.data.sections.filter(s => qbr.review[s.key].included && qbr.review[s.key].safeText.trim());
+
+  const body = included.length
+    ? included.map(s => `
+        <div class="qbr-preview-item">
+          <h5>${escapeHtml(s.title)}</h5>
+          <p>${escapeHtml(qbr.review[s.key].safeText.trim())}</p>
+        </div>
+      `).join("")
+    : `<p class="sub">No sections included yet — go back to review and include at least one section.</p>`;
+
+  container.innerHTML = `
+    <div class="qbr-head">
+      <p class="ai-copilot-eyebrow">CUSTOMER QBR PREVIEW</p>
+      <h4>${escapeHtml(acc?.accountName ?? "")} — Customer QBR</h4>
+    </div>
+    <div class="qbr-preview-body">${body}</div>
+    <div class="qbr-actions">
+      <button class="review-cancel-btn qbr-back-btn">← Back to Review</button>
+    </div>
+  `;
+
+  container.querySelector(".qbr-back-btn").addEventListener("click", () => {
+    state.qbr[accountId].mode = "review";
+    render();
+  });
+}
+
+async function loadQbrDraft(accountId) {
+  state.qbr[accountId] = { status: "loading" };
+  render();
+  try {
+    const data = await fetchQbrDraft(accountId);
+    const review = {};
+    data.sections.forEach(s => {
+      const sensitive = QBR_SENSITIVE_KEYS.includes(s.key);
+      review[s.key] = {
+        included: !sensitive && s.customerSafeDefault !== null,
+        safeText: sensitive ? "" : (s.customerSafeDefault || ""),
+      };
+    });
+    state.qbr[accountId] = { status: "ready", mode: "review", data, review };
+  } catch (e) {
+    state.qbr[accountId] = { status: "error", error: e.message };
   }
   render();
 }
