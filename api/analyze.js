@@ -248,7 +248,7 @@ function isNonEmptyString(v) {
 function validateNextBestAction(nba, context) {
   if (!nba || typeof nba !== "object") throw new Error(`${context}: missing or invalid nextBestAction`);
   if (!NBA_CATEGORIES.includes(nba.category)) throw new Error(`${context}: invalid nextBestAction.category`);
-  if (!isNonEmptyString(nba.action) || nba.action.length > 500) throw new Error(`${context}: invalid nextBestAction.action`);
+  if (!isNonEmptyString(nba.action) || nba.action.length > 700) throw new Error(`${context}: invalid nextBestAction.action`);
   if (!isNonEmptyString(nba.rationale) || nba.rationale.length > 500) throw new Error(`${context}: invalid nextBestAction.rationale`);
 }
 
@@ -398,6 +398,31 @@ alternative scores themselves.
 When asked for a next best action, give exactly ONE — not a list. CSMs already have
 too many half-prioritized todo lists; force yourself to pick the single most
 important thing to do right now, and say why it beats the alternatives.
+If that one action naturally involves multiple concrete steps (e.g. "do A, then B,
+then agree C"), do NOT compress them into a single dense run-on sentence with
+inline "(a)/(b)/(c)" markers packed into the same line as everything else.
+Instead: write a short lead-in sentence ending in a colon, then put each step on
+its OWN line (a real newline before each one — not inline), each line starting
+with "a)", "b)", "c)" etc. Every lettered line must still read as a short,
+complete clause a CSM would actually say out loud — NEVER a bare label/fragment
+like "Invite: X" or "Goal: Y" with no verb. Still exactly one action with one
+shared goal, just legibly formatted, not a list of unrelated alternatives. If the
+situation is time-sensitive, give a concrete deadline (e.g. "within 48 hours")
+rather than a vague one (e.g. "this week") — but only if urgency is actually
+supported by the account's risk/renewal data, never invented. Aim for roughly
+450-650 characters total; the ENTIRE "action" string, including line breaks,
+must never exceed 700 characters — if a fully spelled-out multi-line version
+would exceed that, cut down to the 2-3 most essential steps rather than turning
+any step into a clipped label to save space.
+
+recommend ≠ commit: a specific timeframe or SLA (e.g. "a 72-hour remediation
+timeline") is only allowed if it is already documented/agreed in the customer
+context given to you. If you are yourself proposing a new timeframe that is not
+already documented, phrase it as a proposal for the CSM to review, not as an
+already-agreed commitment — e.g. "propose a 72-hour remediation target for
+human review" or "agree a remediation timeline on the call", never "commit to a
+72-hour remediation timeline". Never phrase your own new suggestion as if the
+company or the customer had already committed to it.
 Not every account needs a risk-mitigation action. If the account's signals are
 positive (stable or improving health, engaged champion, growing adoption), prefer a
 "growth" category action (e.g. propose an unused module, deepen a relationship,
@@ -463,6 +488,18 @@ Internal vs. customer-safe:
   automatically presented as customer-safe language. If nothing appropriate can be
   drafted for a customer from the data given, return null for customerSafeDefault
   rather than inventing customer-facing content.
+- recommend ≠ commit, in EVERY section, not just "nextQuarterPlan": if the
+  "internal" text for this section marks something as recommended, proposed, not
+  documented, or not agreed, the "customerSafeDefault" text must NOT upgrade it
+  into "we will…", "we'll…", or any other agreed-action/commitment phrasing.
+  Use "We recommend…", "We propose…", or "A possible next step is…" instead. Only
+  an action that is already documented/agreed in the customer context may be
+  phrased as "we will…" in customerSafeDefault. When in doubt about whether
+  something is documented or your own suggestion, treat it as your own suggestion.
+- Temporal grounding: check every date you reference against today's date (given
+  in the account context). A date that has already passed must be described in
+  past tense as something that already happened (or didn't) — never phrased as a
+  future plan or upcoming action, in either "internal" or "customerSafeDefault".
 
 Always respond with ONLY valid JSON matching the schema you are given, no markdown
 fences, no commentary outside the JSON.`;
@@ -513,6 +550,9 @@ async function handleQbrDraft(account) {
   const sectionList = QBR_SECTION_DEFS.map((s, i) => `${i + 1}. "${s.key}" — ${s.title}`).join("\n");
   const user = `${formatAccountContextText(contextOf(account))}
 
+Today's date: ${REFERENCE_DATE_ISO}. Use this to judge whether any date you
+reference is in the past or the future (see the temporal grounding rule above).
+
 Draft a QBR (Quarterly Business Review) for this account with exactly these ${QBR_SECTION_DEFS.length} sections, in this exact order and using these exact keys:
 ${sectionList}
 
@@ -542,6 +582,11 @@ Grounding rules — these override any general Customer Success best-practice kn
 - The KPI numbers given to you below (account counts, ARR, average health, risk distribution,
   renewal windows) are already computed deterministically. Use them as-is — never recompute,
   restate a different number, or imply a different total than what is given.
+- In particular: do NOT add multiple given figures together to state a new combined total (e.g.
+  do not sum two or three renewal windows' ARR into one "$X across N renewals" figure). If you
+  want to reference the overall scope's ARR or ARR-at-risk, use ONLY the exact
+  "Total ARR in scope" / "ARR at risk" figures already given — never a total you computed
+  yourself from the per-window numbers, even if the arithmetic seems simple.
 - Analyze ONLY the accounts explicitly listed below. Never mention or imply an account, a
   cause, an ARR figure, or a renewal date that is not present in the data given to you.
 - Do not invent a customer's business goals or objectives — none are given at this level.

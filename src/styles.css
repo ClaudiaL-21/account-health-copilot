@@ -647,7 +647,7 @@ table.breakdown-table td { padding: 5px 6px; border-bottom: 1px solid var(--bord
   background: var(--card);
   border: 1px solid var(--border);
 }
-.nba-box p { margin: 3px 0; }
+.nba-box p { margin: 3px 0; white-space: pre-line; }
 .nba-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 4px; }
 .nba-approval { margin-top: 8px; }
 .approve-btn { border-color: var(--teal); background: var(--teal-bg); color: var(--teal); }
@@ -667,7 +667,7 @@ table.breakdown-table td { padding: 5px 6px; border-bottom: 1px solid var(--bord
 .review-section-label:first-of-type { margin-top: 0; }
 .review-hint-inline { font-weight: 400; text-transform: none; letter-spacing: normal; color: var(--muted); font-size: 11.5px; }
 .review-origin { padding: 10px 12px; border-radius: var(--radius-sm); background: var(--surface-muted); line-height: 1.5; }
-.review-original { margin: 0; }
+.review-original { margin: 0; white-space: pre-line; }
 .review-field {
   display: block;
   font-size: 11px;

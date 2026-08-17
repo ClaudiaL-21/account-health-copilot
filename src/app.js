@@ -1,6 +1,7 @@
 import { computeHealthScore, computeExpansionScore, computePriorityScore, computePortfolioKpis, daysSince, daysFromToday, computeTrend, REFERENCE_DATE_ISO } from "./scoring.js";
 import { fetchAccountInsight, askAboutAccount, fetchTeamPriority, approveAction, askAboutPortfolio, fetchQbrDraft, fetchPortfolioSummary } from "./ai.js";
 import { buildAccountActivity } from "./activity.js";
+import { selectCustomerSafeSections } from "./qbrPreview.js";
 
 const RISK_LABEL = { high: "High", medium: "Medium", low: "Low" };
 const fmtUSD = n => "$" + n.toLocaleString("en-US");
@@ -889,8 +890,8 @@ function renderReviewForm(container, accountId, nba, approval) {
         </select>
       </label>
       <label class="review-field">Recommended action
-        <textarea class="review-action" rows="3" maxlength="500" ${disabled ? "disabled" : ""}>${escapeHtml(draft.action)}</textarea>
-        <span class="review-charcount">${draft.action.length}/500</span>
+        <textarea class="review-action" rows="3" maxlength="700" ${disabled ? "disabled" : ""}>${escapeHtml(draft.action)}</textarea>
+        <span class="review-charcount">${draft.action.length}/700</span>
       </label>
       <label class="review-field">Rationale
         <textarea class="review-rationale" rows="2" maxlength="500" ${disabled ? "disabled" : ""}>${escapeHtml(draft.rationale)}</textarea>
@@ -921,8 +922,8 @@ function renderReviewForm(container, accountId, nba, approval) {
   });
   actionTa.addEventListener("input", () => {
     draft.action = actionTa.value;
-    actionCount.textContent = `${draft.action.length}/500`;
-    if (draft.action.trim() && draft.action.length <= 500) container.querySelector(".review-error")?.remove();
+    actionCount.textContent = `${draft.action.length}/700`;
+    if (draft.action.trim() && draft.action.length <= 700) container.querySelector(".review-error")?.remove();
   });
   rationaleTa.addEventListener("input", () => {
     draft.rationale = rationaleTa.value;
@@ -952,7 +953,7 @@ function renderReviewForm(container, accountId, nba, approval) {
 // re-validates independently and remains the source of truth.
 function reviewValidationError(draft) {
   if (!draft.action.trim()) return "Action cannot be empty.";
-  if (draft.action.length > 500) return "Action must be 500 characters or fewer.";
+  if (draft.action.length > 700) return "Action must be 700 characters or fewer.";
   if (draft.rationale.length > 500) return "Rationale must be 500 characters or fewer.";
   return null;
 }
@@ -1050,21 +1051,33 @@ function renderQbrReview(container, accountId, qbr) {
   const sectionsHtml = data.sections.map(s => {
     const sensitive = QBR_SENSITIVE_KEYS.includes(s.key);
     const state_ = review[s.key];
+    const hasSafeText = state_.safeText.trim().length > 0;
     const placeholder = s.customerSafeDefault === null
       ? "Not included — write a customer-safe version if appropriate."
       : "Customer-safe draft — edit before it counts as reviewed.";
+    // QBR Repair & Hardening — for sensitive sections, the generic "Include in
+    // customer version" checkbox is misleading: it reads as if the internal
+    // draft could be included, when only a human-written safeText ever can
+    // (see renderQbrPreview — internal is never read there). Sensitive
+    // sections instead start disabled with a label that says explicitly that
+    // a customer-safe version is required first, and only become checkable
+    // once the CSM has actually typed one (see the input listener below).
+    const includeLabel = sensitive
+      ? (hasSafeText ? "Include reviewed version in Customer QBR" : "Customer-safe version required")
+      : "Include in customer version";
+    const includeDisabled = sensitive && !hasSafeText;
     return `
       <div class="qbr-item${sensitive ? " qbr-item-sensitive" : ""}">
         <div class="qbr-item-head">
           <h5>${escapeHtml(s.title)}</h5>
           ${sensitive ? `<span class="status-pill risk-high">Manual review required</span>` : ""}
         </div>
-        <p class="review-section-label">Internal — CS team only <span class="review-hint-inline">AI working draft</span></p>
+        <p class="review-section-label">Internal — CS team only <span class="review-hint-inline">AI working draft, cannot be included directly</span></p>
         <div class="review-origin qbr-internal-text">${escapeHtml(s.internal)}</div>
         <p class="review-section-label">Customer version</p>
         <label class="qbr-include-toggle">
-          <input type="checkbox" class="qbr-include" data-key="${s.key}" ${state_.included ? "checked" : ""}/>
-          Include in customer version
+          <input type="checkbox" class="qbr-include" data-key="${s.key}" ${state_.included ? "checked" : ""} ${includeDisabled ? "disabled" : ""}/>
+          <span class="qbr-include-label">${escapeHtml(includeLabel)}</span>
         </label>
         <textarea class="qbr-safe-text" data-key="${s.key}" rows="3" maxlength="1500" placeholder="${escapeHtml(placeholder)}">${escapeHtml(state_.safeText)}</textarea>
       </div>
@@ -1087,7 +1100,20 @@ function renderQbrReview(container, accountId, qbr) {
     cb.addEventListener("change", () => { review[cb.dataset.key].included = cb.checked; });
   });
   container.querySelectorAll(".qbr-safe-text").forEach(ta => {
-    ta.addEventListener("input", () => { review[ta.dataset.key].safeText = ta.value; });
+    ta.addEventListener("input", () => {
+      const key = ta.dataset.key;
+      review[key].safeText = ta.value;
+      if (!QBR_SENSITIVE_KEYS.includes(key)) return;
+      // Sensitive section: unlock/relock the include checkbox live as the CSM
+      // types, without a full render() (which would drop textarea focus).
+      const item = ta.closest(".qbr-item");
+      const cb = item.querySelector(".qbr-include");
+      const label = item.querySelector(".qbr-include-label");
+      const hasSafeText = ta.value.trim().length > 0;
+      cb.disabled = !hasSafeText;
+      if (!hasSafeText) { cb.checked = false; review[key].included = false; }
+      if (label) label.textContent = hasSafeText ? "Include reviewed version in Customer QBR" : "Customer-safe version required";
+    });
   });
   container.querySelector(".qbr-reload-btn").addEventListener("click", () => loadQbrDraft(accountId));
   container.querySelector(".qbr-preview-btn").addEventListener("click", () => {
@@ -1103,7 +1129,7 @@ function renderQbrReview(container, accountId, qbr) {
 // having opened the review panel and explicitly kept/edited/included it.
 function renderQbrPreview(container, accountId, qbr) {
   const acc = state.accounts.find(a => a.accountId === accountId);
-  const included = qbr.data.sections.filter(s => qbr.review[s.key].included && qbr.review[s.key].safeText.trim());
+  const included = selectCustomerSafeSections(qbr.data.sections, qbr.review);
 
   const body = included.length
     ? included.map(s => `

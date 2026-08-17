@@ -68,12 +68,12 @@ test("empty action is rejected", async () => {
   assert.match(body.error, /empty/i);
 });
 
-test("action longer than 500 characters is rejected", async () => {
+test("action longer than 700 characters is rejected", async () => {
   const { statusCode, body } = await callHandler({
-    accountId: LOW_RISK_ACCOUNT.accountId, action: "a".repeat(501), category: "risk_mitigation", rationale: "x",
+    accountId: LOW_RISK_ACCOUNT.accountId, action: "a".repeat(701), category: "risk_mitigation", rationale: "x",
   });
   assert.equal(statusCode, 400);
-  assert.match(body.error, /500/);
+  assert.match(body.error, /700/);
 });
 
 test("rationale longer than 500 characters is rejected", async () => {

@@ -108,11 +108,11 @@ test("account-insight: empty narrative is rejected", async () => {
   assert.equal(statusCode, 502);
 });
 
-test("account-insight: nextBestAction.action over 500 chars is rejected", async () => {
+test("account-insight: nextBestAction.action over 700 chars is rejected", async () => {
   currentResponseText = JSON.stringify({
     sentiment: { label: "neutral", rationale: "ok" },
     narrative: "ok",
-    nextBestAction: { category: "risk_mitigation", action: "a".repeat(501), rationale: "Because." },
+    nextBestAction: { category: "risk_mitigation", action: "a".repeat(701), rationale: "Because." },
   });
   const { statusCode } = await callHandler({ mode: "account-insight", accountId: ACCOUNTS[0].accountId });
   assert.equal(statusCode, 502);

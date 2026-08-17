@@ -55,8 +55,8 @@ export default async function handler(req, res) {
   if (!trimmedAction) {
     return res.status(400).json({ error: "Action cannot be empty" });
   }
-  if (trimmedAction.length > 500) {
-    return res.status(400).json({ error: "Action must be 500 characters or fewer" });
+  if (trimmedAction.length > 700) {
+    return res.status(400).json({ error: "Action must be 700 characters or fewer" });
   }
 
   const trimmedRationale = String(rationale ?? "").trim();

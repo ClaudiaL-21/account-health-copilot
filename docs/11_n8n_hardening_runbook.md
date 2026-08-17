@@ -116,6 +116,15 @@ Knoten in der bestehenden Struktur: **Webhook** → **Append row in sheet** (Goo
 ### 4. Gmail-Text klarstellen
 - **Send a message** bleibt eine interne Benachrichtigung an die bereits hinterlegte interne Demo-Adresse — keine Kundenkommunikation, keine Änderung des Empfängers.
 - Betreff und Nachrichtentext so anpassen, dass eindeutig steht, dass die Aktion **von einer Customer Success Managerin geprüft und freigegeben** wurde (z. B. sinngemäß "reviewed and confirmed by a CSM"). Es darf an keiner Stelle stehen oder anklingen, dass die KI die Aktion automatisch ausgeführt hätte.
+- **Nachtrag 2026-08-17 — Zeilenumbrüche im "Recommended Action"-Feld:** Seit der NBA-Prompt-Anpassung (mehrschrittige Next Best Actions mit `a)`/`b)`/`c)` auf echten Zeilenumbrüchen, siehe `SYSTEM_PROMPT` in `api/analyze.js`) enthält `body.action` bei mehrteiligen Empfehlungen echte `\n`-Zeichen. HTML ignoriert `\n` standardmäßig — im Gmail-HTML-Template deshalb im Feld für die Aktion
+  ```
+  {{ $json['Action (action)'] }}
+  ```
+  ersetzen durch
+  ```
+  {{ $json['Action (action)'].replace(/\n/g, '<br>') }}
+  ```
+  damit a)/b)/c) auch in der Mail auf eigenen Zeilen erscheinen. Reine n8n-Node-Änderung, kein Repo-Code betroffen.
 
 ### 5. Erfolg erst nach beiden Schritten
 - Die Erfolgsantwort (`status: "sent"`) darf erst nach **beiden** Nebenwirkungen erfolgen — Sheet-Zeile geschrieben **und** interne Nachricht verschickt. Das entspricht der bestehenden Verkettung Sheets → Gmail → Antwort; nur sicherstellen, dass die neue Validierung aus Schritt 2 davor sitzt.
