@@ -92,6 +92,17 @@ test("a small explicit subset of accountIds produces kpis matching exactly that 
   assert.equal(body.kpis.totalArrUSD, manualArr);
 });
 
+// Development Day 3 — Numerical Grounding Hardening: the endpoint now
+// exposes a pre-summed totalRenewalArrUSD so the AI is never left to add the
+// three per-window figures together itself.
+test("kpis includes a pre-summed totalRenewalArrUSD matching the three renewal windows added together", async () => {
+  const { body } = await callHandler({ mode: "portfolio-summary", accountIds: ALL_IDS });
+  const w = body.kpis.renewalWindows;
+  const manual = w.days30.arrUSD + w.days3160.arrUSD + w.days6190.arrUSD;
+  assert.equal(body.kpis.totalRenewalArrUSD, manual);
+  assert.equal(body.kpis.totalRenewalAccountCount, w.days30.accountCount + w.days3160.accountCount + w.days6190.accountCount);
+});
+
 test("full portfolio scope (all accountIds) matches the dataset total, confirming scope isn't silently narrowed or widened", async () => {
   const { body } = await callHandler({ mode: "portfolio-summary", accountIds: ALL_IDS });
   assert.equal(body.kpis.totalAccounts, ACCOUNTS.length);

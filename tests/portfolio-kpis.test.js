@@ -94,3 +94,37 @@ test("renewal-window ARR and ARR-at-risk reflect only the accounts in that windo
   assert.equal(kpis.renewalWindows.days30.arrUSD, 12000);
   assert.equal(kpis.renewalWindows.days30.arrAtRiskUSD, 5000, "only the high-risk account's ARR counts as at-risk");
 });
+
+// Development Day 3 — Numerical Grounding Hardening: totalRenewalArrUSD /
+// totalRenewalAccountCount exist so the AI prompt is never given only partial
+// per-window figures and left to add them together itself (which is exactly
+// how the real-world $2,732,000 vs $2,196,000 discrepancy happened).
+test("totalRenewalArrUSD equals the exact sum of the three renewal windows' arrUSD, over the full dataset", () => {
+  const kpis = computePortfolioKpis(ACCOUNTS);
+  const manual = kpis.renewalWindows.days30.arrUSD + kpis.renewalWindows.days3160.arrUSD + kpis.renewalWindows.days6190.arrUSD;
+  assert.equal(kpis.totalRenewalArrUSD, manual);
+});
+
+test("totalRenewalAccountCount equals the exact sum of the three renewal windows' accountCount", () => {
+  const kpis = computePortfolioKpis(ACCOUNTS);
+  const manual = kpis.renewalWindows.days30.accountCount + kpis.renewalWindows.days3160.accountCount + kpis.renewalWindows.days6190.accountCount;
+  assert.equal(kpis.totalRenewalAccountCount, manual);
+});
+
+test("totalRenewalArrUSD stays correctly scoped to a filtered subset, not the full dataset", () => {
+  const base = ACCOUNTS.find(a => computeHealthScore(a).riskCategory === "high");
+  const a30 = { ...base, accountId: "SYN-A30", contract: { ...base.contract, nextRenewalDate: isoDaysFromToday(10), arrUSD: 5000 } };
+  const a60 = { ...base, accountId: "SYN-A60", contract: { ...base.contract, nextRenewalDate: isoDaysFromToday(45), arrUSD: 7000 } };
+  const a90 = { ...base, accountId: "SYN-A90", contract: { ...base.contract, nextRenewalDate: isoDaysFromToday(80), arrUSD: 3000 } };
+  const outside = { ...base, accountId: "SYN-OUT", contract: { ...base.contract, nextRenewalDate: isoDaysFromToday(200), arrUSD: 999000 } };
+
+  const kpis = computePortfolioKpis([a30, a60, a90, outside]);
+  assert.equal(kpis.totalRenewalArrUSD, 15000, "must exclude the account renewing outside all three windows");
+  assert.equal(kpis.totalRenewalAccountCount, 3);
+});
+
+test("empty list: totalRenewalArrUSD and totalRenewalAccountCount are 0, not NaN", () => {
+  const kpis = computePortfolioKpis([]);
+  assert.equal(kpis.totalRenewalArrUSD, 0);
+  assert.equal(kpis.totalRenewalAccountCount, 0);
+});

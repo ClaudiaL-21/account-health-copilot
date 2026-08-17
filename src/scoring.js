@@ -255,7 +255,15 @@ export function computePortfolioKpis(accounts) {
     };
   });
 
-  return { totalAccounts, totalArrUSD, avgHealth, riskCounts, arrAtRiskUSD, renewalWindows };
+  // Development Day 3 — Numerical Grounding Hardening: the combined ARR
+  // renewing across all three windows, computed once here (sum of the
+  // already-computed per-window arrUSD figures — no second calculation
+  // logic). Exists so nothing downstream (AI prompt included) ever has to
+  // add the per-window figures together itself.
+  const totalRenewalArrUSD = Object.values(renewalWindows).reduce((s, w) => s + w.arrUSD, 0);
+  const totalRenewalAccountCount = Object.values(renewalWindows).reduce((s, w) => s + w.accountCount, 0);
+
+  return { totalAccounts, totalArrUSD, avgHealth, riskCounts, arrAtRiskUSD, renewalWindows, totalRenewalArrUSD, totalRenewalAccountCount };
 }
 
 // Directional signal from the most recent weekly CSAT data: are the last
