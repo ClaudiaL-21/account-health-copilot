@@ -1,9 +1,13 @@
 import { computeHealthScore, computeExpansionScore, computePriorityScore, computePortfolioKpis, daysSince, daysFromToday, computeTrend, REFERENCE_DATE_ISO } from "./scoring.js";
 import { fetchAccountInsight, askAboutAccount, fetchTeamPriority, approveAction, askAboutPortfolio, fetchQbrDraft, fetchPortfolioSummary } from "./ai.js";
+import { buildAccountActivity } from "./activity.js";
 
 const RISK_LABEL = { high: "High", medium: "Medium", low: "Low" };
 const fmtUSD = n => "$" + n.toLocaleString("en-US");
 const fmtDate = iso => new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "2-digit" });
+// Development Day 2 — Account Activity Feed: only session-captured runtime
+// timestamps (real time-of-day, not a historical date-only fact) use this.
+const fmtDateTime = iso => new Date(iso).toLocaleString("en-US", { year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" });
 // Sprint 06 — compact calendar-date form for x-axis tick labels (space is
 // tight there); the full fmtDate() form is still used for the axis's
 // accessible name/title, so no precision is lost, only the on-axis label.
@@ -693,7 +697,50 @@ function renderAccountDetail(acc) {
 
   renderAiSection(div.querySelector(`#ai-section-${acc.accountId}`), acc);
   renderQbrSection(div.querySelector(`#qbr-section-${acc.accountId}`), acc);
+  div.appendChild(renderAccountActivity(acc));
   return div;
+}
+
+// Development Day 2 — Account Activity Feed. Purely additive read of
+// already-existing data (account record + this session's aiInsight/approval
+// state) via buildAccountActivity() (src/activity.js) — no new AI call, no
+// new persistence. Reuses the exact same .artifact/.artifact-type/.sub
+// markup the Notes section above already renders freeTextArtifacts with —
+// no new CSS component.
+const ACTIVITY_TYPE_LABEL = {
+  value_milestone: "Value Milestone",
+  qbr_held: "QBR",
+  ai_insight_loaded: "AI Insight",
+  ai_insight_error: "AI Insight",
+  action_reviewed: "Human Review",
+  action_error: "Human Review",
+};
+
+function renderAccountActivity(acc) {
+  const wrap = document.createElement("div");
+  wrap.className = "ai-section";
+  const items = buildAccountActivity(acc, {
+    aiInsight: state.aiInsights[acc.accountId],
+    approval: state.approvals[acc.accountId],
+  });
+
+  const rows = items.map(item => {
+    const dt = item.sessionOnly ? fmtDateTime(item.timestamp) : fmtDate(item.timestamp);
+    const sessionTag = item.sessionOnly ? ` · <span class="sub">this session</span>` : "";
+    const typeLabel = ACTIVITY_TYPE_LABEL[item.type] ?? item.type;
+    return `
+      <div class="artifact">
+        <span class="artifact-type">${escapeHtml(typeLabel)}</span> · <span class="sub">${dt}</span>${sessionTag}
+        <p>${escapeHtml(item.title)}${item.detail ? ` — ${escapeHtml(item.detail)}` : ""}</p>
+      </div>
+    `;
+  }).join("");
+
+  wrap.innerHTML = `
+    <h4>Account Activity <span class="ai-disclaimer">— existing account history, plus this session's activity</span></h4>
+    ${items.length ? rows : `<p class="sub">No activity recorded yet.</p>`}
+  `;
+  return wrap;
 }
 
 function renderAiSection(container, acc) {
@@ -915,9 +962,11 @@ async function submitApproval(accountId, draft) {
   render();
   try {
     const result = await approveAction(accountId, draft);
-    state.approvals[accountId] = { status: "done", result };
+    // `at`: real runtime capture of the moment this resolved — feeds the
+    // Account Activity Feed (src/activity.js). Never backfilled elsewhere.
+    state.approvals[accountId] = { status: "done", result, at: new Date().toISOString() };
   } catch (e) {
-    state.approvals[accountId] = { status: "error", draft, error: e.message };
+    state.approvals[accountId] = { status: "error", draft, error: e.message, at: new Date().toISOString() };
   }
   render();
 }
@@ -927,9 +976,10 @@ async function loadInsight(accountId) {
   render();
   try {
     const data = await fetchAccountInsight(accountId);
-    state.aiInsights[accountId] = { status: "done", data };
+    // `at`: see the note in submitApproval above — same reasoning.
+    state.aiInsights[accountId] = { status: "done", data, at: new Date().toISOString() };
   } catch (e) {
-    state.aiInsights[accountId] = { status: "error", error: e.message };
+    state.aiInsights[accountId] = { status: "error", error: e.message, at: new Date().toISOString() };
   }
   render();
 }
