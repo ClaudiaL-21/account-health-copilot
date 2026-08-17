@@ -31,6 +31,10 @@ const dummyUrl = await new Promise(resolve => {
 process.env.ALLOWED_ORIGINS = TEST_ORIGIN;
 process.env.N8N_APPROVAL_WEBHOOK_URL = dummyUrl;
 delete process.env.N8N_WEBHOOK_SECRET; // the condition under test
+// Development Day 2 hardening — must opt in so this test still exercises the
+// "URL set, secret missing" misconfiguration path instead of being masked by
+// the (also-true-here) "external actions disabled" fallback.
+process.env.ENABLE_EXTERNAL_ACTIONS = "true";
 
 const { default: handler } = await import("../api/approve-action.js");
 

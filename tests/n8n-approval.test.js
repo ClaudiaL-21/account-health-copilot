@@ -36,6 +36,9 @@ process.env.ALLOWED_ORIGINS = TEST_ORIGIN;
 process.env.N8N_APPROVAL_WEBHOOK_URL = dummyUrl;
 process.env.N8N_WEBHOOK_SECRET = TEST_SECRET;
 process.env.N8N_APPROVAL_TIMEOUT_MS = "150"; // short on purpose, keeps the timeout test fast
+// Development Day 2 hardening — this file exercises the real-workflow path
+// on purpose, so it must opt in explicitly like a real live-demo would.
+process.env.ENABLE_EXTERNAL_ACTIONS = "true";
 
 const { default: handler } = await import("../api/approve-action.js");
 

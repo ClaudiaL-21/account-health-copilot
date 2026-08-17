@@ -29,6 +29,11 @@ process.env.ALLOWED_ORIGINS = TEST_ORIGIN;
 // var first and only then dynamically importing the module is what actually
 // guarantees the handler never sees a real webhook URL in this test run.
 delete process.env.N8N_APPROVAL_WEBHOOK_URL;
+// Development Day 2 hardening — set to "true" here on purpose: this file's
+// no-webhook-configured case must stay "logged" even when external actions
+// ARE enabled, proving ENABLE_EXTERNAL_ACTIONS=true alone is not sufficient
+// without an actual webhook URL (see the added test below).
+process.env.ENABLE_EXTERNAL_ACTIONS = "true";
 const { default: handler } = await import("../api/approve-action.js");
 
 function findAccount(riskCategory) {
@@ -113,6 +118,14 @@ test("valid risk-mitigation submission is trimmed and accepted (logged, no n8n c
   assert.equal(statusCode, 200);
   assert.equal(body.status, "logged");
   assert.equal(body.workflowConnected, false);
+});
+
+test("ENABLE_EXTERNAL_ACTIONS=true without a configured webhook URL still safely logs, does not error", async () => {
+  const { statusCode, body } = await callHandler({
+    accountId: LOW_RISK_ACCOUNT.accountId, action: "Call the customer.", category: "risk_mitigation", rationale: "x",
+  });
+  assert.equal(statusCode, 200);
+  assert.deepEqual(body, { status: "logged", workflowConnected: false });
 });
 
 test("valid growth submission for a low-risk account is accepted", async () => {

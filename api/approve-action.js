@@ -6,6 +6,14 @@
 // If N8N_APPROVAL_WEBHOOK_URL isn't configured, the action is just logged
 // server-side instead of failing — so the approve/UI flow can be demoed
 // without an n8n workflow wired up yet.
+//
+// Development Day 2 hardening — external side effects are opt-in, separate
+// from AI mocking: MOCK_AI only ever affected api/analyze.js's AI calls, so
+// a webhook URL left over in .env could still fire a real n8n call (real
+// email, real Sheet row) during local/test use even with MOCK_AI=true — that
+// gap caused a real accidental approval call during a UI check. Requiring
+// ENABLE_EXTERNAL_ACTIONS=true as well closes it: a configured webhook URL
+// alone is no longer sufficient to reach the outside world.
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -20,6 +28,9 @@ const ACCOUNTS = DATA.accounts;
 const CSMS = DATA.csms;
 
 const N8N_APPROVAL_WEBHOOK_URL = process.env.N8N_APPROVAL_WEBHOOK_URL;
+// Must be exactly the string "true" — missing, empty, "false", or any other
+// value is treated as disabled. Exported for tests only.
+export const EXTERNAL_ACTIONS_ENABLED = process.env.ENABLE_EXTERNAL_ACTIONS === "true";
 const VALID_CATEGORIES = ["risk_mitigation", "growth"];
 // Sprint 03 — Demo Hardening: short on purpose. This endpoint has a real
 // side effect (Sheet row + internal email) and is never auto-retried, so a
@@ -75,8 +86,9 @@ export default async function handler(req, res) {
     approvedAt: new Date().toISOString(),
   };
 
-  if (!N8N_APPROVAL_WEBHOOK_URL) {
-    console.log("Human-approved action (no n8n webhook configured, logged only):", payload);
+  if (!EXTERNAL_ACTIONS_ENABLED || !N8N_APPROVAL_WEBHOOK_URL) {
+    const reason = !EXTERNAL_ACTIONS_ENABLED ? "ENABLE_EXTERNAL_ACTIONS is not \"true\"" : "no n8n webhook configured";
+    console.log(`Human-approved action (${reason}, logged only):`, payload);
     return res.status(200).json({ status: "logged", workflowConnected: false });
   }
 
