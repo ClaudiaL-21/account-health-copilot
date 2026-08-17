@@ -210,6 +210,54 @@ export function daysFromToday(dateISO) {
   return daysBetween(TODAY.toISOString(), new Date(dateISO));
 }
 
+// Development Day 1 — Manager View: deterministic portfolio-level rollup
+// over a given list of accounts. Purely additive — calls computeHealthScore
+// and daysFromToday (both above, unchanged) per account, invents no new
+// scoring rule. Self-contained (computes health/renewal per account itself)
+// so it works identically whether called client-side (state.accounts, which
+// already carries a precomputed .health) or server-side (raw ACCOUNTS array,
+// no precomputed fields) — same function, same numbers, either caller.
+// That symmetry is what guarantees the KPI cards the CSM/manager sees and
+// the numbers the "portfolio-summary" AI mode is grounded in can never
+// silently diverge (see api/analyze.js's handlePortfolioSummary).
+const RENEWAL_WINDOWS = [
+  { key: "days30", label: "≤30 days", min: 0, max: 30 },
+  { key: "days3160", label: "31–60 days", min: 31, max: 60 },
+  { key: "days6190", label: "61–90 days", min: 61, max: 90 },
+];
+
+export function computePortfolioKpis(accounts) {
+  const rows = accounts.map(account => ({
+    account,
+    health: computeHealthScore(account),
+    daysToRenewal: daysFromToday(account.contract.nextRenewalDate),
+  }));
+
+  const totalAccounts = rows.length;
+  const totalArrUSD = rows.reduce((s, r) => s + r.account.contract.arrUSD, 0);
+  const avgHealth = totalAccounts ? Math.round(rows.reduce((s, r) => s + r.health.score, 0) / totalAccounts) : 0;
+
+  const riskCounts = { high: 0, medium: 0, low: 0 };
+  rows.forEach(r => { riskCounts[r.health.riskCategory]++; });
+
+  const arrAtRiskUSD = rows
+    .filter(r => r.health.riskCategory === "high")
+    .reduce((s, r) => s + r.account.contract.arrUSD, 0);
+
+  const renewalWindows = {};
+  RENEWAL_WINDOWS.forEach(w => {
+    const inWindow = rows.filter(r => r.daysToRenewal >= w.min && r.daysToRenewal <= w.max);
+    renewalWindows[w.key] = {
+      label: w.label,
+      accountCount: inWindow.length,
+      arrUSD: inWindow.reduce((s, r) => s + r.account.contract.arrUSD, 0),
+      arrAtRiskUSD: inWindow.filter(r => r.health.riskCategory === "high").reduce((s, r) => s + r.account.contract.arrUSD, 0),
+    };
+  });
+
+  return { totalAccounts, totalArrUSD, avgHealth, riskCounts, arrAtRiskUSD, renewalWindows };
+}
+
 // Directional signal from the most recent weekly CSAT data: are the last
 // 4 weeks trending up, down, or flat vs. the first 4 weeks of the window.
 export function computeTrend(account) {

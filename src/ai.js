@@ -31,6 +31,10 @@ export function fetchQbrDraft(accountId) {
   return callAnalyze({ mode: "qbr-draft", accountId });
 }
 
+export function fetchPortfolioSummary(accountIds) {
+  return callAnalyze({ mode: "portfolio-summary", accountIds });
+}
+
 export async function approveAction(accountId, nba) {
   const res = await fetch("/api/approve-action", {
     method: "POST",

@@ -1,5 +1,5 @@
-import { computeHealthScore, computeExpansionScore, computePriorityScore, daysSince, daysFromToday, computeTrend, REFERENCE_DATE_ISO } from "./scoring.js";
-import { fetchAccountInsight, askAboutAccount, fetchTeamPriority, approveAction, askAboutPortfolio, fetchQbrDraft } from "./ai.js";
+import { computeHealthScore, computeExpansionScore, computePriorityScore, computePortfolioKpis, daysSince, daysFromToday, computeTrend, REFERENCE_DATE_ISO } from "./scoring.js";
+import { fetchAccountInsight, askAboutAccount, fetchTeamPriority, approveAction, askAboutPortfolio, fetchQbrDraft, fetchPortfolioSummary } from "./ai.js";
 
 const RISK_LABEL = { high: "High", medium: "Medium", low: "Low" };
 const fmtUSD = n => "$" + n.toLocaleString("en-US");
@@ -34,6 +34,13 @@ let state = {
   // source the Customer QBR Preview renders from (never data.sections[].internal
   // or .customerSafeDefault directly, see renderQbrPreview).
   qbr: {},
+  // Development Day 1 — Manager View. scopeKey: a stable string derived from
+  // the exact set of accountId's the summary was requested for (see
+  // scopeKeyOf() below). Compared against the *current* filtered list's own
+  // scopeKey on every render — if they differ (filters changed since the
+  // last load), the panel reverts to its idle "Load" state instead of
+  // silently showing a summary for a scope that's no longer on screen.
+  portfolioSummary: { status: "idle", data: null, error: null, scopeKey: null },
   teamPriority: { status: "idle", data: null, error: null, csmId: null }, // csmId: null = whole-team scope
   portfolioAsk: { status: "idle", question: "", answer: "", error: "" }, // scoped to whatever getFilteredAccounts() returns at ask time
   portfolioAskExpanded: false, // collapsed-by-default state for the Ask box on Map/Matrix/Features (Portfolio's own is never collapsible)
@@ -234,12 +241,131 @@ function renderPortfolioKpis(list) {
   return wrap;
 }
 
+// Development Day 1 — Manager View: deterministic portfolio rollup, purely
+// computed from computePortfolioKpis() (src/scoring.js) — no AI, no network
+// call. Reuses the exact same .kpi-strip/.kpi-tile styling as
+// renderPortfolioKpis() above (a second, additional tile row), and
+// .breakdown-table for the renewal-window breakdown — no new CSS component.
+function renderManagerKpis(list) {
+  const wrap = document.createElement("div");
+  const kpis = computePortfolioKpis(list);
+
+  const tiles = [
+    { label: "Total ARR", value: fmtUSD(kpis.totalArrUSD), tone: "neutral" },
+    { label: "Average Health", value: String(kpis.avgHealth), tone: "neutral" },
+    { label: "Medium risk", value: String(kpis.riskCounts.medium), tone: "medium" },
+    { label: "Low risk", value: String(kpis.riskCounts.low), tone: "neutral" },
+  ];
+  const strip = document.createElement("div");
+  strip.className = "kpi-strip manager-kpi-strip";
+  strip.innerHTML = tiles.map(k => `
+    <div class="kpi-tile kpi-tile-${k.tone}">
+      <span class="kpi-value">${escapeHtml(k.value)}</span>
+      <span class="kpi-label">${escapeHtml(k.label)}</span>
+    </div>
+  `).join("");
+  wrap.appendChild(strip);
+
+  const windows = [kpis.renewalWindows.days30, kpis.renewalWindows.days3160, kpis.renewalWindows.days6190];
+  const table = document.createElement("table");
+  table.className = "breakdown-table manager-renewal-table";
+  table.innerHTML = `
+    <thead><tr><th>Renewal window</th><th>Accounts</th><th>ARR renewing</th><th>ARR at risk</th></tr></thead>
+    <tbody>
+      ${windows.map(w => `
+        <tr>
+          <td>${escapeHtml(w.label)}</td>
+          <td>${w.accountCount}</td>
+          <td>${fmtUSD(w.arrUSD)}</td>
+          <td>${fmtUSD(w.arrAtRiskUSD)}</td>
+        </tr>
+      `).join("")}
+    </tbody>
+  `;
+  wrap.appendChild(table);
+
+  return wrap;
+}
+
+// Development Day 1 — Manager View AI layer. Stable key for "which accounts
+// is this summary about" — order-independent (sorted) so a re-sort of the
+// same filtered set doesn't count as a scope change, but any actual filter
+// change (different account set) does. Compared against the current list on
+// every render (see renderPortfolioSummary) so a stale summary from a since-
+// changed filter is never shown as if it still applied — the same class of
+// bug this whole feature exists to prevent ("UI shows scope A, AI analyzed
+// scope B"), just guarded against the *filter changed after loading* case
+// too, not only the request-time case already covered server-side.
+function scopeKeyOf(list) {
+  return list.map(a => a.accountId).sort().join(",");
+}
+
+function renderPortfolioSummary(list) {
+  const box = document.createElement("div");
+  box.className = "team-priority-box ai-copilot-panel";
+  const ps = state.portfolioSummary;
+  const currentScopeKey = scopeKeyOf(list);
+  const inScope = ps.scopeKey === currentScopeKey;
+
+  box.innerHTML = aiCopilotHeader("Executive Portfolio Summary");
+  const body = document.createElement("div");
+  box.appendChild(body);
+
+  if (!inScope || ps.status === "idle") {
+    const btn = document.createElement("button");
+    btn.className = "ai-load-btn";
+    btn.textContent = "Load Executive Summary";
+    btn.addEventListener("click", () => loadPortfolioSummary(list.map(a => a.accountId), currentScopeKey));
+    body.appendChild(btn);
+  } else if (ps.status === "loading") {
+    body.innerHTML = `<p class="sub">Loading…</p>`;
+  } else if (ps.status === "error") {
+    body.innerHTML = `<p class="ai-unavailable">Unavailable (${escapeHtml(ps.error)}).</p>`;
+    const retryBtn = document.createElement("button");
+    retryBtn.className = "ai-load-btn";
+    retryBtn.textContent = "Try Again";
+    retryBtn.addEventListener("click", () => loadPortfolioSummary(list.map(a => a.accountId), currentScopeKey));
+    body.appendChild(retryBtn);
+  } else if (ps.status === "done") {
+    const s = ps.data.summary;
+    body.innerHTML = `
+      <p class="review-section-label">What needs attention</p>
+      <p class="ai-insight-body">${escapeHtml(s.whatNeedsAttention)}</p>
+      <p class="review-section-label">Why it matters</p>
+      <p class="ai-insight-body">${escapeHtml(s.whyItMatters)}</p>
+      <p class="review-section-label">Top 3 priorities this week</p>
+      <ol class="ai-insight-body">${s.topPriorities.map(p => `<li>${escapeHtml(p)}</li>`).join("")}</ol>
+    `;
+    const reloadBtn = document.createElement("button");
+    reloadBtn.className = "reload-link";
+    reloadBtn.textContent = "↻ Reload Summary";
+    reloadBtn.addEventListener("click", () => loadPortfolioSummary(list.map(a => a.accountId), currentScopeKey));
+    body.appendChild(reloadBtn);
+  }
+
+  return box;
+}
+
+async function loadPortfolioSummary(accountIds, scopeKey) {
+  state.portfolioSummary = { status: "loading", data: null, error: null, scopeKey };
+  render();
+  try {
+    const data = await fetchPortfolioSummary(accountIds);
+    state.portfolioSummary = { status: "done", data, error: null, scopeKey };
+  } catch (e) {
+    state.portfolioSummary = { status: "error", data: null, error: e.message, scopeKey };
+  }
+  render();
+}
+
 function renderPortfolio() {
   const wrap = document.createElement("div");
   const list = getSorted(getFilteredAccounts());
 
   wrap.appendChild(renderViewHeader("Portfolio", "Prioritized view of every account — click a row to see the full score breakdown, evidence, and AI insight."));
   wrap.appendChild(renderPortfolioKpis(list));
+  wrap.appendChild(renderManagerKpis(list));
+  wrap.appendChild(renderPortfolioSummary(list));
 
   if (state.filters.csm !== "all") {
     wrap.appendChild(renderPriorityBox(state.filters.csm, `AI Priorities for ${csmName(state.filters.csm)}`));

@@ -294,6 +294,12 @@ main { padding: var(--space-5) var(--shell-padding) 40px; box-sizing: border-box
 .kpi-value { font-size: 24px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; line-height: 1.1; }
 .kpi-label { font-size: 11.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
 
+/* Development Day 1 — Manager View: second KPI row + compact renewal-window
+   table, reusing .kpi-strip/.kpi-tile/.breakdown-table as-is above — only
+   the spacing/heading below is new, no new component. */
+.manager-renewal-table { margin-bottom: var(--space-5); }
+.manager-renewal-table th { text-align: left; padding: 5px 6px; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 1px solid var(--border); }
+
 .summary-bar { display: flex; gap: 8px; margin-bottom: 14px; }
 .summary-chip {
   padding: 6px 12px;

@@ -10,6 +10,16 @@ Status: Am 2026-08-13 manuell in n8n umgesetzt und veröffentlicht. Beide aktive
 - Für die lokale Demo muss `npm run dev:local` in einem Prozess mit ausgehendem Netzwerkzugriff laufen. Ist der Webhook von diesem Prozess aus nicht erreichbar, entsteht keine n8n-Ausführung und die App zeigt den kontrollierten Fehlerzustand.
 - Die weiter unten beschriebene dynamische `body.maxTokens`-Begrenzung ist eine spätere Kosten-/Architekturverbesserung. Für die Präsentation bleibt bewusst die getestete feste Obergrenze von 2.400 Tokens aktiv.
 
+## Nachtrag 2026-08-17 — Sprint 15 (QBR Copilot): Max Tokens auf 3.500 angehoben
+
+- **Aktueller, verbindlicher Wert: Analyse-Workflow → OpenAI Chat Model → Max Tokens = 3.500.** Der oben dokumentierte Wert 2.400 aus Sprint 03 ist damit überholt — dieses Limit darf nicht versehentlich wieder auf 2.400 zurückgesetzt werden.
+- Grund: Sprint 15 führte den `qbr-draft`-Mode ein (12-Section-QBR-Antwort, App sendet `maxTokens: 2800` — mit Abstand der größte Wert aller Modes, siehe `api/analyze.js`). Das feste 2.400-Token-Limit im Node lag darunter und begrenzte die Antwort trotzdem, unabhängig vom gesendeten `body.maxTokens`.
+- Beobachteter Fehler: Ein realer QBR-Testcall auf ACC-01 (Alpenbank AG) brach mit `502 Bad Gateway` ab, Ursache serverseitig protokolliert als `Unterminated string in JSON at position 10295` — die Modellantwort wurde mitten im JSON abgeschnitten. Ein sofortiger Retry funktionierte, da diesmal offenbar unter dem Limit geblieben wurde.
+- Fix: Max Tokens im selben Node auf **3.500** erhöht (mit Sicherheitsmarge über den von der App gesendeten 2.800, da QBR-Antwortlänge je nach Account variiert).
+- Verifiziert: Erneuter realer QBR-Call auf ACC-01 → `200 OK` beim ersten Versuch, vollständiges JSON, alle Sensitive-Guardrails (`healthTrends`/`risks`/`previousInterventions` → `customerSafeDefault: null`) weiterhin korrekt.
+- Bewusst **nicht** auf unbegrenzt gestellt: Die App validiert ohnehin serverseitig max. 1.500 Zeichen pro Feld (`validateQbrDraftShape` in `api/analyze.js`), ein höheres Limit brächte keinen Nutzen, nur unvorhersehbare Kosten/Latenz.
+- Der Approval-Workflow (Workflow B) ist von dieser Änderung nicht betroffen — er ruft serverseitig kein LLM auf (`api/approve-action.js` reicht nur die bereits vom CSM geprüfte Aktion durch).
+
 ## Umsetzungsprotokoll 2026-08-13
 
 - Analyse-Workflow: Header Auth aktiv; Agent-Prompt-Zuordnung geprüft; unverbundene Output-Parser-Pflicht deaktiviert; `gpt-5-mini` mit Reasoning Effort `Low`, maximal 600 Tokens und JSON-Objekt-Antwort; robuste String-Antwort an die App.
