@@ -22,7 +22,7 @@ const initialsOf = name => (name || "").trim().split(/\s+/).slice(0, 2).map(w =>
 
 let state = {
   accounts: [], csms: [], view: "portfolio",
-  filters: { csm: "all", region: "all", risk: "all", expansion: "all", trend: "all", search: "" },
+  filters: { csm: "all", region: "all", risk: "all", expansion: "all", trend: "all", search: "", accountIds: null },
   sort: { key: "score", dir: "asc" }, expanded: null, // asc = lowest Health Score (most concerning) first
   feedbackSort: { key: "count", dir: "desc" },
   matrixSelected: null, // accountId selected in the Matrix view (inline detail, no navigation)
@@ -117,8 +117,39 @@ function getFilteredAccounts() {
     (state.filters.risk === "all" || a.health.riskCategory === state.filters.risk) &&
     (state.filters.expansion === "all" || a.expansion.category === state.filters.expansion) &&
     (state.filters.trend === "all" || a.trend === state.filters.trend) &&
-    (!search || a.accountName.toLowerCase().includes(search) || a.accountId.toLowerCase().includes(search))
+    (!search || a.accountName.toLowerCase().includes(search) || a.accountId.toLowerCase().includes(search)) &&
+    (!state.filters.accountIds || state.filters.accountIds.includes(a.accountId))
   );
+}
+
+// Executive Drill-down — "View accounts" links on the Executive Portfolio
+// Summary jump here. accountIds already came back from the server clamped to
+// the scope that summary was generated for (see clampAccountIds in
+// api/analyze.js), so the UI doesn't re-validate them — it only ever
+// switches to Portfolio and narrows to that exact id list. Replaces (not
+// adds to) the other filters, since "show me exactly these N accounts" is a
+// clearer mental model than intersecting with whatever was already set.
+function applyAccountDrillDown(accountIds) {
+  state.filters = { csm: "all", region: "all", risk: "all", expansion: "all", trend: "all", search: "", accountIds };
+  state.view = "portfolio";
+  render();
+  const csmSelect = document.getElementById("filter-csm");
+  const regionSelect = document.getElementById("filter-region");
+  const riskSelect = document.getElementById("filter-risk");
+  const expansionSelect = document.getElementById("filter-expansion");
+  const trendSelect = document.getElementById("filter-trend");
+  const searchInput = document.getElementById("filter-search");
+  if (csmSelect) csmSelect.value = "all";
+  if (regionSelect) regionSelect.value = "all";
+  if (riskSelect) riskSelect.value = "all";
+  if (expansionSelect) expansionSelect.value = "all";
+  if (trendSelect) trendSelect.value = "all";
+  if (searchInput) searchInput.value = "";
+}
+
+function clearAccountDrillDown() {
+  state.filters.accountIds = null;
+  render();
 }
 
 const RISK_SORT_RANK = { low: 1, medium: 2, high: 3 };
@@ -333,14 +364,23 @@ function renderPortfolioSummary(list) {
     body.appendChild(retryBtn);
   } else if (ps.status === "done") {
     const s = ps.data.summary;
+    // Executive Drill-down — a small "View N accounts" link next to any text
+    // block that came back with accountIds. Server-clamped ids only (see
+    // clampAccountIds in api/analyze.js), never parsed from the text itself.
+    const drillLink = ids => (ids && ids.length)
+      ? `<button type="button" class="drilldown-link" data-ids="${escapeHtml(ids.join(","))}">View ${ids.length} account${ids.length === 1 ? "" : "s"} →</button>`
+      : "";
     body.innerHTML = `
       <p class="review-section-label">What needs attention</p>
-      <p class="ai-insight-body">${escapeHtml(s.whatNeedsAttention)}</p>
+      <p class="ai-insight-body">${escapeHtml(s.whatNeedsAttention.text)} ${drillLink(s.whatNeedsAttention.accountIds)}</p>
       <p class="review-section-label">Why it matters</p>
-      <p class="ai-insight-body">${escapeHtml(s.whyItMatters)}</p>
+      <p class="ai-insight-body">${escapeHtml(s.whyItMatters.text)} ${drillLink(s.whyItMatters.accountIds)}</p>
       <p class="review-section-label">Top 3 priorities this week</p>
-      <ol class="ai-insight-body">${s.topPriorities.map(p => `<li>${escapeHtml(p)}</li>`).join("")}</ol>
+      <ol class="ai-insight-body">${s.topPriorities.map(p => `<li>${escapeHtml(p.text)} ${drillLink(p.accountIds)}</li>`).join("")}</ol>
     `;
+    body.querySelectorAll(".drilldown-link").forEach(btn => {
+      btn.addEventListener("click", () => applyAccountDrillDown(btn.dataset.ids.split(",")));
+    });
     const reloadBtn = document.createElement("button");
     reloadBtn.className = "reload-link";
     reloadBtn.textContent = "↻ Reload Summary";
@@ -368,6 +408,19 @@ function renderPortfolio() {
   const list = getSorted(getFilteredAccounts());
 
   wrap.appendChild(renderViewHeader("Portfolio", "Prioritized view of every account — click a row to see the full score breakdown, evidence, and AI insight."));
+
+  if (state.filters.accountIds) {
+    const banner = document.createElement("div");
+    banner.className = "drilldown-banner";
+    banner.innerHTML = `<span>Filtered to ${state.filters.accountIds.length} account${state.filters.accountIds.length === 1 ? "" : "s"} from the Executive Summary.</span>`;
+    const clearBtn = document.createElement("button");
+    clearBtn.className = "drilldown-clear-btn";
+    clearBtn.textContent = "Clear";
+    clearBtn.addEventListener("click", clearAccountDrillDown);
+    banner.appendChild(clearBtn);
+    wrap.appendChild(banner);
+  }
+
   wrap.appendChild(renderPortfolioKpis(list));
   wrap.appendChild(renderManagerKpis(list));
   wrap.appendChild(renderPortfolioSummary(list));
@@ -1011,6 +1064,20 @@ async function submitAsk(accountId, questionText) {
 // .safeText — CSM-typed text — never .internal or .customerSafeDefault).
 const QBR_SENSITIVE_KEYS = ["healthTrends", "risks", "previousInterventions"];
 
+// QBR Workspace UX — groups the 12 flat sections into a small tab set so the
+// review screen isn't one long vertical list. Purely a layout grouping: every
+// section key still renders through the same qbr-item markup/listeners as
+// before, and the internal/customer-safe security boundary (QBR_SENSITIVE_KEYS,
+// selectCustomerSafeSections) is untouched by this grouping.
+const QBR_TAB_GROUPS = [
+  { id: "overview", label: "Overview", keys: ["executiveSummary", "businessObjectives"] },
+  { id: "value-adoption", label: "Value & Adoption", keys: ["valueDelivered", "adoption", "healthTrends"] },
+  { id: "relationships", label: "Relationships", keys: ["relationship", "featureRequests"] },
+  { id: "risks", label: "Risks", keys: ["risks", "previousInterventions"] },
+  { id: "commitments", label: "Commitments", keys: ["openCommitments", "renewalOutlook"] },
+  { id: "next-quarter", label: "Next Quarter", keys: ["nextQuarterPlan"] },
+];
+
 function renderQbrSection(container, acc) {
   const accountId = acc.accountId;
   const qbr = state.qbr[accountId] || { status: "idle" };
@@ -1045,51 +1112,69 @@ function renderQbrSection(container, acc) {
   else renderQbrReview(container, accountId, qbr);
 }
 
+function renderQbrItemHtml(s, review) {
+  const sensitive = QBR_SENSITIVE_KEYS.includes(s.key);
+  const state_ = review[s.key];
+  const hasSafeText = state_.safeText.trim().length > 0;
+  const placeholder = s.customerSafeDefault === null
+    ? "Not included — write a customer-safe version if appropriate."
+    : "Customer-safe draft — edit before it counts as reviewed.";
+  // QBR Repair & Hardening — for sensitive sections, the generic "Include in
+  // customer version" checkbox is misleading: it reads as if the internal
+  // draft could be included, when only a human-written safeText ever can
+  // (see renderQbrPreview — internal is never read there). Sensitive
+  // sections instead start disabled with a label that says explicitly that
+  // a customer-safe version is required first, and only become checkable
+  // once the CSM has actually typed one (see the input listener below).
+  const includeLabel = sensitive
+    ? (hasSafeText ? "Include reviewed version in Customer QBR" : "Customer-safe version required")
+    : "Include in customer version";
+  const includeDisabled = sensitive && !hasSafeText;
+  return `
+    <div class="qbr-item${sensitive ? " qbr-item-sensitive" : ""}">
+      <div class="qbr-item-head">
+        <h5>${escapeHtml(s.title)}</h5>
+        ${sensitive ? `<span class="status-pill risk-high">Manual review required</span>` : ""}
+      </div>
+      <p class="review-section-label">Internal — CS team only <span class="review-hint-inline">AI working draft, cannot be included directly</span></p>
+      <div class="review-origin qbr-internal-text">${escapeHtml(s.internal)}</div>
+      <p class="review-section-label">Customer version</p>
+      <label class="qbr-include-toggle">
+        <input type="checkbox" class="qbr-include" data-key="${s.key}" ${state_.included ? "checked" : ""} ${includeDisabled ? "disabled" : ""}/>
+        <span class="qbr-include-label">${escapeHtml(includeLabel)}</span>
+      </label>
+      <textarea class="qbr-safe-text" data-key="${s.key}" rows="3" maxlength="1500" placeholder="${escapeHtml(placeholder)}">${escapeHtml(state_.safeText)}</textarea>
+    </div>
+  `;
+}
+
 function renderQbrReview(container, accountId, qbr) {
   const { data, review } = qbr;
+  const sectionByKey = Object.fromEntries(data.sections.map(s => [s.key, s]));
+  const activeTab = qbr.activeTab || QBR_TAB_GROUPS[0].id;
 
-  const sectionsHtml = data.sections.map(s => {
-    const sensitive = QBR_SENSITIVE_KEYS.includes(s.key);
-    const state_ = review[s.key];
-    const hasSafeText = state_.safeText.trim().length > 0;
-    const placeholder = s.customerSafeDefault === null
-      ? "Not included — write a customer-safe version if appropriate."
-      : "Customer-safe draft — edit before it counts as reviewed.";
-    // QBR Repair & Hardening — for sensitive sections, the generic "Include in
-    // customer version" checkbox is misleading: it reads as if the internal
-    // draft could be included, when only a human-written safeText ever can
-    // (see renderQbrPreview — internal is never read there). Sensitive
-    // sections instead start disabled with a label that says explicitly that
-    // a customer-safe version is required first, and only become checkable
-    // once the CSM has actually typed one (see the input listener below).
-    const includeLabel = sensitive
-      ? (hasSafeText ? "Include reviewed version in Customer QBR" : "Customer-safe version required")
-      : "Include in customer version";
-    const includeDisabled = sensitive && !hasSafeText;
+  const tabsHtml = QBR_TAB_GROUPS.map(g => {
+    const flagged = g.keys.some(k => QBR_SENSITIVE_KEYS.includes(k) && !review[k]?.safeText.trim());
     return `
-      <div class="qbr-item${sensitive ? " qbr-item-sensitive" : ""}">
-        <div class="qbr-item-head">
-          <h5>${escapeHtml(s.title)}</h5>
-          ${sensitive ? `<span class="status-pill risk-high">Manual review required</span>` : ""}
-        </div>
-        <p class="review-section-label">Internal — CS team only <span class="review-hint-inline">AI working draft, cannot be included directly</span></p>
-        <div class="review-origin qbr-internal-text">${escapeHtml(s.internal)}</div>
-        <p class="review-section-label">Customer version</p>
-        <label class="qbr-include-toggle">
-          <input type="checkbox" class="qbr-include" data-key="${s.key}" ${state_.included ? "checked" : ""} ${includeDisabled ? "disabled" : ""}/>
-          <span class="qbr-include-label">${escapeHtml(includeLabel)}</span>
-        </label>
-        <textarea class="qbr-safe-text" data-key="${s.key}" rows="3" maxlength="1500" placeholder="${escapeHtml(placeholder)}">${escapeHtml(state_.safeText)}</textarea>
-      </div>
+      <button type="button" class="qbr-tab-btn${g.id === activeTab ? " active" : ""}" data-tab="${g.id}">
+        ${escapeHtml(g.label)}${flagged ? ` <span class="qbr-tab-flag" title="Manual review required">•</span>` : ""}
+      </button>
     `;
-  }).join("");
+  }).join("") + `<button type="button" class="qbr-tab-btn qbr-tab-btn-preview" data-action="preview">Customer Preview →</button>`;
+
+  const panelsHtml = QBR_TAB_GROUPS.map(g => `
+    <div class="qbr-tab-panel${g.id === activeTab ? " active" : ""}" data-tab-panel="${g.id}">
+      <div class="qbr-sections">${g.keys.map(k => sectionByKey[k] ? renderQbrItemHtml(sectionByKey[k], review) : "").join("")}</div>
+    </div>
+  `).join("");
 
   container.innerHTML = `
     <div class="qbr-head">
       <p class="ai-copilot-eyebrow">QBR COPILOT</p>
       <h4>QBR Review <span class="ai-disclaimer">— AI-drafted, CSM review required before customer use</span></h4>
     </div>
-    <div class="qbr-sections">${sectionsHtml}</div>
+    <nav class="qbr-tabs">${tabsHtml}</nav>
+    ${panelsHtml}
     <div class="qbr-actions">
       <button class="review-cancel-btn qbr-reload-btn">↻ Regenerate Draft</button>
       <button class="review-confirm-btn qbr-preview-btn">Preview Customer QBR</button>
@@ -1115,11 +1200,20 @@ function renderQbrReview(container, accountId, qbr) {
       if (label) label.textContent = hasSafeText ? "Include reviewed version in Customer QBR" : "Customer-safe version required";
     });
   });
-  container.querySelector(".qbr-reload-btn").addEventListener("click", () => loadQbrDraft(accountId));
-  container.querySelector(".qbr-preview-btn").addEventListener("click", () => {
-    state.qbr[accountId].mode = "preview";
-    render();
+  // Tab switching is pure visibility toggling (no render()), so in-progress
+  // textarea edits on other tabs are never lost or re-rendered away.
+  container.querySelectorAll(".qbr-tab-btn[data-tab]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const tab = btn.dataset.tab;
+      qbr.activeTab = tab;
+      container.querySelectorAll(".qbr-tab-btn[data-tab]").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+      container.querySelectorAll(".qbr-tab-panel").forEach(p => p.classList.toggle("active", p.dataset.tabPanel === tab));
+    });
   });
+  container.querySelector(".qbr-reload-btn").addEventListener("click", () => loadQbrDraft(accountId));
+  const goToPreview = () => { state.qbr[accountId].mode = "preview"; render(); };
+  container.querySelector(".qbr-preview-btn").addEventListener("click", goToPreview);
+  container.querySelector(".qbr-tab-btn-preview").addEventListener("click", goToPreview);
 }
 
 // Renders ONLY from qbr.review[key] — the CSM-edited safeText and included
@@ -2187,10 +2281,13 @@ function renderTrust() {
   wrap.className = "trust-view";
   wrap.innerHTML = `
     <section class="trust-hero">
-      <p class="trust-eyebrow">Trust &amp; Governance</p>
-      <h2>Human-led AI, explainable by design</h2>
-      <p class="sub trust-hero-sub">How fragmented customer signals become transparent priorities and controlled actions in this demo.</p>
-      <p class="trust-refdate">Reference date for this demo: <strong>${fmtDate(REFERENCE_DATE_ISO)}</strong> — a fixed snapshot, not a live feed or a production forecast.</p>
+      <div class="trust-hero-content">
+        <p class="trust-eyebrow">Trust &amp; Governance</p>
+        <h2>Human-led AI, explainable by design</h2>
+        <p class="sub trust-hero-sub">How fragmented customer signals become transparent priorities and controlled actions in this demo.</p>
+        <p class="trust-refdate">Reference date for this demo: <strong>${fmtDate(REFERENCE_DATE_ISO)}</strong> — a fixed snapshot, not a live feed or a production forecast.</p>
+      </div>
+      <img src="assets/logo-horizontal-light.svg" alt="Customer Success AI Hub" class="trust-hero-logo" />
     </section>
 
     <section class="trust-section">

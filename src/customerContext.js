@@ -47,6 +47,17 @@
 
 import { computeHealthScore, computeExpansionScore, computeTrend, daysSince, daysFromToday } from "./scoring.js";
 
+// Management Text Polish — accounts.json stores championStatus as a raw
+// snake_case enum ("recently_departed"). Left untranslated, that value gets
+// echoed verbatim into AI-facing prompt text and can resurface in executive
+// output (e.g. "recently_departed champions"). Same label wording already
+// used for this field in the UI (src/app.js's CHAMPION_LABEL, src/
+// scoring.js's championRisk labelMap) — kept in sync here rather than
+// introducing a third copy with different wording. Falls back to the raw
+// value for any status not in the map, so an unexpected future value still
+// reaches the AI (not silently dropped) rather than crashing.
+const CHAMPION_STATUS_LABEL = { active: "active", unknown: "unclear", recently_departed: "recently departed" };
+
 // Sprint 01 guardrail's confidence measure — moved here from api/analyze.js
 // (which re-exports it for backward compatibility) since it's a per-account
 // derived signal like everything else in this module, not specific to the
@@ -113,7 +124,7 @@ export function buildCustomerContext(account, { csmName } = {}) {
       },
       relationship: {
         championName: account.relationship.championName,
-        championStatus: account.relationship.championStatus,
+        championStatus: CHAMPION_STATUS_LABEL[account.relationship.championStatus] ?? account.relationship.championStatus,
         execSponsorEngaged: account.relationship.execSponsorEngaged,
         lastInteractionDaysAgo: account.relationship.lastInteractionDaysAgo,
         lastQBRDate: account.relationship.lastQBRDate,

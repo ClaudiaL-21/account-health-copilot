@@ -48,6 +48,27 @@ test("buildCustomerContext: country/region/location are carried through verbatim
   assert.deepEqual(ctx.facts.location, { city: alpenbank.location.city, country: alpenbank.location.country });
 });
 
+// Management Text Polish — championStatus is stored in accounts.json as a
+// raw snake_case enum ("recently_departed"); the AI-facing context and
+// prompt text must carry the readable label, not leak the internal value
+// verbatim into executive-facing output.
+test("buildCustomerContext: championStatus is a readable label, not the raw snake_case enum value", () => {
+  const departed = ACCOUNTS.find(a => a.relationship.championStatus === "recently_departed");
+  assert.ok(departed, "fixture assumption: dataset has at least one recently_departed account");
+  const ctx = buildCustomerContext(departed, {});
+  assert.equal(ctx.facts.relationship.championStatus, "recently departed");
+  assert.doesNotMatch(ctx.facts.relationship.championStatus, /_/);
+});
+
+test("formatAccountContextText and formatCustomerSummaryLine never emit the raw 'recently_departed' enum value", () => {
+  const departed = ACCOUNTS.find(a => a.relationship.championStatus === "recently_departed");
+  const ctx = buildCustomerContext(departed, { csmName: csmName(departed.csmId) });
+  assert.doesNotMatch(formatAccountContextText(ctx), /recently_departed/);
+  assert.match(formatAccountContextText(ctx), /recently departed/);
+  assert.doesNotMatch(formatCustomerSummaryLine(ctx), /recently_departed/);
+  assert.match(formatCustomerSummaryLine(ctx), /recently departed/);
+});
+
 test("buildCustomerContext: ARR and renewal date are present", () => {
   const ctx = buildCustomerContext(alpenbank, {});
   assert.equal(ctx.facts.contract.arrUSD, alpenbank.contract.arrUSD);

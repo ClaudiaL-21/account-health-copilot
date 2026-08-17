@@ -276,23 +276,48 @@ function validatePortfolioAskShape(parsed) {
 // Development Day 1 — Manager View. Exactly 3 priorities, no more/fewer —
 // the product promise ("Top 3 priorities this week") is a fixed contract,
 // not "however many the model felt like listing".
+//
+// Executive Drill-down — each text field may carry an `accountIds` array so
+// the UI can offer a "View N accounts" link without ever parsing account
+// names out of free text. `accountIds` is optional on the model's output
+// (defaults to []) but always validated as an array of strings here; the
+// actual in-scope clamping (dropping any id the model wasn't given) happens
+// in handlePortfolioSummary via clampAccountIds(), not here — this function
+// only checks shape, not membership.
+function isValidTextBlock(block, maxLen) {
+  if (!block || typeof block !== "object") return false;
+  if (!isNonEmptyString(block.text) || block.text.length > maxLen) return false;
+  if (block.accountIds === undefined) return true;
+  return Array.isArray(block.accountIds) && block.accountIds.every(id => typeof id === "string");
+}
 function validatePortfolioSummaryShape(parsed) {
   if (!parsed || typeof parsed !== "object" || !parsed.summary || typeof parsed.summary !== "object") {
     throw new Error("portfolio-summary: response missing summary object");
   }
   const { whatNeedsAttention, whyItMatters, topPriorities } = parsed.summary;
-  if (!isNonEmptyString(whatNeedsAttention) || whatNeedsAttention.length > 1000) {
+  if (!isValidTextBlock(whatNeedsAttention, 1000)) {
     throw new Error("portfolio-summary: invalid whatNeedsAttention");
   }
-  if (!isNonEmptyString(whyItMatters) || whyItMatters.length > 1000) {
+  if (!isValidTextBlock(whyItMatters, 1000)) {
     throw new Error("portfolio-summary: invalid whyItMatters");
   }
   if (!Array.isArray(topPriorities) || topPriorities.length !== 3) {
     throw new Error("portfolio-summary: topPriorities must be an array of exactly 3 items");
   }
   topPriorities.forEach((p, i) => {
-    if (!isNonEmptyString(p) || p.length > 500) throw new Error(`portfolio-summary: invalid topPriorities[${i}]`);
+    if (!isValidTextBlock(p, 500)) throw new Error(`portfolio-summary: invalid topPriorities[${i}]`);
   });
+}
+
+// Executive Drill-down — the model is only ever shown the accounts in the
+// current scope, but nothing stops it from hallucinating an id it wasn't
+// given (typo, a similar-looking id from training data, etc.). Every
+// accountIds array from the model is clamped against the real scope here
+// before it ever reaches the client, so the UI can trust any id it renders
+// a link for without re-checking.
+function clampAccountIds(ids, validIds) {
+  if (!Array.isArray(ids)) return [];
+  return ids.filter(id => validIds.has(id));
 }
 
 // The ranking (accounts, order, accountId per position) is deterministic and
@@ -619,20 +644,40 @@ Total ARR renewing within 90 days (all windows combined, already summed — do n
 Total accounts renewing within 90 days (all windows combined, already summed): ${kpis.totalRenewalAccountCount}`;
 }
 
+function daysUntil(dateISO) {
+  return Math.round((new Date(dateISO) - new Date(REFERENCE_DATE_ISO)) / 86400000);
+}
+
+// Executive Drill-down — the mock path's accountIds are derived from the
+// same deterministic facts the text already describes (risk category,
+// renewal date, health score), never invented, so the mock stays a faithful
+// stand-in for what the real prompt/validation path also guarantees.
 function mockPortfolioSummary(accounts, kpis) {
   const topDrivers = accounts.map(a => computeHealthScore(a).criteria[0]?.label).filter(Boolean);
   const commonDriver = topDrivers.length
     ? topDrivers.sort((x, y) => topDrivers.filter(d => d === y).length - topDrivers.filter(d => d === x).length)[0]
     : null;
+  const highRiskIds = accounts.filter(a => computeHealthScore(a).riskCategory === "high").map(a => a.accountId);
+  const renewingSoonIds = accounts.filter(a => { const d = daysUntil(a.contract.nextRenewalDate); return d >= 0 && d <= 30; }).map(a => a.accountId);
+  const lowestHealthIds = [...accounts]
+    .sort((a, b) => computeHealthScore(a).score - computeHealthScore(b).score)
+    .slice(0, 3)
+    .map(a => a.accountId);
   return {
-    whatNeedsAttention: `[MOCK] ${kpis.riskCounts.high} of ${kpis.totalAccounts} accounts in this scope are high risk, representing $${kpis.arrAtRiskUSD} of ARR at risk.`,
-    whyItMatters: commonDriver
-      ? `[MOCK] The most common top risk driver across these accounts is "${commonDriver}".`
-      : `[MOCK] No single common risk driver stands out across these accounts.`,
+    whatNeedsAttention: {
+      text: `[MOCK] ${kpis.riskCounts.high} of ${kpis.totalAccounts} accounts in this scope are high risk, representing $${kpis.arrAtRiskUSD} of ARR at risk.`,
+      accountIds: highRiskIds,
+    },
+    whyItMatters: {
+      text: commonDriver
+        ? `[MOCK] The most common top risk driver across these accounts is "${commonDriver}".`
+        : `[MOCK] No single common risk driver stands out across these accounts.`,
+      accountIds: highRiskIds,
+    },
     topPriorities: [
-      `[MOCK] Review the ${kpis.renewalWindows.days30.accountCount} account(s) renewing within 30 days first.`,
-      `[MOCK] Focus on the $${kpis.arrAtRiskUSD} of ARR currently in high-risk accounts.`,
-      `[MOCK] CSM to confirm next steps for the accounts with the lowest Health Scores in this scope.`,
+      { text: `[MOCK] Review the ${kpis.renewalWindows.days30.accountCount} account(s) renewing within 30 days first.`, accountIds: renewingSoonIds },
+      { text: `[MOCK] Focus on the $${kpis.arrAtRiskUSD} of ARR currently in high-risk accounts.`, accountIds: highRiskIds },
+      { text: `[MOCK] CSM to confirm next steps for the accounts with the lowest Health Scores in this scope.`, accountIds: lowestHealthIds },
     ],
   };
 }
@@ -640,9 +685,10 @@ function mockPortfolioSummary(accounts, kpis) {
 async function handlePortfolioSummary(accountIds) {
   const accounts = ACCOUNTS.filter(a => accountIds.includes(a.accountId));
   const kpis = computePortfolioKpis(accounts);
+  const validIds = new Set(accounts.map(a => a.accountId));
 
   if (accounts.length === 0) {
-    return { kpis, summary: { whatNeedsAttention: "No accounts match the current filters.", whyItMatters: "", topPriorities: [] } };
+    return { kpis, summary: { whatNeedsAttention: { text: "No accounts match the current filters.", accountIds: [] }, whyItMatters: { text: "", accountIds: [] }, topPriorities: [] } };
   }
 
   if (MOCK_MODE) {
@@ -661,25 +707,33 @@ ${summary}
 
 ${PORTFOLIO_GROUNDING_HINTS}
 
+Each account line starts with its exact accountId (e.g. "ACC-07") — use those exact ids, verbatim, in the accountIds arrays below. Never invent an id or reference an account not listed above.
+
 Respond with ONLY this JSON schema:
 {
   "summary": {
-    "whatNeedsAttention": "1-2 sentences: what in this scope most needs a manager's attention right now, grounded only in the KPIs/accounts above",
-    "whyItMatters": "1-2 sentences: why that matters (business impact), grounded only in the data above",
-    "topPriorities": ["exactly 3 short, concrete priorities for this week, each grounded in the accounts/KPIs above"]
+    "whatNeedsAttention": { "text": "1-2 sentences: what in this scope most needs a manager's attention right now, grounded only in the KPIs/accounts above", "accountIds": ["the specific accountIds this text is about, [] if none"] },
+    "whyItMatters": { "text": "1-2 sentences: why that matters (business impact), grounded only in the data above", "accountIds": ["the specific accountIds this text is about, [] if none"] },
+    "topPriorities": [
+      { "text": "a short, concrete priority for this week, grounded in the accounts/KPIs above", "accountIds": ["the specific accountIds this priority is about, [] if none"] }
+    ]
   }
-}`;
+}
+(topPriorities must have exactly 3 items)`;
   const raw = await callAI(PORTFOLIO_SUMMARY_SYSTEM_PROMPT, user, 900);
   const parsed = parseJsonLoose(raw);
   validatePortfolioSummaryShape(parsed);
   // Explicit allowlist construction (not a spread of `parsed`) — guarantees
   // no unexpected/extra field the model might add ever reaches the client.
+  // accountIds are clamped against validIds (the actual accounts in this
+  // request's scope) here — the model only ever sees these accounts, but
+  // clamping is what actually guarantees it can't reference anything else.
   return {
     kpis,
     summary: {
-      whatNeedsAttention: parsed.summary.whatNeedsAttention,
-      whyItMatters: parsed.summary.whyItMatters,
-      topPriorities: parsed.summary.topPriorities,
+      whatNeedsAttention: { text: parsed.summary.whatNeedsAttention.text, accountIds: clampAccountIds(parsed.summary.whatNeedsAttention.accountIds, validIds) },
+      whyItMatters: { text: parsed.summary.whyItMatters.text, accountIds: clampAccountIds(parsed.summary.whyItMatters.accountIds, validIds) },
+      topPriorities: parsed.summary.topPriorities.map(p => ({ text: p.text, accountIds: clampAccountIds(p.accountIds, validIds) })),
     },
   };
 }

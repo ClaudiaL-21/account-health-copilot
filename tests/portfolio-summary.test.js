@@ -49,23 +49,27 @@ test("portfolio-summary returns kpis + summary with exactly 3 topPriorities", as
   assert.equal(statusCode, 200);
   assert.ok(body.kpis);
   assert.ok(body.summary);
-  assert.ok(typeof body.summary.whatNeedsAttention === "string" && body.summary.whatNeedsAttention.length > 0);
-  assert.ok(typeof body.summary.whyItMatters === "string" && body.summary.whyItMatters.length > 0);
+  assert.ok(typeof body.summary.whatNeedsAttention.text === "string" && body.summary.whatNeedsAttention.text.length > 0);
+  assert.ok(typeof body.summary.whyItMatters.text === "string" && body.summary.whyItMatters.text.length > 0);
   assert.equal(body.summary.topPriorities.length, 3);
-  body.summary.topPriorities.forEach(p => assert.ok(typeof p === "string" && p.length > 0));
+  body.summary.topPriorities.forEach(p => assert.ok(typeof p.text === "string" && p.text.length > 0));
 });
 
 test("response contains no unexpected top-level or summary fields beyond the known contract", async () => {
   const { body } = await callHandler({ mode: "portfolio-summary", accountIds: ALL_IDS });
   assert.deepEqual(Object.keys(body).sort(), ["kpis", "summary"]);
   assert.deepEqual(Object.keys(body.summary).sort(), ["topPriorities", "whatNeedsAttention", "whyItMatters"]);
+  assert.deepEqual(Object.keys(body.summary.whatNeedsAttention).sort(), ["accountIds", "text"]);
+  assert.deepEqual(Object.keys(body.summary.whyItMatters).sort(), ["accountIds", "text"]);
+  body.summary.topPriorities.forEach(p => assert.deepEqual(Object.keys(p).sort(), ["accountIds", "text"]));
 });
 
 test("empty accountIds returns a safe, deterministic response without calling the AI provider", async () => {
   const { statusCode, body } = await callHandler({ mode: "portfolio-summary", accountIds: [] });
   assert.equal(statusCode, 200);
   assert.equal(body.kpis.totalAccounts, 0);
-  assert.match(body.summary.whatNeedsAttention, /no accounts/i);
+  assert.match(body.summary.whatNeedsAttention.text, /no accounts/i);
+  assert.deepEqual(body.summary.whatNeedsAttention.accountIds, []);
 });
 
 test("missing accountIds field (not an array) is treated as empty, not a crash", async () => {
@@ -113,10 +117,43 @@ test("full portfolio scope (all accountIds) matches the dataset total, confirmin
 test("mock summary text only references accounts/numbers actually in the given scope (High-risk scope never mentions 0 as the at-risk count when high-risk accounts exist)", async () => {
   const { body } = await callHandler({ mode: "portfolio-summary", accountIds: HIGH_RISK_IDS });
   assert.ok(body.kpis.arrAtRiskUSD > 0);
-  assert.match(body.summary.whatNeedsAttention, new RegExp(String(HIGH_RISK_IDS.length)));
+  assert.match(body.summary.whatNeedsAttention.text, new RegExp(String(HIGH_RISK_IDS.length)));
 });
 
 test("unknown accountId in the list is silently excluded from the scope, not fabricated into a phantom account", async () => {
   const { body } = await callHandler({ mode: "portfolio-summary", accountIds: [ALL_IDS[0], "ACC-does-not-exist"] });
   assert.equal(body.kpis.totalAccounts, 1);
+});
+
+// --- Executive Drill-down: accountIds scope safety ------------------------
+// Section 15 of the redesign brief: account references are structured data,
+// and the server must never let a drill-down id escape the accounts that
+// were actually sent in this request's scope, no matter what the model
+// (mocked here) returns.
+
+test("mock summary's accountIds are always a subset of the requested scope", async () => {
+  const subsetIds = HIGH_RISK_IDS.slice(0, Math.max(1, Math.floor(HIGH_RISK_IDS.length / 2)));
+  const { body } = await callHandler({ mode: "portfolio-summary", accountIds: subsetIds });
+  const scope = new Set(subsetIds);
+  const allReturnedIds = [
+    ...body.summary.whatNeedsAttention.accountIds,
+    ...body.summary.whyItMatters.accountIds,
+    ...body.summary.topPriorities.flatMap(p => p.accountIds),
+  ];
+  allReturnedIds.forEach(id => assert.ok(scope.has(id), `${id} was not in the requested scope`));
+});
+
+test("an accountId outside the requested scope is never returned, even if every account in scope is high-risk", async () => {
+  // Narrow the scope to a single account not in HIGH_RISK_IDS's full set,
+  // so any drill-down id the mock computes is mechanically checkable.
+  const [firstId, ...rest] = ALL_IDS;
+  const { body } = await callHandler({ mode: "portfolio-summary", accountIds: [firstId] });
+  const excludedId = rest.find(id => id !== firstId);
+  const allReturnedIds = [
+    ...body.summary.whatNeedsAttention.accountIds,
+    ...body.summary.whyItMatters.accountIds,
+    ...body.summary.topPriorities.flatMap(p => p.accountIds),
+  ];
+  assert.ok(!allReturnedIds.includes(excludedId));
+  allReturnedIds.forEach(id => assert.equal(id, firstId));
 });

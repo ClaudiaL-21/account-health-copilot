@@ -11,12 +11,17 @@
   --red: #dc2626;
   --red-bg: #fef2f2;
 
-  /* Brand palette, from the CS AI Signal Hub logo */
-  --navy: #153450;
-  --navy-bg: #eaf1f6;
-  --teal: #14b8a6;
-  --teal-bg: #ecfdfa;
-  --mint: #5eead4;
+  /* Brand palette — Customer Success AI | Hub, Aug 2026 redesign
+     (Signal Teal / Ground Slate / Open Canvas system). --navy/--teal/--mint
+     names kept as-is so existing component styles don't need touching
+     one-by-one; the hex values underneath now match the new brand. */
+  --navy: #25333a;      /* Ground Slate */
+  --navy-bg: #edf1f0;
+  --teal: #007f83;      /* Signal Teal */
+  --teal-bg: #e5f3f3;
+  --mint: #a9e5d3;      /* Human Mint */
+  --clarity-blue: #226fbd;
+  --insight-violet: #7462a6;
 
   /* Accent alias — was a generic blue, now the brand teal.
      Kept as --blue/--blue-bg so existing component styles don't
@@ -38,7 +43,7 @@
   --radius-lg: 14px;
   --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.07);
   --shadow-md: 0 6px 18px rgba(15, 23, 42, 0.10);
-  --focus-ring: 0 0 0 3px rgba(20, 184, 166, 0.38);
+  --focus-ring: 0 0 0 3px rgba(0, 127, 131, 0.38);
   --surface-muted: #f8fafc;
   --shell-width: 1300px;
   --shell-padding: 28px;
@@ -54,8 +59,8 @@
   --ink-border: rgba(255, 255, 255, 0.10);
   --ink-text: #e7eef5;
   --ink-text-muted: #9db1c7;
-  --canvas: #f6f4ef;
-  --canvas-alt: #eef1ee;
+  --canvas: #f7faf9;   /* Open Canvas */
+  --canvas-alt: #eef3f1;
 }
 * { box-sizing: border-box; }
 body {
@@ -116,29 +121,24 @@ textarea:focus-visible,
   gap: var(--space-3);
   padding: 0 var(--space-2) var(--space-4);
 }
-/* Sprint 06B — the square assets/logo-icon.png shown in full (object-fit:
-   contain, not the old cover-cropped logo-full.jpg) on a deliberately white/
-   near-white tile, since the source PNG's own light backing is what keeps
-   the mark's dark-navy strokes legible against the navy sidebar — no alpha
-   editing of the asset itself, just CSS padding/background around it. */
+/* Brand redesign — the new CUSTOMER SUCCESS AI | HUB icon (transparent PNG/SVG,
+   dark-background variant) is legible directly on the navy sidebar, so no
+   white backing tile is needed anymore (unlike the old logo-icon.png). */
 .sidebar-logo {
   width: 56px;
   height: 56px;
-  padding: 6px;
-  box-sizing: border-box;
   object-fit: contain;
-  background: #fbfdfd;
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(94, 234, 212, 0.4);
-  box-shadow: 0 0 0 1px rgba(20, 184, 166, 0.1), 0 2px 6px rgba(11, 31, 51, 0.35);
   flex-shrink: 0;
 }
 .sidebar-product-name {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
-  line-height: 1.25;
+  line-height: 1.3;
   color: #ffffff;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
+}
+.sidebar-product-name-accent {
+  color: var(--teal);
 }
 
 nav.tabs { display: flex; flex-direction: column; gap: 2px; flex: 1; }
@@ -160,12 +160,12 @@ nav.tabs button {
 nav.tabs button .nav-icon { width: 18px; height: 18px; flex-shrink: 0; color: currentColor; }
 nav.tabs button:hover { background: rgba(255, 255, 255, 0.06); color: var(--ink-text); }
 nav.tabs button.active {
-  background: rgba(20, 184, 166, 0.16);
+  background: rgba(0, 127, 131, 0.16);
   color: #ffffff;
   font-weight: 600;
   box-shadow: inset 3px 0 0 var(--teal);
 }
-nav.tabs button:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(94, 234, 212, 0.5); }
+nav.tabs button:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(169, 229, 211, 0.5); }
 
 .sidebar-footer {
   border-top: 1px solid var(--ink-border);
@@ -731,6 +731,21 @@ table.breakdown-table td { padding: 5px 6px; border-bottom: 1px solid var(--bord
    review-confirm-btn) rather than introducing a new component style. */
 .qbr-head { margin-bottom: 14px; }
 .qbr-head h4 { margin: 2px 0 0; }
+/* QBR Workspace UX — tab nav replaces the old single 12-item vertical list;
+   panels are all rendered but only the active one is shown (pure CSS/class
+   toggle, no re-render), so in-progress edits on other tabs are never lost. */
+.qbr-tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
+.qbr-tab-btn {
+  padding: 9px 14px; border: none; background: none; cursor: pointer;
+  font-size: 12.5px; font-weight: 600; color: var(--muted);
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.qbr-tab-btn:hover { color: var(--text); }
+.qbr-tab-btn.active { color: var(--teal); border-bottom-color: var(--teal); }
+.qbr-tab-flag { color: var(--red); font-weight: 700; }
+.qbr-tab-btn-preview { margin-left: auto; color: var(--teal); }
+.qbr-tab-panel { display: none; }
+.qbr-tab-panel.active { display: block; }
 .qbr-sections { display: flex; flex-direction: column; gap: 18px; }
 .qbr-item { padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--card); }
 .qbr-item-sensitive { border-color: var(--red); }
@@ -824,6 +839,45 @@ table.breakdown-table td { padding: 5px 6px; border-bottom: 1px solid var(--bord
 }
 .reload-link:hover { color: var(--blue); }
 .ai-unavailable { color: var(--muted); font-size: 12px; font-style: italic; }
+
+/* Executive Drill-down — inline text link next to a summary/priority line,
+   and the banner shown on Portfolio once a drill-down narrows the list. */
+.drilldown-link {
+  display: inline;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--teal);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+.drilldown-link:hover { color: var(--clarity-blue); }
+.drilldown-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  margin-bottom: 14px;
+  border-radius: var(--radius-sm);
+  background: var(--teal-bg);
+  color: var(--navy);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.drilldown-clear-btn {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--teal);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+  margin-left: auto;
+}
 .ai-ask { display: flex; gap: 8px; margin-top: 10px; }
 .ai-ask-input, .portfolio-ask-input {
   flex: 1;
@@ -851,7 +905,7 @@ table.breakdown-table td { padding: 5px 6px; border-bottom: 1px solid var(--bord
 .ai-answer p { margin: 0 0 8px; }
 .ai-answer p:last-child { margin-bottom: 0; }
 .ai-answer-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.ai-answer-table td { padding: 5px 8px; border-bottom: 1px solid rgba(20, 184, 166, 0.2); vertical-align: top; }
+.ai-answer-table td { padding: 5px 8px; border-bottom: 1px solid rgba(0, 127, 131, 0.2); vertical-align: top; }
 .ai-answer-table tr:last-child td { border-bottom: none; }
 
 .team-priority-box {
@@ -1003,6 +1057,16 @@ table.breakdown-table td { padding: 5px 6px; border-bottom: 1px solid var(--bord
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 24px 28px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+.trust-hero-content { min-width: 0; }
+.trust-hero-logo { width: 480px; max-width: 45%; height: auto; flex-shrink: 0; object-fit: contain; }
+@media (max-width: 640px) {
+  .trust-hero { flex-direction: column; }
+  .trust-hero-logo { width: 240px; max-width: 100%; height: auto; align-self: flex-end; }
 }
 .trust-eyebrow {
   margin: 0 0 6px;
@@ -1157,11 +1221,11 @@ footer { text-align: center; color: var(--muted); font-size: 11px; padding: 20px
     padding: var(--space-2) var(--space-3);
   }
   .sidebar-brand { padding: 4px var(--space-1) var(--space-2); }
-  /* Sprint 06B — mobile keeps the same white-tile treatment, just smaller
-     (34-40px per the sprint's mobile sizing), so the nav stays compact and
-     the round-1 mobile height fix (no empty navy area) doesn't regress. */
-  .sidebar-logo { width: 36px; height: 36px; padding: 4px; border-radius: var(--radius-sm); }
-  .sidebar-product-name { font-size: 12.5px; }
+  /* Mobile keeps the same transparent-icon treatment, just smaller (34-40px),
+     so the nav stays compact and the round-1 mobile height fix (no empty
+     navy area) doesn't regress. */
+  .sidebar-logo { width: 36px; height: 36px; }
+  .sidebar-product-name { font-size: 11.5px; }
   nav.tabs { flex-direction: row; flex-wrap: wrap; gap: 4px; flex: 0 0 auto; }
   nav.tabs button { padding: 9px 12px; min-height: 40px; font-size: 12px; }
   .sidebar-footer { display: none; }
