@@ -29,10 +29,16 @@ export const SLOT_GEOMETRY = {
   // for both, since the two cards are symmetric.
   "slide2.interpretation": { boxW_emu: 7500975, boxH_emu: 285750 * 2, fontSizePt: 13.88, insets_emu: { l: 0, r: 0, t: 0, b: 0 } },
   "slide2.areasForAttention": { boxW_emu: 7500975, boxH_emu: 285750 * 2, fontSizePt: 13.88, insets_emu: { l: 0, r: 0, t: 0, b: 0 } },
-  // Slide 6 — Executive Summary
-  "slide6.valueDelivered": { boxW_emu: 4042029, boxH_emu: 531316, fontSizePt: 13.88, insets_emu: INSETS_DEFAULT },
-  "slide6.adoption": { boxW_emu: 4042029, boxH_emu: 531316, fontSizePt: 13.88, insets_emu: INSETS_DEFAULT },
-  "slide6.renewalOutlook": { boxW_emu: 4042029, boxH_emu: 531316, fontSizePt: 13.88, insets_emu: INSETS_DEFAULT },
+  // Slide 6 — Executive Summary. boxH_emu 531316 -> 701316 (2026-08
+  // overflow-ordering fix): Recommendation (row 2, 3rd column) and Customer
+  // Commitment (bottom bar) are unconditionally removed with no adaptive
+  // content, freeing real vertical space that src/qbrMasterRenderer.js's
+  // slide6Modifiers now actually uses to grow these three card text boxes
+  // (SLIDE6_ROW1_GROWTH) — this validates against that resized final shape,
+  // not the original design-placeholder height.
+  "slide6.valueDelivered": { boxW_emu: 4042029, boxH_emu: 701316, fontSizePt: 13.88, insets_emu: INSETS_DEFAULT },
+  "slide6.adoption": { boxW_emu: 4042029, boxH_emu: 701316, fontSizePt: 13.88, insets_emu: INSETS_DEFAULT },
+  "slide6.renewalOutlook": { boxW_emu: 4042029, boxH_emu: 701316, fontSizePt: 13.88, insets_emu: INSETS_DEFAULT },
   "slide6.fact": { boxW_emu: 3711989, boxH_emu: 285750 * 2, fontSizePt: 13.88, insets_emu: { l: 0, r: 0, t: 0, b: 0 } },
   "slide6.interpretation": { boxW_emu: 4517237, boxH_emu: 506016, fontSizePt: 13.88, insets_emu: { l: 0, r: 0, t: 0, b: 0 } },
   // Slide 7 — Business Objectives & Value. Calibration note: the master's
@@ -42,7 +48,11 @@ export const SLOT_GEOMETRY = {
   // corrected slots above. Even after this correction, real capacity here
   // (~117 chars) is modest for a "full" safeText, which may run to several
   // hundred characters; see the Block B report's overflow-testing findings.
-  "slide7.valueDeliveredFull": { boxW_emu: 6493431, boxH_emu: 298103 * 2, fontSizePt: 14.63, insets_emu: INSETS_DEFAULT },
+  // boxW_emu 6493431 -> 12000000 (2026-08 overflow-ordering fix): widened
+  // into the banner's own unused width, freed by the always-removed $ KPI
+  // figure (see src/qbrMasterRenderer.js slide7Modifiers) — real, resized
+  // final shape, not the original narrow placeholder.
+  "slide7.valueDeliveredFull": { boxW_emu: 12000000, boxH_emu: 298103 * 2, fontSizePt: 14.63, insets_emu: INSETS_DEFAULT },
   "slide7.businessObjectives": { boxW_emu: 3561302, boxH_emu: 285750 * 2, fontSizePt: 13.88, insets_emu: { l: 0, r: 0, t: 0, b: 0 } },
 
   // Slide 4 — Open Commitments. Each row's "description" text box is
@@ -90,7 +100,11 @@ export const SLOT_GEOMETRY = {
   "slide9.hero": { boxW_emu: 5587945, boxH_emu: 278011 * 2, fontSizePt: 13.5, insets_emu: INSETS_DEFAULT },
   "slide9.partnershipContext": { boxW_emu: 5121212, boxH_emu: 517922, fontSizePt: 13.5, insets_emu: INSETS_DEFAULT },
   "slide9.renewalOutlook": { boxW_emu: 5469255, boxH_emu: 278011 * 2, fontSizePt: 13.5, insets_emu: INSETS_DEFAULT },
-  "slide9.nextSteps": { boxW_emu: 4738725, boxH_emu: 276225 * 2, fontSizePt: 13.5, insets_emu: INSETS_DEFAULT },
+  // boxH_emu 276225*2 -> 1200000 (2026-08 overflow-ordering fix): grown
+  // into the vertical space already freed inside the same card by the
+  // other 2 always-removed bullet rows (see src/qbrMasterRenderer.js
+  // slide9Modifiers) — real, resized final shape.
+  "slide9.nextSteps": { boxW_emu: 4738725, boxH_emu: 1200000, fontSizePt: 13.5, insets_emu: INSETS_DEFAULT },
 
   // Block D — Slide 10 Evidence/Appendix. Previous Interventions widened to
   // the full row width freed by removing the Sources card entirely.

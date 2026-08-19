@@ -637,7 +637,7 @@ reference is in the past or the future (see the temporal grounding rule above).
 Draft a QBR (Quarterly Business Review) for this account with exactly these ${QBR_SECTION_DEFS.length} sections, in this exact order and using these exact keys:
 ${sectionList}
 
-For each section, write 2-4 sentences for "internal" and, if appropriate, a short customer-facing draft for "customerSafeDefault" (or null). Also draft "presentationText" (a separate, concise <=400-char version for a fixed PPTX slot, or null) and, ONLY for the two list-capable sections above, "presentationItems" (an array of 1-5 short items, or null; must be null for every other section) — see the rules above for all three.
+For each section, write 1-2 concise sentences for "internal" and, if appropriate, an even shorter customer-facing draft (<=200 chars) for "customerSafeDefault" (or null) — do not repeat "internal" verbatim in it. Also draft "presentationText" (a separate, concise <=200-char version for a fixed PPTX slot, or null) and, ONLY for the two list-capable sections above, "presentationItems" (an array of 1-5 short items, or null; must be null for every other section) — see the rules above for all three. Keep every field as short as the rules allow; avoid restating the same information across "internal", "customerSafeDefault", and "presentationText".
 
 Respond with ONLY this JSON schema, "sections" containing exactly ${QBR_SECTION_DEFS.length} entries in the exact order above:
 {

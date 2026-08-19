@@ -21,7 +21,9 @@
   --teal-bg: #e5f3f3;
   --mint: #a9e5d3;      /* Human Mint */
   --clarity-blue: #226fbd;
+  --clarity-blue-bg: #eaf2fa;
   --insight-violet: #7462a6;
+  --violet-bg: #f1eefa;
 
   /* Accent alias — was a generic blue, now the brand teal.
      Kept as --blue/--blue-bg so existing component styles don't
@@ -656,6 +658,16 @@ table.breakdown-table td { padding: 5px 6px; border-bottom: 1px solid var(--bord
 .ai-disclaimer { font-size: 10px; font-weight: 400; color: var(--muted); text-transform: none; letter-spacing: 0; }
 .ai-insight-body { font-size: 13px; line-height: 1.55; margin: 8px 0; }
 .ai-insight-body ul { margin: 6px 0; padding-left: 18px; }
+
+/* 2026-08 semantic color polish — same whole-card-by-content-type benchmark
+   as the QBR Review UI's qbr-block-* treatment. Fact/context: neutral card
+   with a Clarity Blue accent (not a filled blue, stays calm). Interpretation:
+   Signal Teal, same tone as the rest of the approved brand system. */
+.ai-fact-card, .ai-insight-card { border-radius: var(--radius-sm); padding: 8px 12px; margin: 8px 0; }
+.ai-fact-card p, .ai-insight-card p { margin: 0; }
+.ai-fact-card { background: var(--canvas-alt); border: 1px solid var(--border); border-left: 3px solid var(--clarity-blue); }
+.ai-insight-card { background: var(--teal-bg); border: 1px solid var(--teal); }
+
 .nba-box {
   margin-top: 10px;
   padding: 10px 12px;
@@ -665,6 +677,15 @@ table.breakdown-table td { padding: 5px 6px; border-bottom: 1px solid var(--bord
 }
 .nba-box p { margin: 3px 0; white-space: pre-line; }
 .nba-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 4px; }
+/* Recommendation (growth NBA): Insight Violet. Risk (risk_mitigation NBA):
+   restrained red — only this variant, since it's the one that's actually
+   risk-related content. Label color follows the card, overriding the
+   generic risk-text-low/high shade so the label never clashes with its
+   own card's accent color. */
+.nba-box-recommendation { background: var(--violet-bg); border-color: var(--insight-violet); }
+.nba-box-recommendation .nba-label { color: var(--insight-violet); }
+.nba-box-risk { background: var(--red-bg); border-color: var(--red); }
+.nba-box-risk .nba-label { color: var(--red); }
 .nba-approval { margin-top: 8px; }
 .approve-btn { border-color: var(--teal); background: var(--teal-bg); color: var(--teal); }
 .approve-btn:hover { opacity: 0.85; }
@@ -767,12 +788,39 @@ table.breakdown-table td { padding: 5px 6px; border-bottom: 1px solid var(--bord
 .qbr-item-sensitive { border-color: var(--red); }
 .qbr-item-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
 .qbr-item-head h5 { margin: 0; font-size: 13.5px; font-weight: 700; color: var(--text); }
-.qbr-internal-text { font-size: 13px; margin-bottom: 4px; }
+.qbr-internal-text { font-size: 13px; margin-bottom: 0; }
+
+/* 2026-08 Review UI polish — three visually distinct content layers per
+   section (governance, not just UX): internal draft must read as
+   restricted at a glance, customer version stays in the calm brand
+   treatment, presentation version is a clearly separate third tier without
+   warning styling. Body text itself is never colored — only the
+   label/border/background carries the distinction. */
+.qbr-block { border-radius: var(--radius-sm); padding: 10px 12px; margin-top: 10px; }
+.qbr-block:first-of-type { margin-top: 12px; }
+.qbr-block-label { margin: 0 0 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+.qbr-block-hint { margin: 0 0 8px; font-size: 11.5px; font-weight: 600; }
+
+.qbr-block-internal { border: 1.5px solid var(--red); background: var(--red-bg); }
+.qbr-block-label-internal { color: var(--red); font-weight: 800; }
+.qbr-block-hint-internal { color: var(--red); opacity: 0.85; }
+
+.qbr-block-customer { border: 1px solid var(--teal); background: var(--teal-bg); }
+.qbr-block-label-customer { color: var(--teal); }
+
+.qbr-block-presentation { border: 1px solid var(--border); border-left: 3px solid var(--clarity-blue); background: var(--card); }
+.qbr-block-label-presentation { color: var(--clarity-blue); }
 .qbr-include-toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: none; letter-spacing: normal; margin: 6px 0; cursor: pointer; }
 .qbr-include-toggle input { margin: 0; }
 .qbr-safe-text {
   display: block; width: 100%; max-width: 100%; box-sizing: border-box;
   padding: 8px 9px; min-height: 64px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--card); color: var(--text);
+  font-size: 13px; font-family: inherit; resize: vertical;
+}
+.qbr-presentation-text {
+  display: block; width: 100%; max-width: 100%; box-sizing: border-box;
+  padding: 8px 9px; border-radius: var(--radius-sm);
   border: 1px solid var(--border); background: var(--card); color: var(--text);
   font-size: 13px; font-family: inherit; resize: vertical;
 }

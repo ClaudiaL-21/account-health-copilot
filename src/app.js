@@ -2,6 +2,8 @@ import { computeHealthScore, computeExpansionScore, computePriorityScore, comput
 import { fetchAccountInsight, askAboutAccount, fetchTeamPriority, approveAction, askAboutPortfolio, fetchQbrDraft, fetchPortfolioSummary, generateQbrPptx } from "./ai.js";
 import { buildAccountActivity } from "./activity.js";
 import { selectCustomerSafeSections } from "./qbrPreview.js";
+import { mapQbrToHtmlContent } from "./qbrHtmlContentMap.js";
+import { renderQbrHtml } from "./qbrHtmlRenderer.js";
 
 const RISK_LABEL = { high: "High", medium: "Medium", low: "Low" };
 const fmtUSD = n => "$" + n.toLocaleString("en-US");
@@ -766,6 +768,19 @@ function renderAccountDetail(acc) {
     ? `<div class="milestone-box"><p class="milestone-label">Value Milestone — ${fmtDate(acc.valueMilestone.achievedDate)}</p><p>${escapeHtml(acc.valueMilestone.description)}</p></div>`
     : "";
 
+  // Demo-stabilization polish — surface the existing topFeatureRequest/
+  // featureRequestSentiment/featureRequestsCount/featureRequestSince fields
+  // (already used in the Features portfolio view and the QBR content
+  // contract) on the account profile itself, so a CSM doesn't have to leave
+  // the account to see it. Real fields only, no new data.
+  const featureRequestBox = acc.support.topFeatureRequest
+    ? `<div class="milestone-box">
+         <p class="milestone-label">Feature Request</p>
+         <p>"${escapeHtml(acc.support.topFeatureRequest)}"</p>
+         <p class="sub">${acc.support.featureRequestSentiment ? `Sentiment: ${escapeHtml(acc.support.featureRequestSentiment)}` : ""}${typeof acc.support.featureRequestsCount === "number" ? ` · ${acc.support.featureRequestsCount} request${acc.support.featureRequestsCount === 1 ? "" : "s"}` : ""}${acc.support.featureRequestSince ? ` · since ${fmtDate(acc.support.featureRequestSince)}` : ""}</p>
+       </div>`
+    : "";
+
   const scoreTrend = acc.healthScoreHistory ? renderScoreTrend(acc.healthScoreHistory) : "";
   const csatTrend = acc.relationship.weeklyCSAT ? renderCsatTrend(acc.relationship.weeklyCSAT) : "";
   const trendRow = (scoreTrend || csatTrend) ? `<div class="trend-row">${scoreTrend}${csatTrend}</div>` : "";
@@ -788,6 +803,7 @@ function renderAccountDetail(acc) {
         <p>Champion: ${escapeHtml(acc.relationship.championName)} (${CHAMPION_LABEL[acc.relationship.championStatus]})<br/>
         Exec sponsor: ${acc.relationship.execSponsorEngaged ? "engaged" : "not engaged"}<br/>
         Last QBR: ${fmtDate(acc.relationship.lastQBRDate)}</p>
+        ${featureRequestBox}
         <h4>Notes (Support/Communication)</h4>
         ${artifacts}
       </div>
@@ -882,12 +898,19 @@ function renderAiSection(container, acc) {
     const nba = d.nextBestAction;
     const nbaLabel = nba?.category === "growth" ? "Next Best Action — Growth" : "Next Best Action — Risk Mitigation";
     const nbaClass = nba?.category === "growth" ? "low" : "high";
+    // 2026-08 semantic color polish — same QBR card benchmark as the Review
+    // UI (qbr-block-*): whole-card treatment by content TYPE, not per-word.
+    // Facts (sentiment) -> neutral/Clarity Blue, interpretation (narrative)
+    // -> Signal Teal, recommendation (growth NBA) -> Insight Violet, actual
+    // risk content (risk_mitigation NBA) -> restrained red. Text/logic
+    // unchanged — only the card class and (for NBA) the box variant differ.
+    const nbaBoxClass = nba?.category === "growth" ? "nba-box-recommendation" : "nba-box-risk";
     body.innerHTML = `
-      <p><strong>Sentiment:</strong> ${escapeHtml(d.sentiment?.label ?? "-")} — <span class="sub">${escapeHtml(d.sentiment?.rationale ?? "")}</span></p>
-      <p>${escapeHtml(d.narrative ?? "")}</p>
+      <div class="ai-fact-card"><p><strong>Sentiment:</strong> ${escapeHtml(d.sentiment?.label ?? "-")} — <span class="sub">${escapeHtml(d.sentiment?.rationale ?? "")}</span></p></div>
+      <div class="ai-insight-card"><p>${escapeHtml(d.narrative ?? "")}</p></div>
       <p><span class="status-pill risk-${confRisk}">${confLabel}</span>${conf.reason ? ` <span class="sub">${escapeHtml(conf.reason)}</span>` : ""}</p>
       ${nba ? `
-        <div class="nba-box">
+        <div class="nba-box ${nbaBoxClass}">
           <p class="nba-label risk-text-${nbaClass}">${nbaLabel}</p>
           <p><strong>${escapeHtml(nba.action)}</strong></p>
           <p class="sub">${escapeHtml(nba.rationale)}</p>
@@ -1189,27 +1212,34 @@ function renderQbrItemHtml(s, review) {
   // fallback to safeText/internal. presentationItems[] only applies to the
   // two list-capable sections (Open Commitments, Next Quarter Plan); edited
   // here as one item per line, joined back into an array on input.
-  const presPlaceholder = "Presentation-safe version — used only in the exported PPTX. Leave blank to omit this slot from the deck.";
+  const presPlaceholder = "Presentation-safe version — used in the Web QBR and the exported PPTX. Leave blank to omit this slot.";
   const presentationFieldHtml = listCapable
-    ? `<p class="review-section-label">Presentation items <span class="review-hint-inline">one per line, PPTX only</span></p>
+    ? `<p class="qbr-block-label qbr-block-label-presentation">Presentation items <span class="review-hint-inline">one per line, for Web QBR / PPTX</span></p>
        <textarea class="qbr-presentation-items" data-key="${s.key}" rows="3" maxlength="1000" placeholder="${escapeHtml(presPlaceholder)}">${escapeHtml((state_.presentationItems || []).join("\n"))}</textarea>`
-    : `<p class="review-section-label">Presentation version <span class="review-hint-inline">concise, PPTX only</span></p>
-       <textarea class="qbr-presentation-text" data-key="${s.key}" rows="2" maxlength="400" placeholder="${escapeHtml(presPlaceholder)}">${escapeHtml(state_.presentationText || "")}</textarea>`;
+    : `<p class="qbr-block-label qbr-block-label-presentation">Presentation version <span class="review-hint-inline">Concise reviewed version for Web QBR / PPTX</span></p>
+       <textarea class="qbr-presentation-text" data-key="${s.key}" rows="4" maxlength="400" placeholder="${escapeHtml(presPlaceholder)}">${escapeHtml(state_.presentationText || "")}</textarea>`;
   return `
     <div class="qbr-item${sensitive ? " qbr-item-sensitive" : ""}">
       <div class="qbr-item-head">
         <h5>${escapeHtml(s.title)}</h5>
         ${sensitive ? `<span class="status-pill risk-high">Manual review required</span>` : ""}
       </div>
-      <p class="review-section-label">Internal — CS team only <span class="review-hint-inline">AI working draft, cannot be included directly</span></p>
-      <div class="review-origin qbr-internal-text">${escapeHtml(s.internal)}</div>
-      <p class="review-section-label">Customer version</p>
-      <label class="qbr-include-toggle">
-        <input type="checkbox" class="qbr-include" data-key="${s.key}" ${state_.included ? "checked" : ""} ${includeDisabled ? "disabled" : ""}/>
-        <span class="qbr-include-label">${escapeHtml(includeLabel)}</span>
-      </label>
-      <textarea class="qbr-safe-text" data-key="${s.key}" rows="3" maxlength="1500" placeholder="${escapeHtml(placeholder)}">${escapeHtml(state_.safeText)}</textarea>
-      ${presentationFieldHtml}
+      <div class="qbr-block qbr-block-internal">
+        <p class="qbr-block-label qbr-block-label-internal">Internal — CS team only</p>
+        <p class="qbr-block-hint qbr-block-hint-internal">AI working draft — never included in customer output</p>
+        <div class="review-origin qbr-internal-text">${escapeHtml(s.internal)}</div>
+      </div>
+      <div class="qbr-block qbr-block-customer">
+        <p class="qbr-block-label qbr-block-label-customer">Customer version</p>
+        <label class="qbr-include-toggle">
+          <input type="checkbox" class="qbr-include" data-key="${s.key}" ${state_.included ? "checked" : ""} ${includeDisabled ? "disabled" : ""}/>
+          <span class="qbr-include-label">${escapeHtml(includeLabel)}</span>
+        </label>
+        <textarea class="qbr-safe-text" data-key="${s.key}" rows="3" maxlength="1500" placeholder="${escapeHtml(placeholder)}">${escapeHtml(state_.safeText)}</textarea>
+      </div>
+      <div class="qbr-block qbr-block-presentation">
+        ${presentationFieldHtml}
+      </div>
     </div>
   `;
 }
@@ -1327,8 +1357,11 @@ function renderQbrPreview(container, accountId, qbr) {
     ${exp.status === "error" ? `<p class="ai-unavailable">${escapeHtml(exp.error)}</p>${warningsHtml}` : ""}
     <div class="qbr-actions">
       <button class="review-cancel-btn qbr-back-btn">← Back to Review</button>
+      <button class="review-confirm-btn qbr-open-web-btn" ${included.length === 0 ? "disabled" : ""}>
+        Open Web QBR
+      </button>
       <button class="review-confirm-btn qbr-generate-btn" ${included.length === 0 || exp.status === "loading" ? "disabled" : ""}>
-        ${exp.status === "loading" ? "Generating…" : "Generate Customer QBR"}
+        ${exp.status === "loading" ? "Generating…" : "Download PowerPoint"}
       </button>
     </div>
   `;
@@ -1337,7 +1370,28 @@ function renderQbrPreview(container, accountId, qbr) {
     state.qbr[accountId].mode = "review";
     render();
   });
+  container.querySelector(".qbr-open-web-btn").addEventListener("click", () => openWebQbr(accountId));
   container.querySelector(".qbr-generate-btn").addEventListener("click", () => downloadQbrPptx(accountId));
+}
+
+// Web QBR spike — same governed-content boundary as the PPTX export
+// (selectCustomerSafeSections() + reviewed safeText/presentationText/
+// presentationItems only), rendered client-side with no server round trip
+// and no new LLM call. Opens the 3-page deck in a new tab via a Blob URL.
+function openWebQbr(accountId) {
+  const acc = state.accounts.find(a => a.accountId === accountId);
+  const qbr = state.qbr[accountId];
+  const included = selectCustomerSafeSections(qbr.data.sections, qbr.review);
+  const sections = included.map(s => ({
+    key: s.key,
+    safeText: qbr.review[s.key].safeText.trim(),
+    presentationText: (qbr.review[s.key].presentationText || "").trim(),
+    presentationItems: qbr.review[s.key].presentationItems || [],
+  }));
+  const content = mapQbrToHtmlContent({ account: acc, sections });
+  const html = renderQbrHtml({ account: acc, content });
+  const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+  window.open(url, "_blank");
 }
 
 async function downloadQbrPptx(accountId) {

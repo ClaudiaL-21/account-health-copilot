@@ -165,31 +165,71 @@ function slide2Modifiers(slide2) {
   };
 }
 
+// 2026-08 overflow-ordering fix — Recommendation (row 2, 3rd column) and
+// Customer Commitment (bottom bar) are unconditionally removed below (V1,
+// no data source for either), which frees real vertical space: the bar
+// itself (cy 1295400) plus its preceding gap (190500). ROW1_GROWTH is
+// applied to the three executive-summary cards' own background AND text
+// box height (same delta on both, so the original bottom padding is
+// preserved exactly); ROW2_SHIFT moves the Fact/Interpretation row down by
+// the same amount so the gap between row 1 and row 2 stays intact. Real,
+// calibrated EMU deltas — not a redesign of the master, just filling space
+// that used to hold now-deleted content. See qbrMasterGeometry.js for the
+// matching SLOT_GEOMETRY capacity update.
+const SLIDE6_ROW1_GROWTH = 170000;
+const SLIDE6_ROW2_SHIFT = 200000;
+
 function slide6Modifiers(slide6) {
   return (slide) => {
     // Each card icon is a colored-circle "Shape N" + glyph "Image N" pair at
     // the same position (Shape3+Image1, Shape7+Image2, Shape11+Image3) —
-    // both removed together when a card has no reviewed content.
-    const card = (labelName, contentName, shapeName, imageName, text) => {
+    // both removed together when a card has no reviewed content. Card
+    // background (Shape2/6/10) and text box (contentName) both grow by
+    // SLIDE6_ROW1_GROWTH — the card unconditionally (structural, keeps the
+    // three-card hierarchy even if one is empty), the text box only when
+    // populated (nothing to resize otherwise).
+    const card = (labelName, contentName, shapeName, imageName, cardShapeName, textCx, textCy, text) => {
+      slide.modifyElement(cardShapeName, setSize(5410200, 1276350 + SLIDE6_ROW1_GROWTH));
       if (text) {
-        slide.modifyElement(contentName, setTextFixed(text));
+        slide.modifyElement(contentName, [...setTextFixed(text), setSize(textCx, textCy + SLIDE6_ROW1_GROWTH)]);
       } else {
         [labelName, contentName, shapeName, imageName].forEach(n => slide.removeElement(n));
       }
     };
-    card("Text 4", "Text 5", "Shape 3", "Image 1", slide6.valueDeliveredText);
-    card("Text 8", "Text 9", "Shape 7", "Image 2", slide6.adoptionText);
-    card("Text 12", "Text 13", "Shape 11", "Image 3", slide6.renewalOutlookText);
+    card("Text 4", "Text 5", "Shape 3", "Image 1", "Shape 2", 4042029, 531316, slide6.valueDeliveredText);
+    card("Text 8", "Text 9", "Shape 7", "Image 2", "Shape 6", 4042029, 531316, slide6.adoptionText);
+    card("Text 12", "Text 13", "Shape 11", "Image 3", "Shape 10", 4042029, 531316, slide6.renewalOutlookText);
 
+    // Fact/Interpretation row (row 2) — shifted down by SLIDE6_ROW2_SHIFT to
+    // keep its original gap below the now-taller row 1. Card backgrounds
+    // (Shape14/22) and the always-present underline/dot decorations
+    // (Shape17/18/20, Shape25/26/28) move unconditionally; the icon/label/
+    // content elements move only in the branch where they're kept (moving
+    // an element that's about to be removed is pointless, not harmful, but
+    // skipped for clarity).
+    slide.modifyElement("Shape 14", setPosition(838200, 3145036 + SLIDE6_ROW2_SHIFT));
+    slide.modifyElement("Shape 17", setPosition(1057275, 4078486 + SLIDE6_ROW2_SHIFT));
+    slide.modifyElement("Shape 18", setPosition(1057275, 4307086 + SLIDE6_ROW2_SHIFT));
+    slide.modifyElement("Shape 20", setPosition(1057275, 4813102 + SLIDE6_ROW2_SHIFT));
     if (slide6.factText) {
-      slide.modifyElement("Text 19", setTextFixed(slide6.factText));
+      slide.modifyElement("Shape 15", setPosition(1057275, 3326011 + SLIDE6_ROW2_SHIFT));
+      slide.modifyElement("Image 4", setPosition(1057275, 3326011 + SLIDE6_ROW2_SHIFT));
+      slide.modifyElement("Text 16", setPosition(1828800, 3555802 + SLIDE6_ROW2_SHIFT));
+      slide.modifyElement("Text 19", [...setTextFixed(slide6.factText), setPosition(1209675, 4192786 + SLIDE6_ROW2_SHIFT)]);
     } else {
       ["Text 16", "Text 19", "Shape 15", "Image 4"].forEach(n => slide.removeElement(n));
     }
     slide.removeElement("Text 21");
 
+    slide.modifyElement("Shape 22", setPosition(6438900, 3145036 + SLIDE6_ROW2_SHIFT));
+    slide.modifyElement("Shape 25", setPosition(6657975, 4078486 + SLIDE6_ROW2_SHIFT));
+    slide.modifyElement("Shape 26", setPosition(6657975, 4307086 + SLIDE6_ROW2_SHIFT));
+    slide.modifyElement("Shape 28", setPosition(6657975, 5033367 + SLIDE6_ROW2_SHIFT));
     if (slide6.interpretationText) {
-      slide.modifyElement("Text 27", setTextFixed(slide6.interpretationText));
+      slide.modifyElement("Shape 23", setPosition(6657975, 3326011 + SLIDE6_ROW2_SHIFT));
+      slide.modifyElement("Image 5", setPosition(6657975, 3326011 + SLIDE6_ROW2_SHIFT));
+      slide.modifyElement("Text 24", setPosition(7429500, 3555802 + SLIDE6_ROW2_SHIFT));
+      slide.modifyElement("Text 27", [...setTextFixed(slide6.interpretationText), setPosition(6810375, 4192786 + SLIDE6_ROW2_SHIFT)]);
     } else {
       ["Text 24", "Text 27", "Shape 23", "Image 5"].forEach(n => slide.removeElement(n));
     }
@@ -214,8 +254,15 @@ function slide7Modifiers(slide7) {
     // Shape 8 = Ticket Backlog card, Shape 19 = First Response card) — all
     // position-matched against the original master (Shape 13 = CSAT card,
     // always kept, not listed here).
+    // 2026-08 overflow-ordering fix — Text 7 originally kept the master's
+    // narrow cx (6493431) even though the banner (Shape 2, full width
+    // 16611600) has ~6.6M EMU of untouched space to its right once the
+    // illustrative $ KPI (Text 5, always removed below) is gone. Widened to
+    // 12000000 — comfortably inside the banner's right edge (~17.0M EMU)
+    // with margin to spare — instead of validating against the old,
+    // now-stale narrow box. See qbrMasterGeometry.js slide7.valueDeliveredFull.
     if (slide7.valueDeliveredFullText) {
-      slide.modifyElement("Text 7", setTextFixed(slide7.valueDeliveredFullText));
+      slide.modifyElement("Text 7", [...setTextFixed(slide7.valueDeliveredFullText), setSize(12000000, 298103)]);
     } else {
       ["Text 4", "Text 7", "Shape 2", "Shape 3", "Image 1"].forEach(n => slide.removeElement(n));
     }
@@ -562,9 +609,15 @@ function slide9Modifiers(slide9) {
     }
 
     // Documented Next Steps — one reviewed item (decision 1), widened into
-    // the space freed by the other 2 (unsourced) bullets.
+    // the space freed by the other 2 (unsourced) bullets. 2026-08
+    // overflow-ordering fix: also grown TALLER (cy 276225 -> 1200000) — the
+    // other 2 bullet rows below it (Text 27/29, removed below) leave real
+    // unused room inside the same card (Shape 21, cy 2366963) down to its
+    // bottom, so this validates against the actual freed vertical space
+    // rather than the original single-line placeholder height. See
+    // qbrMasterGeometry.js slide9.nextSteps.
     if (slide9.nextStepsText) {
-      slide.modifyElement("Text 25", [...setTextFixed(slide9.nextStepsText), setSize(4738725, 276225)]);
+      slide.modifyElement("Text 25", [...setTextFixed(slide9.nextStepsText), setSize(4738725, 1200000)]);
     } else {
       ["Shape 21", "Shape 22", "Image 7", "Text 23", "Text 25", "Shape 24"].forEach(n => slide.removeElement(n));
     }
