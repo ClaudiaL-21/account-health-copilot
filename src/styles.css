@@ -257,6 +257,22 @@ nav.tabs button:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(169, 2
   color: var(--text);
 }
 .filter-search input:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* Executive Drill-down — always-visible indicator in the filter bar itself
+   (not just a banner further down the page), so a still-active accountIds
+   drill-down is never invisible next to dropdowns that otherwise all read
+   "All". Click anywhere on it to clear, same as the in-page banner's link. */
+.drilldown-indicator {
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: var(--teal-bg);
+  color: var(--teal);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.drilldown-indicator:hover { background: var(--mint); color: var(--navy); }
 @media (max-width: 480px) {
   .filter-search { margin-left: 0; width: 100%; }
   .filter-search input { width: 100%; }
@@ -839,6 +855,8 @@ table.breakdown-table td { padding: 5px 6px; border-bottom: 1px solid var(--bord
 }
 .reload-link:hover { color: var(--blue); }
 .ai-unavailable { color: var(--muted); font-size: 12px; font-style: italic; }
+.qbr-export-warnings { margin: 6px 0 0; padding-left: 18px; font-size: 12px; color: var(--red); }
+.qbr-export-warnings li { margin-bottom: 4px; }
 
 /* Executive Drill-down — inline text link next to a summary/priority line,
    and the banner shown on Portfolio once a drill-down narrows the list. */
@@ -878,6 +896,28 @@ table.breakdown-table td { padding: 5px 6px; border-bottom: 1px solid var(--bord
   cursor: pointer;
   margin-left: auto;
 }
+.qbrs-open-btn {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--teal);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.qbrs-open-btn:hover { text-decoration: underline; }
+.back-to-team-link {
+  display: inline-block;
+  border: none;
+  background: none;
+  padding: 0;
+  margin-bottom: 14px;
+  color: var(--teal);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.back-to-team-link:hover { text-decoration: underline; }
 .ai-ask { display: flex; gap: 8px; margin-top: 10px; }
 .ai-ask-input, .portfolio-ask-input {
   flex: 1;

@@ -35,9 +35,11 @@ const MIME = {
 
 const { default: analyzeHandler } = await import("./api/analyze.js");
 const { default: approveActionHandler } = await import("./api/approve-action.js");
+const { default: qbrExportHandler } = await import("./api/qbr-export.js");
 const API_ROUTES = {
   "/api/analyze": analyzeHandler,
   "/api/approve-action": approveActionHandler,
+  "/api/qbr-export": qbrExportHandler,
 };
 
 function serveStatic(req, res) {
@@ -67,7 +69,9 @@ const server = createServer(async (req, res) => {
         status(code) { this.statusCode = code; return this; },
         setHeader(k, v) { res.setHeader(k, v); },
         json(obj) { res.writeHead(this.statusCode, { "content-type": "application/json" }); res.end(JSON.stringify(obj)); },
-        end() { res.writeHead(this.statusCode); res.end(); },
+        // body is optional — QBR PPTX export uses this with a Buffer;
+        // every other existing endpoint still calls end() with no args.
+        end(body) { res.writeHead(this.statusCode); res.end(body); },
       };
       // local dev has no origin header from same-origin fetches in some browsers; default to allowed
       if (!req.headers.origin) req.headers.origin = `http://localhost:${PORT}`;

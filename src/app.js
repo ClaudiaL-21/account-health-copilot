@@ -1,5 +1,5 @@
 import { computeHealthScore, computeExpansionScore, computePriorityScore, computePortfolioKpis, daysSince, daysFromToday, computeTrend, REFERENCE_DATE_ISO } from "./scoring.js";
-import { fetchAccountInsight, askAboutAccount, fetchTeamPriority, approveAction, askAboutPortfolio, fetchQbrDraft, fetchPortfolioSummary } from "./ai.js";
+import { fetchAccountInsight, askAboutAccount, fetchTeamPriority, approveAction, askAboutPortfolio, fetchQbrDraft, fetchPortfolioSummary, generateQbrPptx } from "./ai.js";
 import { buildAccountActivity } from "./activity.js";
 import { selectCustomerSafeSections } from "./qbrPreview.js";
 
@@ -22,7 +22,7 @@ const initialsOf = name => (name || "").trim().split(/\s+/).slice(0, 2).map(w =>
 
 let state = {
   accounts: [], csms: [], view: "portfolio",
-  filters: { csm: "all", region: "all", risk: "all", expansion: "all", trend: "all", search: "", accountIds: null },
+  filters: { csm: "all", region: "all", risk: "all", expansion: "all", trend: "all", search: "", accountIds: null, csmFromTeam: false },
   sort: { key: "score", dir: "asc" }, expanded: null, // asc = lowest Health Score (most concerning) first
   feedbackSort: { key: "count", dir: "desc" },
   matrixSelected: null, // accountId selected in the Matrix view (inline detail, no navigation)
@@ -75,8 +75,23 @@ function bindControls() {
   document.getElementById("tab-matrix").addEventListener("click", () => { state.view = "matrix"; render(); });
   document.getElementById("tab-map").addEventListener("click", () => { state.view = "map"; render(); });
   document.getElementById("tab-team").addEventListener("click", () => { state.view = "team"; render(); });
+  document.getElementById("tab-qbrs").addEventListener("click", () => { state.view = "qbrs"; render(); });
   document.getElementById("tab-feedback").addEventListener("click", () => { state.view = "feedback"; render(); });
   document.getElementById("tab-trust").addEventListener("click", () => { state.view = "trust"; render(); });
+
+  // Executive Drill-down — touching any of the primary filter controls below
+  // is the user manually taking back control of the scope, so it clears a
+  // still-active accountIds drill-down (see applyAccountDrillDown) instead of
+  // silently ANDing with it. Without this, e.g. picking a CSM after "View 5
+  // accounts →" would intersect the CSM's accounts with the 5 drilled-down
+  // ones — a confusing near-empty result with no visible cause, since the
+  // dropdowns never show the drill-down (it isn't one of their values).
+  const setFilterAndClearDrillDown = (key, value) => {
+    state.filters[key] = value;
+    state.filters.accountIds = null;
+    state.filters.csmFromTeam = false;
+    render();
+  };
 
   const csmSelect = document.getElementById("filter-csm");
   state.csms.forEach(c => {
@@ -84,19 +99,19 @@ function bindControls() {
     opt.value = c.csmId; opt.textContent = c.name;
     csmSelect.appendChild(opt);
   });
-  csmSelect.addEventListener("change", e => { state.filters.csm = e.target.value; render(); });
+  csmSelect.addEventListener("change", e => setFilterAndClearDrillDown("csm", e.target.value));
 
   const regionSelect = document.getElementById("filter-region");
-  regionSelect.addEventListener("change", e => { state.filters.region = e.target.value; render(); });
+  regionSelect.addEventListener("change", e => setFilterAndClearDrillDown("region", e.target.value));
 
   const riskSelect = document.getElementById("filter-risk");
-  riskSelect.addEventListener("change", e => { state.filters.risk = e.target.value; render(); });
+  riskSelect.addEventListener("change", e => setFilterAndClearDrillDown("risk", e.target.value));
 
   const expansionSelect = document.getElementById("filter-expansion");
-  expansionSelect.addEventListener("change", e => { state.filters.expansion = e.target.value; render(); });
+  expansionSelect.addEventListener("change", e => setFilterAndClearDrillDown("expansion", e.target.value));
 
   const trendSelect = document.getElementById("filter-trend");
-  trendSelect.addEventListener("change", e => { state.filters.trend = e.target.value; render(); });
+  trendSelect.addEventListener("change", e => setFilterAndClearDrillDown("trend", e.target.value));
 
   // PO polish — compact account search: filters the same getFilteredAccounts()
   // list every other filter and the Portfolio Copilot already read from, so
@@ -106,7 +121,7 @@ function bindControls() {
   // CSM types. #filters (and this field) is static markup outside render()'s
   // #app root, so the input itself is never recreated — no focus loss.
   const searchInput = document.getElementById("filter-search");
-  searchInput.addEventListener("input", e => { state.filters.search = e.target.value; render(); });
+  searchInput.addEventListener("input", e => setFilterAndClearDrillDown("search", e.target.value));
 }
 
 function getFilteredAccounts() {
@@ -150,6 +165,27 @@ function applyAccountDrillDown(accountIds) {
 function clearAccountDrillDown() {
   state.filters.accountIds = null;
   render();
+}
+
+// Executive Drill-down — a persistent indicator in the static #filters bar
+// itself (not just the Portfolio-view banner further down the page), since
+// user feedback was that the dropdown row up top looked untouched ("All"
+// everywhere) with no visible sign a drill-down was narrowing the results.
+// #filters lives outside render()'s #app root and is never recreated, so
+// this updates it imperatively (display + onclick, not addEventListener,
+// so re-running this on every render() never stacks duplicate listeners).
+function syncDrillDownIndicator() {
+  const el = document.getElementById("drilldown-indicator");
+  if (!el) return;
+  const ids = state.filters.accountIds;
+  if (!ids) {
+    el.hidden = true;
+    el.onclick = null;
+    return;
+  }
+  el.hidden = false;
+  el.textContent = `Filtered: ${ids.length} account${ids.length === 1 ? "" : "s"} (AI Summary) ✕`;
+  el.onclick = clearAccountDrillDown;
 }
 
 const RISK_SORT_RANK = { low: 1, medium: 2, high: 3 };
@@ -215,15 +251,18 @@ function render() {
   document.getElementById("tab-matrix").classList.toggle("active", state.view === "matrix");
   document.getElementById("tab-map").classList.toggle("active", state.view === "map");
   document.getElementById("tab-team").classList.toggle("active", state.view === "team");
+  document.getElementById("tab-qbrs").classList.toggle("active", state.view === "qbrs");
   document.getElementById("tab-feedback").classList.toggle("active", state.view === "feedback");
   document.getElementById("tab-trust").classList.toggle("active", state.view === "trust");
-  document.getElementById("filters").style.display = (state.view === "team" || state.view === "trust") ? "none" : "flex";
+  document.getElementById("filters").style.display = (state.view === "team" || state.view === "trust" || state.view === "qbrs") ? "none" : "flex";
+  syncDrillDownIndicator();
 
   const root = document.getElementById("app");
   root.innerHTML = "";
   if (state.view === "portfolio") root.appendChild(renderPortfolio());
   else if (state.view === "matrix") root.appendChild(renderMatrix());
   else if (state.view === "map") root.appendChild(renderMap());
+  else if (state.view === "qbrs") root.appendChild(renderQbrsOverview());
   else if (state.view === "feedback") root.appendChild(renderFeedback());
   else if (state.view === "trust") root.appendChild(renderTrust());
   else root.appendChild(renderTeam());
@@ -408,6 +447,14 @@ function renderPortfolio() {
   const list = getSorted(getFilteredAccounts());
 
   wrap.appendChild(renderViewHeader("Portfolio", "Prioritized view of every account — click a row to see the full score breakdown, evidence, and AI insight."));
+
+  if (state.filters.csmFromTeam) {
+    const backLink = document.createElement("button");
+    backLink.className = "back-to-team-link";
+    backLink.textContent = `← Back to Team`;
+    backLink.addEventListener("click", backToTeamFromPortfolio);
+    wrap.appendChild(backLink);
+  }
 
   if (state.filters.accountIds) {
     const banner = document.createElement("div");
@@ -1064,6 +1111,12 @@ async function submitAsk(accountId, questionText) {
 // .safeText — CSM-typed text — never .internal or .customerSafeDefault).
 const QBR_SENSITIVE_KEYS = ["healthTrends", "risks", "previousInterventions"];
 
+// UI-only mirror of api/analyze.js's QBR_SECTION_DEFS `listCapable` flag —
+// same non-authoritative pattern as QBR_SENSITIVE_KEYS above. Sections here
+// get an editable presentationItems[] list instead of (in addition to) the
+// single-sentence presentationText field.
+const QBR_LIST_CAPABLE_KEYS = ["openCommitments", "nextQuarterPlan"];
+
 // QBR Workspace UX — groups the 12 flat sections into a small tab set so the
 // review screen isn't one long vertical list. Purely a layout grouping: every
 // section key still renders through the same qbr-item markup/listeners as
@@ -1114,6 +1167,7 @@ function renderQbrSection(container, acc) {
 
 function renderQbrItemHtml(s, review) {
   const sensitive = QBR_SENSITIVE_KEYS.includes(s.key);
+  const listCapable = QBR_LIST_CAPABLE_KEYS.includes(s.key);
   const state_ = review[s.key];
   const hasSafeText = state_.safeText.trim().length > 0;
   const placeholder = s.customerSafeDefault === null
@@ -1130,6 +1184,17 @@ function renderQbrItemHtml(s, review) {
     ? (hasSafeText ? "Include reviewed version in Customer QBR" : "Customer-safe version required")
     : "Include in customer version";
   const includeDisabled = sensitive && !hasSafeText;
+  // Presentation content (2026-08 PPTX content contract) — a separate,
+  // concise reviewed version used only by the PPTX exporter, never a
+  // fallback to safeText/internal. presentationItems[] only applies to the
+  // two list-capable sections (Open Commitments, Next Quarter Plan); edited
+  // here as one item per line, joined back into an array on input.
+  const presPlaceholder = "Presentation-safe version — used only in the exported PPTX. Leave blank to omit this slot from the deck.";
+  const presentationFieldHtml = listCapable
+    ? `<p class="review-section-label">Presentation items <span class="review-hint-inline">one per line, PPTX only</span></p>
+       <textarea class="qbr-presentation-items" data-key="${s.key}" rows="3" maxlength="1000" placeholder="${escapeHtml(presPlaceholder)}">${escapeHtml((state_.presentationItems || []).join("\n"))}</textarea>`
+    : `<p class="review-section-label">Presentation version <span class="review-hint-inline">concise, PPTX only</span></p>
+       <textarea class="qbr-presentation-text" data-key="${s.key}" rows="2" maxlength="400" placeholder="${escapeHtml(presPlaceholder)}">${escapeHtml(state_.presentationText || "")}</textarea>`;
   return `
     <div class="qbr-item${sensitive ? " qbr-item-sensitive" : ""}">
       <div class="qbr-item-head">
@@ -1144,6 +1209,7 @@ function renderQbrItemHtml(s, review) {
         <span class="qbr-include-label">${escapeHtml(includeLabel)}</span>
       </label>
       <textarea class="qbr-safe-text" data-key="${s.key}" rows="3" maxlength="1500" placeholder="${escapeHtml(placeholder)}">${escapeHtml(state_.safeText)}</textarea>
+      ${presentationFieldHtml}
     </div>
   `;
 }
@@ -1200,6 +1266,14 @@ function renderQbrReview(container, accountId, qbr) {
       if (label) label.textContent = hasSafeText ? "Include reviewed version in Customer QBR" : "Customer-safe version required";
     });
   });
+  container.querySelectorAll(".qbr-presentation-text").forEach(ta => {
+    ta.addEventListener("input", () => { review[ta.dataset.key].presentationText = ta.value; });
+  });
+  container.querySelectorAll(".qbr-presentation-items").forEach(ta => {
+    ta.addEventListener("input", () => {
+      review[ta.dataset.key].presentationItems = ta.value.split("\n").map(line => line.trim()).filter(Boolean);
+    });
+  });
   // Tab switching is pure visibility toggling (no render()), so in-progress
   // textarea edits on other tabs are never lost or re-rendered away.
   container.querySelectorAll(".qbr-tab-btn[data-tab]").forEach(btn => {
@@ -1224,6 +1298,7 @@ function renderQbrReview(container, accountId, qbr) {
 function renderQbrPreview(container, accountId, qbr) {
   const acc = state.accounts.find(a => a.accountId === accountId);
   const included = selectCustomerSafeSections(qbr.data.sections, qbr.review);
+  const exp = qbr.export || { status: "idle" };
 
   const body = included.length
     ? included.map(s => `
@@ -1234,14 +1309,27 @@ function renderQbrPreview(container, accountId, qbr) {
       `).join("")
     : `<p class="sub">No sections included yet — go back to review and include at least one section.</p>`;
 
+  // Generate Customer QBR — exports the LIGHT PowerPoint deck from exactly
+  // what's rendered above: selectCustomerSafeSections()'s output plus each
+  // included section's reviewed safeText. Same security boundary the
+  // preview already uses; the export request never carries `internal` or
+  // `customerSafeDefault`.
+  const warningsHtml = exp.status === "error" && exp.warnings?.length
+    ? `<ul class="qbr-export-warnings">${exp.warnings.map(w => `<li><strong>${escapeHtml(w.slide)} — ${escapeHtml(w.slot)}:</strong> ${escapeHtml(w.message)}</li>`).join("")}</ul>`
+    : "";
+
   container.innerHTML = `
     <div class="qbr-head">
       <p class="ai-copilot-eyebrow">CUSTOMER QBR PREVIEW</p>
       <h4>${escapeHtml(acc?.accountName ?? "")} — Customer QBR</h4>
     </div>
     <div class="qbr-preview-body">${body}</div>
+    ${exp.status === "error" ? `<p class="ai-unavailable">${escapeHtml(exp.error)}</p>${warningsHtml}` : ""}
     <div class="qbr-actions">
       <button class="review-cancel-btn qbr-back-btn">← Back to Review</button>
+      <button class="review-confirm-btn qbr-generate-btn" ${included.length === 0 || exp.status === "loading" ? "disabled" : ""}>
+        ${exp.status === "loading" ? "Generating…" : "Generate Customer QBR"}
+      </button>
     </div>
   `;
 
@@ -1249,6 +1337,40 @@ function renderQbrPreview(container, accountId, qbr) {
     state.qbr[accountId].mode = "review";
     render();
   });
+  container.querySelector(".qbr-generate-btn").addEventListener("click", () => downloadQbrPptx(accountId));
+}
+
+async function downloadQbrPptx(accountId) {
+  const qbr = state.qbr[accountId];
+  const included = selectCustomerSafeSections(qbr.data.sections, qbr.review);
+  // 2026-08 content contract — carries presentationText/presentationItems
+  // alongside safeText, gated by the exact same included/safeText boundary
+  // selectCustomerSafeSections() already enforces; never sourced from
+  // s.internal or s.customerSafeDefault.
+  const sections = included.map(s => ({
+    key: s.key,
+    safeText: qbr.review[s.key].safeText.trim(),
+    presentationText: (qbr.review[s.key].presentationText || "").trim(),
+    presentationItems: qbr.review[s.key].presentationItems || [],
+  }));
+
+  qbr.export = { status: "loading", error: null, warnings: null };
+  render();
+  try {
+    const { blob, filename } = await generateQbrPptx(accountId, sections);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    qbr.export = { status: "idle", error: null, warnings: null };
+  } catch (e) {
+    qbr.export = { status: "error", error: e.message, warnings: e.warnings || null };
+  }
+  render();
 }
 
 async function loadQbrDraft(accountId) {
@@ -1262,6 +1384,11 @@ async function loadQbrDraft(accountId) {
       review[s.key] = {
         included: !sensitive && s.customerSafeDefault !== null,
         safeText: sensitive ? "" : (s.customerSafeDefault || ""),
+        // Presentation content (PPTX-only) — same sensitive-section
+        // guardrail as safeText: the server already nulls these for
+        // healthTrends/risks/previousInterventions, but init defensively.
+        presentationText: sensitive ? "" : (s.presentationText || ""),
+        presentationItems: sensitive ? [] : (Array.isArray(s.presentationItems) ? s.presentationItems : []),
       };
     });
     state.qbr[accountId] = { status: "ready", mode: "review", data, review };
@@ -2213,10 +2340,25 @@ function renderPriorityBox(scopeCsmId, title) {
   return box;
 }
 
+// Bug fix — clicking a CSM card on Team navigates straight to Portfolio with
+// no way back except rediscovering the top nav's Team tab (which several
+// users didn't). csmFromTeam marks the filter as "came from a Team click, not
+// a manual dropdown change" so Portfolio can show an explicit return link;
+// any manual filter change (setFilterAndClearDrillDown) clears the flag
+// again, since a deliberate re-filter supersedes the auto-navigation intent.
 function goToCsmPortfolio(csmId) {
   state.filters.csm = csmId;
+  state.filters.csmFromTeam = true;
   document.getElementById("filter-csm").value = csmId;
   state.view = "portfolio";
+  render();
+}
+
+function backToTeamFromPortfolio() {
+  state.filters.csm = "all";
+  state.filters.csmFromTeam = false;
+  document.getElementById("filter-csm").value = "all";
+  state.view = "team";
   render();
 }
 
@@ -2267,6 +2409,56 @@ function renderTeam() {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); goToCsmPortfolio(csm.csmId); }
     });
     grid.appendChild(card);
+  });
+  return wrap;
+}
+
+// QBRs menu item — a dedicated cadence view across every account (previously
+// only reachable one account at a time, buried inside each Portfolio row's
+// expanded detail). Reuses the exact overdue definition Team's "QBR overdue"
+// stat already uses, just per-account instead of aggregated per-CSM.
+function goToAccountQbr(accountId) {
+  state.view = "portfolio";
+  state.expanded = accountId;
+  render();
+  document.getElementById(`qbr-section-${accountId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function renderQbrsOverview() {
+  const wrap = document.createElement("div");
+  wrap.appendChild(renderViewHeader("QBRs", "Every account's QBR cadence — overdue first, then soonest upcoming. Opens straight into that account's QBR Copilot."));
+
+  const rows = state.accounts.map(acc => ({
+    acc,
+    overdue: daysSince(acc.relationship.lastQBRDate) > 100 && daysFromToday(acc.relationship.nextQBRDate) > 20,
+    daysToNext: daysFromToday(acc.relationship.nextQBRDate),
+  })).sort((a, b) => (a.overdue !== b.overdue) ? (a.overdue ? -1 : 1) : a.daysToNext - b.daysToNext);
+
+  const table = document.createElement("table");
+  table.className = "qbrs-table portfolio-table";
+  table.innerHTML = `
+    <thead><tr><th>Account</th><th>CSM</th><th>Last QBR</th><th>Next QBR</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      ${rows.map(({ acc, overdue, daysToNext }) => `
+        <tr data-account-id="${acc.accountId}">
+          <td><strong>${escapeHtml(acc.accountName)}</strong><div class="sub">${escapeHtml(acc.industry)} · ${escapeHtml(acc.accountId)}</div></td>
+          <td>${escapeHtml(csmName(acc.csmId))}</td>
+          <td>${fmtDate(acc.relationship.lastQBRDate)}</td>
+          <td>${fmtDate(acc.relationship.nextQBRDate)}</td>
+          <td>${overdue
+            ? `<span class="status-pill risk-high">Overdue</span>`
+            : daysToNext < 0
+              ? `<span class="status-pill risk-medium">${Math.abs(daysToNext)}d past due</span>`
+              : `<span class="sub">in ${daysToNext}d</span>`}</td>
+          <td><button class="qbrs-open-btn" data-account-id="${acc.accountId}">Open QBR →</button></td>
+        </tr>
+      `).join("")}
+    </tbody>
+  `;
+  wrap.appendChild(table);
+
+  table.querySelectorAll("tbody tr").forEach(tr => {
+    tr.addEventListener("click", () => goToAccountQbr(tr.dataset.accountId));
   });
   return wrap;
 }

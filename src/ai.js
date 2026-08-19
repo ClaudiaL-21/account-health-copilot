@@ -35,6 +35,28 @@ export function fetchPortfolioSummary(accountIds) {
   return callAnalyze({ mode: "portfolio-summary", accountIds });
 }
 
+// QBR Customer Presentation export — separate from callAnalyze() since a
+// success response is a binary .pptx (application/vnd...presentation), not
+// JSON; only the error path is JSON. `sections` here is exactly what
+// selectCustomerSafeSections() + the CSM's reviewed safeText produced —
+// never internal/customerSafeDefault — see src/app.js's call site.
+export async function generateQbrPptx(accountId, sections) {
+  const res = await fetch("/api/qbr-export", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ accountId, sections }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    const error = new Error(err.error || `Request failed (${res.status})`);
+    error.warnings = Array.isArray(err.warnings) ? err.warnings : null;
+    throw error;
+  }
+  const blob = await res.blob();
+  const match = /filename="([^"]+)"/.exec(res.headers.get("content-disposition") || "");
+  return { blob, filename: match ? match[1] : "Customer-QBR.pptx" };
+}
+
 export async function approveAction(accountId, nba) {
   const res = await fetch("/api/approve-action", {
     method: "POST",

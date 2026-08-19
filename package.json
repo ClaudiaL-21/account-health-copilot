@@ -10,5 +10,9 @@
     "dev": "npx --yes vercel dev",
     "enrich-data": "node scripts/enrich-history.js",
     "test": "node --test"
+  },
+  "dependencies": {
+    "pptx-automizer": "^0.9.0",
+    "pptxgenjs": "^4.0.1"
   }
 }

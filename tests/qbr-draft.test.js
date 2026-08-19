@@ -27,6 +27,7 @@ const { default: handler, QBR_SECTION_DEFS, applyQbrSensitiveGuardrail } = await
 
 const QBR_SECTION_KEYS = QBR_SECTION_DEFS.map(s => s.key);
 const SENSITIVE_KEYS = ["healthTrends", "risks", "previousInterventions"];
+const LIST_CAPABLE_KEYS = QBR_SECTION_DEFS.filter(s => s.listCapable).map(s => s.key);
 const NO_STRUCTURED_EVIDENCE_KEYS = ["businessObjectives", "previousInterventions", "openCommitments"];
 
 function callHandler(body) {
@@ -130,4 +131,49 @@ test("non-sensitive sections may still carry a customer-safe draft (not blanket-
   const { body } = await callHandler({ mode: "qbr-draft", accountId: ACCOUNTS[0].accountId });
   const nonSensitiveWithDefault = body.sections.filter(s => !SENSITIVE_KEYS.includes(s.key) && s.customerSafeDefault !== null);
   assert.ok(nonSensitiveWithDefault.length > 0, "expected at least one non-sensitive section to carry a customer-safe draft");
+});
+
+// --- Presentation content contract (2026-08 PPTX content model) ---------
+
+test("applyQbrSensitiveGuardrail also forces presentationText/presentationItems to null for sensitive sections", () => {
+  const input = QBR_SECTION_KEYS.map(key => ({
+    key, internal: "x", customerSafeDefault: "forbidden",
+    presentationText: "forbidden concise text",
+    presentationItems: LIST_CAPABLE_KEYS.includes(key) ? ["forbidden item"] : null,
+  }));
+  const result = applyQbrSensitiveGuardrail(input);
+  for (const s of result) {
+    if (SENSITIVE_KEYS.includes(s.key)) {
+      assert.equal(s.presentationText, null, `expected ${s.key}.presentationText to be nulled`);
+      assert.equal(s.presentationItems, null, `expected ${s.key}.presentationItems to be nulled`);
+    } else {
+      assert.equal(s.presentationText, "forbidden concise text");
+    }
+  }
+});
+
+test("the qbr-draft endpoint never leaks presentationText/presentationItems for the 3 sensitive sections", async () => {
+  const { body } = await callHandler({ mode: "qbr-draft", accountId: ACCOUNTS[0].accountId });
+  for (const key of SENSITIVE_KEYS) {
+    const section = body.sections.find(s => s.key === key);
+    assert.equal(section.presentationText, null, `expected ${key}.presentationText to be null`);
+    assert.equal(section.presentationItems, null, `expected ${key}.presentationItems to be null`);
+  }
+});
+
+test("non-sensitive sections carry a presentationText draft", async () => {
+  const { body } = await callHandler({ mode: "qbr-draft", accountId: ACCOUNTS[0].accountId });
+  const withPresentationText = body.sections.filter(s => !SENSITIVE_KEYS.includes(s.key) && typeof s.presentationText === "string" && s.presentationText.trim().length > 0);
+  assert.ok(withPresentationText.length > 0, "expected at least one non-sensitive section to carry a presentationText draft");
+});
+
+test("only list-capable sections (openCommitments, nextQuarterPlan) carry presentationItems; every other section is null", async () => {
+  const { body } = await callHandler({ mode: "qbr-draft", accountId: ACCOUNTS[0].accountId });
+  for (const s of body.sections) {
+    if (LIST_CAPABLE_KEYS.includes(s.key) && !SENSITIVE_KEYS.includes(s.key)) {
+      assert.ok(Array.isArray(s.presentationItems) && s.presentationItems.length > 0, `expected ${s.key}.presentationItems to be a non-empty array`);
+    } else if (!SENSITIVE_KEYS.includes(s.key)) {
+      assert.equal(s.presentationItems, null, `expected ${s.key}.presentationItems to be null (not list-capable)`);
+    }
+  }
 });

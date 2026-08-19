@@ -329,6 +329,12 @@ function clampAccountIds(ids, validIds) {
 // by — an unknown or reordered key must never reach the UI, since the
 // customer-safe review flow (src/app.js) keys its per-section review state
 // off these exact strings.
+// QBR PPTX Content Contract (2026-08) — two sections are "naturally
+// list-based" (a commitment list, a plan of actions) and additionally carry
+// a reviewed `presentationItems[]`; every section carries a reviewed
+// `presentationText` (concise presentation-safe prose, distinct from the
+// fuller `safeText`/customerSafeDefault). See QBR_LIST_CAPABLE_KEYS mirror
+// in src/app.js for the UI-only copy of this flag.
 export const QBR_SECTION_DEFS = [
   { key: "executiveSummary", title: "Executive Summary" },
   { key: "valueDelivered", title: "Value Delivered" },
@@ -340,9 +346,10 @@ export const QBR_SECTION_DEFS = [
   { key: "featureRequests", title: "Feature Requests" },
   { key: "renewalOutlook", title: "Renewal / Commercial Outlook" },
   { key: "previousInterventions", title: "Previous Interventions" },
-  { key: "openCommitments", title: "Open Commitments" },
-  { key: "nextQuarterPlan", title: "Next Quarter Plan" },
+  { key: "openCommitments", title: "Open Commitments", listCapable: true },
+  { key: "nextQuarterPlan", title: "Next Quarter Plan", listCapable: true },
 ];
+const LIST_CAPABLE_QBR_KEYS = QBR_SECTION_DEFS.filter(d => d.listCapable).map(d => d.key);
 
 // These three sections are where internal-only language (Health Score,
 // risk category, evidence confidence, CSM notes, escalation framing) is
@@ -357,7 +364,9 @@ export const QBR_SECTION_DEFS = [
 const SENSITIVE_QBR_SECTIONS = ["healthTrends", "risks", "previousInterventions"];
 
 export function applyQbrSensitiveGuardrail(sections) {
-  return sections.map(s => SENSITIVE_QBR_SECTIONS.includes(s.key) ? { ...s, customerSafeDefault: null } : s);
+  return sections.map(s => SENSITIVE_QBR_SECTIONS.includes(s.key)
+    ? { ...s, customerSafeDefault: null, presentationText: null, presentationItems: null }
+    : s);
 }
 
 function validateQbrDraftShape(parsed) {
@@ -377,6 +386,30 @@ function validateQbrDraftShape(parsed) {
     }
     if (entry.customerSafeDefault !== null && (!isNonEmptyString(entry.customerSafeDefault) || entry.customerSafeDefault.length > 1500)) {
       throw new Error(`qbr-draft: invalid customerSafeDefault for section "${expectedKey}" (must be a non-empty string or null)`);
+    }
+    // presentationText — concise reviewed-ready draft, same "null if nothing
+    // appropriate" contract as customerSafeDefault, just a tighter length cap
+    // since it's meant to fit a fixed PPTX slot, not a full paragraph.
+    if (entry.presentationText !== null && entry.presentationText !== undefined
+      && (!isNonEmptyString(entry.presentationText) || entry.presentationText.length > 400)) {
+      throw new Error(`qbr-draft: invalid presentationText for section "${expectedKey}" (must be a non-empty string <=400 chars, or null)`);
+    }
+    // presentationItems — only meaningful for the two list-capable sections;
+    // any other section carrying items would have nowhere safe to render
+    // them (decision 1: one section = one presentation slot unless
+    // explicitly list-capable), so it's rejected rather than ignored.
+    if (entry.presentationItems !== null && entry.presentationItems !== undefined) {
+      if (!LIST_CAPABLE_QBR_KEYS.includes(expectedKey)) {
+        throw new Error(`qbr-draft: presentationItems not allowed for non-list-capable section "${expectedKey}"`);
+      }
+      if (!Array.isArray(entry.presentationItems) || entry.presentationItems.length === 0 || entry.presentationItems.length > 5) {
+        throw new Error(`qbr-draft: invalid presentationItems for section "${expectedKey}" (must be an array of 1-5 items, or null)`);
+      }
+      entry.presentationItems.forEach((item, j) => {
+        if (!isNonEmptyString(item) || item.length > 200) {
+          throw new Error(`qbr-draft: invalid presentationItems[${j}] for section "${expectedKey}"`);
+        }
+      });
     }
   });
 }
@@ -513,6 +546,18 @@ Internal vs. customer-safe:
   automatically presented as customer-safe language. If nothing appropriate can be
   drafted for a customer from the data given, return null for customerSafeDefault
   rather than inventing customer-facing content.
+- "presentationText" is a SEPARATE, SHORTER draft for a fixed-size PPTX slide slot —
+  same customer-safe rules as customerSafeDefault (factual, neutral, never restates
+  internal-only terminology), but must be a single concise sentence, ideally under
+  180 characters and never over 400. It is not a truncation of customerSafeDefault —
+  write it as its own concise version of the same underlying fact. Same "return null
+  if nothing appropriate" rule applies.
+- "presentationItems" applies ONLY to the "openCommitments" and "nextQuarterPlan"
+  sections, which are naturally a short list rather than one paragraph. Return an
+  array of 1-5 short items (each under 120 characters, same customer-safe rules as
+  above), or null if there is nothing appropriate. For every OTHER section, always
+  return null for presentationItems — never invent a list where a single sentence is
+  correct.
 - recommend ≠ commit, in EVERY section, not just "nextQuarterPlan": if the
   "internal" text for this section marks something as recommended, proposed, not
   documented, or not agreed, the "customerSafeDefault" text must NOT upgrade it
@@ -547,15 +592,26 @@ function mockQbrDraft(account) {
     openCommitments: noEvidence,
     nextQuarterPlan: "[MOCK] Suggested focus next quarter based on the top risk/growth driver above — CSM to confirm.",
   };
+  const presentationItemsBySection = {
+    openCommitments: ["[MOCK] Confirm data residency requirements before contracting begins."],
+    nextQuarterPlan: ["[MOCK] Launch role-based AI prompts.", "[MOCK] Complete CRM bi-directional sync."],
+  };
   // Sensitive sections deliberately get a non-null "leak" value here — proves
   // applyQbrSensitiveGuardrail() strips it unconditionally, not just when the
-  // mock happens to omit it (see tests/qbr-draft.test.js).
+  // mock happens to omit it (see tests/qbr-draft.test.js). presentationText/
+  // presentationItems get the same leak-test treatment.
   return QBR_SECTION_DEFS.map(def => ({
     key: def.key,
     internal: bySection[def.key],
     customerSafeDefault: SENSITIVE_QBR_SECTIONS.includes(def.key)
       ? "[MOCK LEAK-TEST] this must never reach the client"
       : `[MOCK draft] ${bySection[def.key].replace(/^\[MOCK\] /, "")}`,
+    presentationText: SENSITIVE_QBR_SECTIONS.includes(def.key)
+      ? "[MOCK LEAK-TEST] this must never reach the client"
+      : `[MOCK concise] ${bySection[def.key].replace(/^\[MOCK\] /, "").slice(0, 120)}`,
+    presentationItems: SENSITIVE_QBR_SECTIONS.includes(def.key)
+      ? ["[MOCK LEAK-TEST] this must never reach the client"]
+      : (def.listCapable ? presentationItemsBySection[def.key] : null),
   }));
 }
 
@@ -572,7 +628,7 @@ async function handleQbrDraft(account) {
     await new Promise(r => setTimeout(r, 500));
     return { accountId: account.accountId, generatedAt: REFERENCE_DATE_ISO, sections: withTitles(applyQbrSensitiveGuardrail(mockQbrDraft(account))) };
   }
-  const sectionList = QBR_SECTION_DEFS.map((s, i) => `${i + 1}. "${s.key}" — ${s.title}`).join("\n");
+  const sectionList = QBR_SECTION_DEFS.map((s, i) => `${i + 1}. "${s.key}" — ${s.title}${s.listCapable ? " (list-capable: also fill presentationItems)" : ""}`).join("\n");
   const user = `${formatAccountContextText(contextOf(account))}
 
 Today's date: ${REFERENCE_DATE_ISO}. Use this to judge whether any date you
@@ -581,15 +637,15 @@ reference is in the past or the future (see the temporal grounding rule above).
 Draft a QBR (Quarterly Business Review) for this account with exactly these ${QBR_SECTION_DEFS.length} sections, in this exact order and using these exact keys:
 ${sectionList}
 
-For each section, write 2-4 sentences for "internal" and, if appropriate, a short customer-facing draft for "customerSafeDefault" (or null — see the rules above).
+For each section, write 2-4 sentences for "internal" and, if appropriate, a short customer-facing draft for "customerSafeDefault" (or null). Also draft "presentationText" (a separate, concise <=400-char version for a fixed PPTX slot, or null) and, ONLY for the two list-capable sections above, "presentationItems" (an array of 1-5 short items, or null; must be null for every other section) — see the rules above for all three.
 
 Respond with ONLY this JSON schema, "sections" containing exactly ${QBR_SECTION_DEFS.length} entries in the exact order above:
 {
   "sections": [
-    { "key": "...", "internal": "...", "customerSafeDefault": "..." }
+    { "key": "...", "internal": "...", "customerSafeDefault": "...", "presentationText": "...", "presentationItems": null }
   ]
 }`;
-  const raw = await callAI(QBR_SYSTEM_PROMPT, user, 2800);
+  const raw = await callAI(QBR_SYSTEM_PROMPT, user, 3800);
   const parsed = parseJsonLoose(raw);
   validateQbrDraftShape(parsed);
   return { accountId: account.accountId, generatedAt: REFERENCE_DATE_ISO, sections: withTitles(applyQbrSensitiveGuardrail(parsed.sections)) };
